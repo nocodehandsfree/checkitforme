@@ -6671,12 +6671,22 @@ app.get("/api/admin/check-audio/:room", async (c) => {
   const auth = "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64");
   const list = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}/Recordings.json`, { headers: { Authorization: auth } });
   if (!list.ok) return c.json({ error: `carrier ${list.status}` }, 502);
-  const recs = ((await list.json()) as { recordings?: Array<{ sid: string }> }).recordings || [];
-  if (c.req.query("probe")) return c.json({ exists: recs.length > 0 });
+  const recs = ((await list.json()) as { recordings?: Array<{ sid: string; duration?: string }> }).recordings || [];
+  // The probe also carries HOW LONG the tape is, straight off the carrier's own record of it, so the
+  // player can print the total length and size its bar before a single byte of sound is fetched.
+  if (c.req.query("probe")) return c.json({ exists: recs.length > 0, seconds: recs.length ? Number(recs[0].duration || 0) || null : null });
   if (!recs.length) return c.json({ error: "no recording for this check", exists: false }, 404);
-  const media = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Recordings/${recs[0].sid}.mp3`, { headers: { Authorization: auth } });
+  // DRAGGING TO ANY POINT NEEDS THE ASK FOR A PIECE TO SURVIVE THE TRIP (owner box 08-17). A player
+  // that drags asks for the bytes around the point it was dragged to, so the browser's Range ask is
+  // handed to the carrier and the carrier's answer — the piece, its length, and its place in the
+  // whole — is handed straight back. Without this the browser can only play from the beginning.
+  const range = c.req.header("range");
+  const media = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Recordings/${recs[0].sid}.mp3`,
+    { headers: { Authorization: auth, ...(range ? { Range: range } : {}) } });
   if (!media.ok || !media.body) return c.json({ error: `carrier ${media.status}` }, 502);
-  return new Response(media.body, { headers: { "content-type": "audio/mpeg", "cache-control": "private, max-age=3600" } });
+  const headers: Record<string, string> = { "content-type": "audio/mpeg", "cache-control": "private, max-age=3600", "accept-ranges": "bytes" };
+  for (const k of ["content-length", "content-range"]) { const v = media.headers.get(k); if (v) headers[k] = v; }
+  return new Response(media.body, { status: media.status, headers });
 });
 app.get("/api/admin/call-timing", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings

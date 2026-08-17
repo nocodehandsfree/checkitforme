@@ -364,6 +364,14 @@
   .k-range{display:flex;gap:4px;background:var(--terminal);border-radius:999px;padding:4px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);flex:0 0 auto}
   .k-range button{border:none;background:transparent;color:#7C7C88;font-size:11px;font-weight:700;padding:7px 12px;border-radius:999px;cursor:pointer;font-family:inherit}
   .k-range button.on{background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#fff;font-weight:800}
+  /* HEAR THE CALL (owner box 08-17): the bar you drag to any point in the check's own recording.
+     It is the page's own carved well, the same track and inset shadow as the range switch above,
+     filled in green up to where the sound has reached, with one white knob to take hold of. */
+  .v2scrub{-webkit-appearance:none;appearance:none;width:100%;height:24px;margin:0;background:transparent;cursor:pointer;display:block;touch-action:none}
+  .v2scrub::-webkit-slider-runnable-track{height:6px;border-radius:999px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);background:linear-gradient(90deg,var(--green) 0 var(--p,0%),var(--terminal) var(--p,0%) 100%)}
+  .v2scrub::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-5px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.55)}
+  .v2scrub::-moz-range-track{height:6px;border-radius:999px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);background:linear-gradient(90deg,var(--green) 0 var(--p,0%),var(--terminal) var(--p,0%) 100%)}
+  .v2scrub::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.55)}
   .k-hero{display:flex;align-items:baseline;gap:10px;padding:14px 4px 0}
   .k-hero .n{font-size:34px;font-weight:900;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;color:#fff}
   .k-hero .l{font-size:13px;font-weight:600;color:#8A8A96}
@@ -2653,11 +2661,7 @@ function checkV2From(d,o){
 function checkV2Html(d){
   const pill=(n,w,cls)=>n?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${cls}">${n} ${w}</span>`:'';
   const head=`<div style="max-width:100%">
-      <div style="display:flex;align-items:center;gap:10px"><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span>
-      <!-- HEAR THE CALL (owner box 08-17): the lucide speaker at the top of the check's screen,
-           playing the call's own recording. Hidden until the probe proves a recording exists, so a
-           simulated check that never dialed shows no player at all. Wired in openTestReceipt. -->
-      <button id="v2hear" aria-label="Hear the call" style="display:none;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:0;cursor:pointer;background:rgba(74,222,128,.13);color:var(--green);flex:0 0 auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button></div>
+      <div style="display:flex;align-items:center;gap:10px"><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span></div>
       <!-- The sub takes the screen's own width now (owner, 08-17: it was wrapping one word per
            line on his phone). The old max-width:0 trick sized it to the title above, and Safari
            can resolve that to a zero-wide box. -->
@@ -2745,11 +2749,27 @@ function checkV2Html(d){
       :`<div style="display:flex;align-items:center;gap:8px">${title}${at}</div>${sub}`;
     return `<div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;flex:0 0 15px">${stub}${dot}${line}</div><div style="flex:1;min-width:0;padding-top:5px;padding-bottom:${last?'0':'13px'}">${inner}</div></div>`;
   };
+  // HEAR THE CALL (owner box 08-17, his own section 08-17 evening). The check's recording gets its
+  // own section, sitting directly above the check log where the conversation is written out. The
+  // bar drags to any point, the pill jumps forward fifteen seconds, and the length of the whole
+  // recording is printed beside where it has reached. The section stays hidden until the probe
+  // proves a recording exists, so a simulated check that never dialed shows no player at all.
+  const round=(id,lab,size,bg,col,svg)=>`<button id="${id}" aria-label="${lab}" style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;border:0;cursor:pointer;background:${bg};color:${col};flex:0 0 auto">${svg}</button>`;
+  const playIco='<svg id="v2playico" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="7 4 20 12 7 20 7 4"/></svg>';
+  const hear=`<div id="v2audio" class="card" style="display:none;margin-bottom:14px;padding:16px 18px">
+      <div class="k-eyebrow" style="margin:0 0 12px">Hear the call</div>
+      <input id="v2scrub" class="v2scrub" type="range" min="0" max="1000" step="1" value="0" aria-label="Move to any point in the call">
+      <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:11.5px;font-weight:700;color:#8A8A96;font-variant-numeric:tabular-nums"><span id="v2at">0:00</span><span id="v2len">0:00</span></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+        ${round('v2play','Play the call',44,'rgba(74,222,128,.13)','var(--green)',playIco)}
+        <button id="v2skip" aria-label="Skip forward fifteen seconds" style="display:flex;align-items:center;gap:6px;border:0;cursor:pointer;padding:11px 16px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--text-strong);font-family:inherit;font-size:12px;font-weight:800"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l7 6-7 6"/><path d="M13 6l7 6-7 6"/></svg>15s</button>
+      </div>
+    </div>`;
   const logCard=`<details open class="card" style="padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px"><span class="k-eyebrow" style="margin:0;flex:1">Check log</span><span style="font-size:12px;font-weight:700;color:var(--muted)">${esch(d.when)}</span>${chev}</summary>
       ${d.workflow?`<details style="margin:8px 0 2px"><summary style="list-style:none;cursor:pointer;display:inline-flex"><span style="display:inline-flex;align-items:center;background:#1B1B20;border-radius:999px;padding:6px 13px;box-shadow:inset 0 2px 5px rgba(0,0,0,.4);font-size:12px;font-weight:700;color:var(--text-strong)">${esch(d.workflow.name)}</span></summary>${mini(d.workflow.d)}</details>`:''}
       <div class="mladder" style="margin-top:12px">${d.log.map((e,i,a)=>rung(e,i===a.length-1,i===0)).join('')}</div>
     </details>`;
-  return `<div class="v2sheet">${head+stats+cost+behavior+logCard}</div>`;
+  return `<div class="v2sheet">${head+stats+cost+behavior+hear+logCard}</div>`;
 }
 // Microdollars to the cents string, the same arithmetic the server prints with.
 function money2(u){const c=(u/1e6)*100;if(c>0&&c<0.1)return c.toFixed(3)+'\u00a2';return c<100?c.toFixed(1)+'\u00a2':'$'+(u/1e6).toFixed(2);}
@@ -7211,22 +7231,40 @@ async function openTestReceipt(room,name,started){
   if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this check.</div>'; return; }
   const when=started?new Date(started*1000).toLocaleDateString([], {month:'short',day:'numeric'})+' \u00b7 '+new Date(started*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'';
   box.innerHTML=checkV2Html(checkV2From(d,{name:name||'Check',when}));
-  // THE HEAR THE CALL BUTTON (owner box 08-17). Ask the server whether this check's recording
+  // THE HEAR THE CALL SECTION (owner box 08-17). Ask the server whether this check's recording
   // exists before showing anything: every check we dial ourselves is recorded at the carrier, a
   // simulated check never dialed and has none, and an old check from before the recording flag has
-  // none either. Only a yes turns the speaker on. Tapping plays the call's sound; tapping again
-  // pauses it. The audio follows the same live or staging switch the sheet itself read from.
+  // none either. Only a yes opens the section. The audio follows the same live or staging switch
+  // the sheet itself read from.
   (async()=>{try{
     const p=await srcApi('/api/admin/check-audio/'+encodeURIComponent(room)+'?probe=1');
     if(!p||!p.exists)return;
-    const b=box.querySelector('#v2hear'); if(!b)return;
-    b.style.display='inline-flex';
-    b.onclick=()=>{
-      if(!b._a){ b._a=new Audio((CALL_SRC==='staging'?STG_ORIGIN:'')+'/api/admin/check-audio/'+encodeURIComponent(room));
-        b._a.onended=()=>{ b.style.background='rgba(74,222,128,.13)'; }; }
-      if(b._a.paused){ b._a.play(); b.style.background='rgba(74,222,128,.3)'; }
-      else { b._a.pause(); b.style.background='rgba(74,222,128,.13)'; }
-    };
+    const sec=box.querySelector('#v2audio'); if(!sec)return;
+    const scrub=sec.querySelector('#v2scrub'),atEl=sec.querySelector('#v2at'),lenEl=sec.querySelector('#v2len');
+    const playB=sec.querySelector('#v2play'),skipB=sec.querySelector('#v2skip');
+    const mmss=s=>{s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+    // The carrier already knows how long the tape is, so the total length is printed before a
+    // single byte of sound is fetched; the file's own length replaces it once the browser reads it.
+    let dur=Number(p.seconds)||0;
+    const a=new Audio((CALL_SRC==='staging'?STG_ORIGIN:'')+'/api/admin/check-audio/'+encodeURIComponent(room));
+    a.preload='metadata';
+    const PLAY='<polygon points="7 4 20 12 7 20 7 4"/>',PAUSE='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+    const ico=sec.querySelector('#v2playico');
+    const face=()=>{ ico.innerHTML=a.paused?PLAY:PAUSE; playB.setAttribute('aria-label',a.paused?'Play the call':'Pause the call'); };
+    const paint=()=>{ const f=dur?Math.min(1,a.currentTime/dur):0; scrub.value=Math.round(f*1000); scrub.style.setProperty('--p',(f*100).toFixed(2)+'%'); atEl.textContent=mmss(a.currentTime); };
+    lenEl.textContent=mmss(dur);
+    sec.style.display='';
+    a.onloadedmetadata=()=>{ if(isFinite(a.duration)&&a.duration>0){ dur=a.duration; lenEl.textContent=mmss(dur); } paint(); };
+    a.ontimeupdate=()=>{ if(!scrub._dragging) paint(); };
+    a.onended=()=>{ face(); };
+    a.onplay=face; a.onpause=face;
+    // Dragging moves the sound itself, and the moment under the knob is printed while the drag is
+    // still going, so he can see where he is landing before he lets go.
+    const at=()=>dur*(Number(scrub.value)/1000);
+    scrub.oninput=()=>{ scrub._dragging=true; scrub.style.setProperty('--p',(Number(scrub.value)/10).toFixed(2)+'%'); atEl.textContent=mmss(at()); };
+    scrub.onchange=()=>{ if(dur){ a.currentTime=at(); } scrub._dragging=false; paint(); };
+    playB.onclick=()=>{ if(a.paused) a.play().catch(()=>toast("Could not play this check's recording")); else a.pause(); };
+    skipB.onclick=()=>{ if(dur){ a.currentTime=Math.min(dur-0.25,a.currentTime+15); paint(); } };
   }catch(_){/* no answer means no player, which is the truthful default */}})();
   // The sheet covers 96 percent of the screen (owner ruling 08-04).
   const lift=()=>{ const sh=document.querySelector('.sheet.on')||document.querySelector('.sheet'); if(sh){ const sc=window.scrollY||document.documentElement.scrollTop||0; sh.style.top=(sc+window.innerHeight*0.04)+'px'; sh.style.height=(window.innerHeight*0.96+120)+'px'; } }; setTimeout(lift,120); setTimeout(lift,700);
