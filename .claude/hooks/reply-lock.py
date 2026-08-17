@@ -106,16 +106,6 @@ def is_short(text):
     lines = [l for l in text.splitlines() if l.strip()]
     return len(lines) <= 2 and len(text.strip()) <= 240
 
-def skips_writer(text):
-    # THE SPEED BYPASS, widened from 2 lines to 4 on the owner's word (08-06). A simple
-    # question with a 3 or 4 line answer was paying about 12 seconds to be rewritten in
-    # his voice, which it did not need. Kept SEPARATE from is_short on purpose: a 4 line
-    # reply covering 2 things still wants its bold labels, and folding the two together
-    # would have started rejecting those for "bold on a quick answer".
-    # The word scan still runs here. Only the writer and the meaning pass are skipped.
-    lines = [l for l in text.splitlines() if l.strip()]
-    return len(lines) <= 4 and len(text.strip()) <= 420
-
 # THE LINE CAP (owner set 20 on 08-08; 15 scrunched the explaining, 25 ran long).
 # HARD_STOP is where no rewrite is even attempted, kept 10 above the cap as always.
 CAP = 20
@@ -123,6 +113,18 @@ HARD_STOP = 30
 
 def count_lines(prose):
     return sum(max(1, -(-len(l.rstrip()) // 90)) for l in prose.splitlines() if l.strip())
+
+def skips_writer(text):
+    # THE SPEED BYPASS, widened from 2 lines to 4 on the owner's word (08-06). A simple
+    # question with a 3 or 4 line answer was paying about 12 seconds to be rewritten in
+    # his voice, which it did not need. Kept SEPARATE from is_short on purpose: a 4 line
+    # reply covering 2 things still wants its bold labels, and folding the two together
+    # would have started rejecting those for "bold on a quick answer".
+    # The word scan still runs here. Only the writer and the meaning pass are skipped.
+    # Counted in 90 character phone lines, not typed lines (owner 08-08, found live): a
+    # single 420 character paragraph is one typed line but five phone lines of shorthand,
+    # and it was skipping the writer AND the judge through this bypass.
+    return count_lines(text) <= 4 and len(text.strip()) <= 380
 
 def word_scan(text, cap=CAP):
     # cap=None turns OFF the line rule, and NOTHING else. That is rule 11, the one
@@ -337,15 +339,22 @@ def render(root, owner_msg, draft, notes="", timeout=90, uncapped=False):
         "Say each thing ONCE: never restate a fix, a cause, or a result a second "
         "time in different words. Never volunteer what he did not ask about, and "
         "never raise something that needs nothing from him. He asks when he wants "
-        "more. If it never answers him, rewrite so the answer comes first. THEN "
-        "judge every "
-        "sentence: would a person actually text this to a friend? And judge the "
-        "shape: when the reply covers 2 or more separate things you MUST give each "
-        "one a SHORT bold label alone on its own line with a plain paragraph under "
-        "it. " + ceiling +
-        "Pass the draft unchanged ONLY if it answers him, reads like one friend "
-        "texting another, and already carries those labels. Otherwise rewrite it "
-        "fully in the owner's style. CUTTING BEATS KEEPING: dropping a whole topic "
+        "more. If it never answers him, rewrite so the answer comes first. THEN, "
+        "and this is your real job (owner 08-08: polished shorthand kept reaching "
+        "him): YOU ARE NOT AN EDITOR. Do not fix the agent's sentences. Read the "
+        "answer until you understand WHAT ACTUALLY HAPPENED, put the draft aside, "
+        "and tell it to him fresh, the way you would tell a friend what you just "
+        "watched happen. BREAK THE PROBLEM DOWN: what happened in one plain "
+        "sentence, then what it means for him, then what you need from him, in "
+        "that order, everyday words, a thing described before its name is used. "
+        "The agent's structure is not your structure; a paragraph narrating "
+        "mechanics becomes one sentence of what happened and one of what he "
+        "should do. Test yourself: could he repeat back what happened after one "
+        "read? Judge the shape too: when the reply covers 2 or more separate "
+        "things you MUST give each one a SHORT bold label alone on its own line "
+        "with a plain paragraph under it. " + ceiling +
+        "Pass the draft unchanged ONLY if it already reads that way, answers him, "
+        "and carries those labels. Otherwise retell it fully in the owner's style. CUTTING BEATS KEEPING: dropping a whole topic "
         "he did not ask about, that needs nothing from him, is CORRECT and is not "
         "a loss. But whatever you DO keep must survive exactly: every fact, "
         "number (as digits), name, "
