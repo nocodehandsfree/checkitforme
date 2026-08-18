@@ -1302,6 +1302,23 @@ export async function diedOnAHold(room: string | null | undefined): Promise<bool
   } catch { return false; }
 }
 
+/** THE RECORD'S FACTS DECIDE OVER THE READER, AT EVERY DOOR (law 11). Three doors settle a
+ *  verdict — the sweep, the on-demand settle a watching customer triggers, and the webhook — and
+ *  only the sweep carried these rules until check 390 (test seven) settled through the on-demand
+ *  door and kept the reader's "no clear answer" over a check that died mid-hold. The reader reads
+ *  the words; these facts are the check's own timeline, and they only ever speak over an answer we
+ *  do not have: if Staff came back and answered, that answer stands. */
+export async function statusFromTheRecord(
+  room: string | null | undefined, confirmed: boolean | null, statusKey: string | undefined,
+  transcript: string | null | undefined,
+): Promise<string | undefined> {
+  if (confirmed !== null) return statusKey;
+  if (await weHungUpOnAHold(room) || await diedOnAHold(room)) return "left_on_hold";
+  if (await staffHungUpOn(room)) return "staff_hung_up";
+  if (statusKey === "no_clear_answer" && keptAskingNoStraightAnswer(transcript)) return "no_straight_answer";
+  return statusKey;
+}
+
 /** Did the STORE end this check, read off the check's own timeline (the round 2 subtraction:
  *  we know every time it was us, so an ending that was not ours and not a failure is theirs).
  *  Never throws: a check must never fail to finalize because a lookup did. */
@@ -1433,20 +1450,9 @@ export async function ingestPending(): Promise<number> {
     // Only ever over an answer we do not have: if Staff came back and answered, that answer stands.
     // …and a hold that opened and never closed is the same fact from the customer's side, whoever
     // put the phone down (check 389: the store's hang-up beat our cap by two seconds and the check
-    // read "no clear answer" over a death mid-hold). Anchored on the hold events, not the hang-up
-    // row, so it cannot lose the settle-vs-hangup write race that hid 389's ending.
-    if (finalConfirmed === null && (await weHungUpOnAHold(row.room) || await diedOnAHold(row.room))) finalStatusKey = "left_on_hold";
-    // STAFF HUNG UP ON US BEFORE GIVING AN ANSWER (owner 08-04, the Hungup: Staff card). The engine
-    // already knows who put the phone down by subtraction; this is the customer's word for it. Only
-    // ever over an answer we do not have: an answer they gave before hanging up still stands.
-    else if (finalConfirmed === null && await staffHungUpOn(row.room)) finalStatusKey = "staff_hung_up";
-    // WE KEPT ASKING AND THEY NEVER GAVE US A STRAIGHT ANSWER (owner 08-07, a NEW status, never a
-    // rename). Only ever over Couldn't tell, and only on a check where their words really are on
-    // the record: every other reason above already has its own honest word and keeps it. Couldn't
-    // tell survives underneath this for the one case it was always meant for, which is a check
-    // where we could not make out what the person was saying.
-    else if (finalConfirmed === null && finalStatusKey === "no_clear_answer"
-      && keptAskingNoStraightAnswer(outcome.transcript)) finalStatusKey = "no_straight_answer";
+    // read "no clear answer" over a death mid-hold). ONE shared decider for all three settle doors
+    // (law 11, check 390) — see statusFromTheRecord above for each rule and its history.
+    finalStatusKey = await statusFromTheRecord(row.room, finalConfirmed, finalStatusKey, outcome.transcript);
 
     // Update the primary row (the line we called about).
     await db.update(callResults).set({

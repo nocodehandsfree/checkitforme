@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-18T19:14:27.639Z",
+  "at": "2026-08-18T19:26:54.100Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -22,7 +22,7 @@
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
           "pass": true,
-          "detail": "Calling → Talking to Staff → Getting results"
+          "detail": "Calling → Getting through the menu → Talking to Staff → Getting results"
         },
         {
           "n": 4,
@@ -64,13 +64,13 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 188 looks · header held at 62px"
+          "detail": "0 bounce(s) over 191 looks · header held at 62px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 90px"
+          "detail": "19px → 113px"
         },
         {
           "n": 13,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 134 seconds and the line closed at 134 — 0 seconds of nothing"
+          "detail": "the answer was in at 137 seconds and the line closed at 137 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Tue, Aug 18 · 7:12 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you th"
+          "detail": " Result Tue, Aug 18 · 7:24 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you th"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 8.6¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 9.0¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/06-live.png",
         "./robot-run/06-result.png"
       ],
-      "startedAt": 1787080287258,
-      "checkId": 389,
-      "cost": 0.08561,
-      "costReadable": "8.6¢",
+      "startedAt": 1787081031840,
+      "checkId": 390,
+      "cost": 0.089954,
+      "costReadable": "9.0¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "no_clear_answer"
