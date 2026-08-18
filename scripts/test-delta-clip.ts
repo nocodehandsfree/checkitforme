@@ -689,15 +689,17 @@ console.log("\n▶ the Admin's numbers arrive with the room: a bare carrier sock
   // quiet to run. His "Silence before Charlie drops" number is what the ear still uses for a quiet
   // NOBODY announced, and the bare socket below is why this scene exists: check 364's connection
   // arrived with no room on it, the tuning lookup found nothing, and every Admin number was lost.
-  await sleep(120);
+  // THE BEHAVIOUR RULE (owner, 08-17 late): they still owe us the answer, their voice has stopped,
+  // and nothing is being said to us. No wording is read at all, so this is the same on a silent
+  // hold, on hold music, on a handset on a counter and in any language.
+  const stoppedAt = Date.now();
+  quiet(tw, 200);
+  await sleep(1500);
   ok((getReceipt(room)?.events || []).some((e) => e.kind === "hold_start"),
-    "their announcement alone stops his meter, with no quiet to sit through");
+    "their voice stopping with the answer still owed stops his meter, with no phrase read");
   ok((getReceipt(room)?.events || []).some((e) => e.kind === "charlie_leave"),
     "…and he is really closed, which is the only thing that stops the meter");
-  const droppedAt = (getReceipt(room)?.events || []).find((e) => e.kind === "hold_start")?.atMs ?? null;
-  const saidAt = (getReceipt(room)?.transcript || []).filter((l) => l.who === "Clerk").pop()?.atMs ?? 0;
-  ok(droppedAt != null && droppedAt - saidAt < 1500,
-    `he came off the meter inside a second and a half of their words (${droppedAt == null ? "he never came off it" : `${droppedAt - saidAt}ms`})`);
+  ok(Date.now() - stoppedAt < 3000, `and it happens inside a couple of seconds of their voice stopping (${Date.now() - stoppedAt}ms)`);
   restore(); tw.close(); f.close();
 }
 
@@ -1224,8 +1226,13 @@ console.log("\n▶ …but quiet WITHOUT the goodbye still holds: told to wrap up
   await sleep(80);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);
   await sleep(120);
+  // THE ANSWER IS IN HAND, so a quiet line is the check ENDING, not a wait (owner, 08-17 late).
+  // Nobody owes us anything any more, so he is told to say his goodbye rather than standing there
+  // for 13 seconds the way check 376 did. Nothing hangs up on a store that might still be talking.
+  await sleep(5200);
   const ev = getReceipt("room-nudged-hold")?.events || [];
-  ok(ev.some((e) => e.kind === "hold_start"), "quiet before the goodbye is still a wait, never a hang up");
+  ok(ev.some((e) => (e.detail as { step?: string } | null)?.step === "warm_wrap_up"),
+    "with the answer in hand and the line quiet, he is told to say goodbye rather than wait");
   ok(!ev.some((e) => e.kind === "hangup"), "…and nothing hung up on a store that might come back");
   ok(tw.readyState === 1, "…and the line is still up");
   restore(); tw.close(); f.close();
@@ -1912,12 +1919,10 @@ console.log("\n▶ Staff put the phone down on the counter: Charlie is dropped, 
   const ev = (getReceipt("room-counter")?.events || []);
   const hold = ev.find((e) => e.kind === "hold_start");
   ok(!!hold, "a room we can hear with nobody talking to us is a wait, not a conversation");
-  // THE ANNOUNCEMENT IS WHAT TOOK HIM OFF THE METER (owner, 08-17 late), so the row is the
-  // announced one: Staff said they were going, and his meter stopped on their words rather than on
-  // what the line sounded like afterwards. The room test above is what still proves the ear can
-  // tell a room from a conversation, which is the thing that keeps him from being reopened by a
-  // till or a radio.
-  ok(hold?.note === "Staff stepped away, the line went quiet", `…and the log says the wait Staff announced (${hold?.note})`);
+  // WHAT THE WAIT SOUNDED LIKE IS STILL THE EAR'S OWN WORD (owner, 08-17 late): the meter goes off
+  // on behaviour, and the row still says which of the two this was, a silent line or a handset left
+  // on a counter with the store audible around it.
+  ok(hold?.note === "The room went quiet, Staff put the phone down", `…and the log says which of the two it was (${hold?.note})`);
   ok(ev.some((e) => e.kind === "charlie_leave" && e.note === "Charlie dropped"), "Charlie is dropped, so the meter stops");
   console.log("  …and he comes back the moment somebody speaks up close again");
   for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));
@@ -2507,6 +2512,50 @@ console.log("\n▶ CHECK 373'S SHAPE: Staff's comeback reaches Charlie ONCE, as 
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 376'S SHAPE: the meter goes off on behaviour, and he never re-asks what he was told");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-376";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    holdAckClip: { audio: Buffer.alloc(300 * 8, 0x30), ms: 300, text: "No worries, take your time!" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_376", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now());
+  await sleep(80);
+  // THE METER GOES OFF ON BEHAVIOUR, NOT ON A WORDING (owner, 08-17 late). Staff say something that
+  // leaves the answer owed, in any words, and then stop talking: nothing is being said to us and
+  // the answer is still theirs to give, so his meter goes off without a phrase list anywhere.
+  const leavesBefore = evs().filter((e) => e.kind === "charlie_leave").length;
+  echoHeardStaff(room, "Un momento, voy a mirar.", Date.now());
+  for (let i = 0; i < 30; i++) { tw.media(frame(SPEECH(i))); await sleep(4); }
+  const stopped = Date.now();
+  quiet(tw, 200);
+  await sleep(1400);
+  const left = evs().filter((e) => e.kind === "charlie_leave");
+  ok(left.length > leavesBefore, "his meter goes off on what they DID, with not one word of English in it");
+  ok(Date.now() - stopped < 3000, `and it goes off inside a couple of seconds of their voice stopping (${Date.now() - stopped}ms)`);
+  // …and a plain beat in the middle of a conversation still never drops him: that needs the answer
+  // to still be owed AND their voice stopped AND nothing said to us, which is the whole rule.
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ CHECK 375'S SHAPE: he comes off the meter at the announce and joins at their pause");
 {
   _reset();
@@ -2542,8 +2591,11 @@ console.log("\n▶ CHECK 375'S SHAPE: he comes off the meter at the announce and
   await sleep(120);
   const leavesBefore = leaves();
   echoHeardStaff(room, "Let me check. Let me just put you on hold.", Date.now());
-  await sleep(120);
-  ok(leaves() > leavesBefore, "their announce alone takes Charlie off the meter, with no quiet to wait through");
+  // THE BEHAVIOUR RULE (owner, 08-17 late): what stops his meter is the answer still being owed,
+  // their voice stopping and nothing being said to us. No wording is read at all.
+  quiet(tw, 200);
+  await sleep(1500);
+  ok(leaves() > leavesBefore, "their voice stopping with the answer still owed takes Charlie off the meter");
   const ack = evs().find((e) => (e.detail as { step?: string } | null)?.step === "hold_ack_clip");
   const left = evs().filter((e) => e.kind === "charlie_leave").pop();
   ok(!!left && (!ack || left.atMs <= ack.atMs),
