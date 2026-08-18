@@ -2515,11 +2515,15 @@ async function simRuns(){
     <span style="font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:4px 10px;flex:0 0 auto;${r.failed?'color:var(--red);background:rgba(239,68,68,.13)':'color:var(--green);background:rgba(74,222,128,.13)'}">${r.failed?r.failed+' failed':'All passed'}</span>
   </div>`).join('');
 }
+// A RUN OPENS AS THE SLIDE-UP SHEET, the same one a check opens in (owner 08-18: sliding it
+// back down should reveal the list behind it, never a back link). Same openSheet the check
+// receipt uses, so there is one sheet on this dashboard and not two.
 async function simOpen(id){
-  const box=document.getElementById('testing_sims');if(!box)return;
-  box.innerHTML='<div class="empty">Loading…</div>';
+  const box=document.createElement('div');
+  box.innerHTML='<div class="meta">Loading…</div>';
+  openSheet('','',box);
   const r=await srcApi('/api/admin/sim-runs/'+id);
-  if(!r||r.error){simRuns();return;}
+  if(!r||r.error){box.innerHTML='<div class="empty">Nothing was recorded for this run.</div>';return;}
   const when=new Date((r.startedAt||0)*1000).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'});
   const fails=(r.callList||[]).filter(c=>!c.pass);
   // The average wears the meter's own colors: green to 23, yellow to 30, red at 31 (owner 08-16).
@@ -2534,7 +2538,6 @@ async function simOpen(id){
   const mmssT=n=>{n=Math.max(0,Math.round(n||0));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');};
   const split=(r.avgSpeakingSec!=null||r.avgListeningSec!=null)?`${r.avgSpeakingSec??0}s speaking · ${r.avgListeningSec??0}s listening · ${r.avgWaitingSec??0}s waiting`:'';
   box.innerHTML=`
-    <div style="font-size:12.5px;font-weight:700;color:var(--muted);margin:0 0 10px;cursor:pointer" onclick="simRuns()">‹ All runs</div>
     <div><span${r.info?` data-tip="${esch(r.info)}"`:''} style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff">${esch(r.name)}</span></div>
     ${r.sub?`<div class="meta" style="margin:5px 0 0;font-size:13px">${esch(r.sub)}</div>`:''}
     <div style="display:flex;gap:7px;margin:12px 0 14px;flex-wrap:wrap">
