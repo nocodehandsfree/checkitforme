@@ -219,6 +219,12 @@ export async function recordVerdict(
     if (charged != null) rows.push(rowFor("unknown", charged ? "Customer charged" : "Customer not charged", { step: "charged", charged }, 2));
     await db.insert(callEvents).values(rows);
     console.log(`[receipt] verdict tail written for check ${callId}: ${rows.length} row(s)`);
+    // WAS ANY OF THAT A RECORDING? (owner's box, 08-18 night, item 7.) Asked here because this is
+    // the one place a check settles exactly once, whichever of the three doors won the race. It
+    // runs AFTER the tail is written and nothing waits on it: a check's answer, its charge and the
+    // customer's screen are all already done by the time this asks. A wrong answer costs one line
+    // on the record and nothing else, and it can never stop a live call — his rule.
+    void judgeTheVoices(callId, room ?? "", baseMs + 3, at);
   } catch (e) {
     console.error("[receipt] verdict not recorded:", e);
     // The verdict is the one row the customer's answer lives on. If the batch failed, write it
@@ -227,6 +233,41 @@ export async function recordVerdict(
       await db.insert(callEvents).values({ callId, room: "", atMs: Math.max(0, atSec) * 1000, atSec: Math.max(0, atSec), kind: "verdict", note: (summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`), detail: JSON.stringify({ statusKey }) });
     } catch (e2) { console.error("[receipt] even the bare verdict failed:", e2); }
   }
+}
+
+/**
+ * WHO REALLY SAID EACH LINE, decided after the check is over and written onto its record.
+ *
+ * THE FAULT IT ANSWERS (check 383, the advert mixed into hold music): a recorded voice is the one
+ * thing on a phone line that no listening rule can refuse, because it IS a voice. Only the words
+ * say it, and only a model reads words in any language — which is the same reason this is the
+ * honest answer to a wait announced in Spanish (check 376). Best effort, always: no key, a refused
+ * model or a slow one simply leaves this line off the record.
+ */
+async function judgeTheVoices(callId: number, room: string, atMs: number, atSec: number): Promise<void> {
+  try {
+    const row = (await db.select({ t: callResults.transcript }).from(callResults).where(eq(callResults.id, callId)))[0];
+    const lines = String(row?.t || "").split("\n").map((l) => {
+      const m = /^(Clerk|Staff|Agent):\s*(.*)$/i.exec(l.trim());
+      return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2] } : null;
+    }).filter((l): l is { who: string; text: string } => !!l && l.text.length > 2);
+    if (lines.filter((l) => l.who === "Clerk").length < 2) return;   // nothing worth a read
+    const { judgeHoldVoice } = await import("../voice/verdict");
+    const read = await judgeHoldVoice(lines);
+    if (!read) return;
+    const played = read.filter((r) => r.voice === "recording");
+    if (!played.length) return;   // everybody who spoke was a person: nothing to say
+    await db.insert(callEvents).values({
+      callId, room, atMs, atSec, kind: "unknown",
+      note: played.length === 1
+        ? "One thing Staff seemed to say was really a recording the store played"
+        : `${played.length} things Staff seemed to say were really recordings the store played`,
+      detail: JSON.stringify({
+        step: "played_at_us",
+        lines: played.map((p) => ({ line: p.line.slice(0, 160), why: p.why, announcesWait: p.announcesWait })),
+      }),
+    });
+  } catch (e) { console.error("[receipt] who-said-it not recorded:", e); }
 }
 
 /** Wire the recorder to the database. Called once at boot. */
