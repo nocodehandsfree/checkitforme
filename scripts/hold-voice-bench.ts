@@ -70,6 +70,20 @@ const SAVED: Saved[] = [
     ],
     expect: ["person", "person", "recording", "person"],
   },
+  {
+    check: 0, what: "the robot store's OWN recorded lines, word for word from tapedeck.ts — a machine by definition",
+    lines: [
+      // Scene 17's answering machine and the phone menu's opening, both owner-approved scripts the
+      // robot store really plays. Nothing here is invented: if the judge cannot tell these from a
+      // person, it cannot tell an advert either.
+      { who: "Clerk", text: "You've reached MVP's. We're not able to take your call right now. Please leave a message after the tone." },
+      { who: "Clerk", text: "Thank you for calling MVP's Pharmacy." },
+      { who: "Clerk", text: "For the pharmacy, press 1." },
+      { who: "Agent", text: "Hi there! I was just checking, do you have any Pokémon cards in stock right now?" },
+      { who: "Clerk", text: "MVP's, buenas tardes. ¿En qué le puedo ayudar?" },
+    ],
+    expect: ["recording", "recording", "recording", "person"],
+  },
 ];
 
 // The two things that matter, kept apart on purpose: calling a RECORDING a person is the fault this
