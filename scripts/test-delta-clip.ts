@@ -2292,10 +2292,7 @@ console.log("\n▶ THEIR ANSWER LANDS WHILE HE IS OFF THE LINE, AND HE ANSWERS I
   echoHeardStaff(room, "Yeah. It's the pitch black booster boxes.");
   // …and them speaking is what brings him back.
   for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
-  // …and their sentence ENDS, which is when he joins now (owner, 08-17 late): while Staff are
-  // still talking his meter would be paying to hear words Echo is already writing down.
-  quiet(tw, 60);
-  await sleep(700);
+  await sleep(500);
   ok(f.sockets.length > sockets, "somebody spoke, so he is opened again");
   const missed = evs().filter((e) => (e.detail || {}).step === "missed_turn");
   ok(missed.length === 1, "what they said while he was off is handed to him ONCE");
@@ -2370,10 +2367,7 @@ console.log("\n▶ CHECK 366'S SHAPE: a stale hello never rides the reconnect, a
   // was spoken at 65 seconds, his session opened at 69, and the writing landed at 70.
   const spokenAt = Date.now();
   for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
-  // …and their sentence ENDS, which is when he joins now (owner, 08-17 late): while Staff are
-  // still talking his meter would be paying to hear words Echo is already writing down.
-  quiet(tw, 60);
-  await sleep(700);
+  await sleep(500);
   ok(f.sockets.length > sockets, "somebody spoke, so he is opened again");
   echoHeardStaff(room, "Thank you for holding. I did not see any, unfortunately.", spokenAt);
   await sleep(200);
@@ -2419,11 +2413,8 @@ console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the 
   const sockets = f.sockets.length;
   // STAFF COME BACK and are still mid sentence while his new session opens.
   for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
-  // …and their sentence ends, which is when he joins now (owner, 08-17 late): while Staff are
-  // still talking his meter would be paying to hear words Echo is already writing down.
-  quiet(tw, 120);
-  await sleep(800);
-  ok(f.sockets.length > sockets, "somebody spoke and their sentence ended, so he is opened again");
+  await sleep(400);
+  ok(f.sockets.length > sockets, "somebody spoke, so he is opened again");
   // The writer's final pieces land while their voice is still going: held, not handed.
   echoHeardPiece(room, "Okay. Thank you for holding.");
   for (let i = 0; i < 20; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
@@ -2489,9 +2480,7 @@ console.log("\n▶ CHECK 373'S SHAPE: Staff's comeback reaches Charlie ONCE, as 
   await sleep(400);
   const sockets = f.sockets.length;
   for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
-  // Their sentence ends: that is when he joins now (owner, 08-17 late).
-  quiet(tw, 120);
-  await sleep(800);
+  await sleep(400);
   ok(f.sockets.length > sockets, "Staff came back and he is opened again");
   // 373's own shape: the first piece lands, their voice stops, and 93 MILLISECONDS later the
   // finished line arrives from Echo. That is what handed him two turns and printed the handed
@@ -2512,7 +2501,7 @@ console.log("\n▶ CHECK 373'S SHAPE: Staff's comeback reaches Charlie ONCE, as 
   restore(); tw.close(); f.close();
 }
 
-console.log("\n▶ CHECK 376'S SHAPE: the meter goes off on behaviour, and he never re-asks what he was told");
+console.log("\n▶ CHECK 376'S SHAPE: he never re-asks what he was told, and never stands on a dead line");
 {
   _reset();
   const f = await fakeProvider();
@@ -2538,25 +2527,38 @@ console.log("\n▶ CHECK 376'S SHAPE: the meter goes off on behaviour, and he ne
   const evs = () => getReceipt(room)?.events || [];
   echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now());
   await sleep(80);
-  // THE METER GOES OFF ON BEHAVIOUR, NOT ON A WORDING (owner, 08-17 late). Staff say something that
-  // leaves the answer owed, in any words, and then stop talking: nothing is being said to us and
-  // the answer is still theirs to give, so his meter goes off without a phrase list anywhere.
-  const leavesBefore = evs().filter((e) => e.kind === "charlie_leave").length;
-  echoHeardStaff(room, "Un momento, voy a mirar.", Date.now());
-  for (let i = 0; i < 30; i++) { tw.media(frame(SPEECH(i))); await sleep(4); }
-  const stopped = Date.now();
-  quiet(tw, 200);
-  await sleep(1400);
-  const left = evs().filter((e) => e.kind === "charlie_leave");
-  ok(left.length > leavesBefore, "his meter goes off on what they DID, with not one word of English in it");
-  ok(Date.now() - stopped < 3000, `and it goes off inside a couple of seconds of their voice stopping (${Date.now() - stopped}ms)`);
-  // …and a plain beat in the middle of a conversation still never drops him: that needs the answer
-  // to still be owed AND their voice stopped AND nothing said to us, which is the whole rule.
+  // HE NEVER ASKS FOR WHAT THE CHECK ALREADY HOLDS. On 376 Staff said the boxes were the pitch
+  // black ones and he asked for the set name again, then stood on a dead line for 13 seconds.
+  echoHeardStaff(room, "Yeah, we've got a few. They're the pitch black boxes.", Date.now());
+  await sleep(80);
+  const noteBefore = f.raw.length;
+  nudgeSignoff(room, "in stock", { set: "Pitch Black", productForm: null, restockDay: null, restockTime: null });
+  await sleep(120);
+  const signoff = evs().find((e) => (e.detail as { step?: string } | null)?.step === "signoff");
+  const stillMissing = ((signoff?.detail as { missing?: string[] } | null)?.missing) || [];
+  ok(JSON.stringify(stillMissing) === JSON.stringify(["whether it is packs, a box or a tin"]),
+    `the only thing left to ask for is the piece the memory does not hold (${JSON.stringify(stillMissing)})`);
+  const note = f.raw.slice(noteBefore).find((m) => m.includes("contextual_update")) || "";
+  ok(note.includes("except whether it is packs, a box or a tin") && !note.includes("the set name"),
+    "…and he is told to ask for that one piece, never for the set name they just gave him");
+  // …AND HE NEVER STANDS ON A DEAD LINE. Nobody says anything more, and five seconds later he is
+  // told to say his goodbye rather than wait, which is 376's 13 silent seconds.
+  quiet(tw, 60);
+  await sleep(5400);
+  ok(evs().some((e) => (e.detail as { step?: string } | null)?.step === "warm_wrap_up"),
+    "five seconds of nothing said and he is told to close, instead of standing there");
+  // STILL OPEN, AND THE OWNER'S TO CALL: 376's meter ran all through a wait Staff announced in
+  // Spanish, because what drops him is still the going-to-check family of English words. The
+  // wordless version — the check's memory saying the answer is owed and the line having gone quiet
+  // — cannot tell that wait apart from a person taking a beat to think, which is the 08-08
+  // inversion three scenes below, so building it that way dropped him mid conversation and broke
+  // those shapes. The next honest move is the READER saying Staff stepped away, since the reader
+  // is a model that reads any language, and that is a build the owner has not ordered yet.
   echoListening(room, false);
   restore(); tw.close(); f.close();
 }
 
-console.log("\n▶ CHECK 375'S SHAPE: he comes off the meter at the announce and joins at their pause");
+console.log("\n▶ CHECK 375'S SHAPE: he comes off the meter at the announce, and rejoins on their voice");
 {
   _reset();
   const f = await fakeProvider();
@@ -2600,19 +2602,20 @@ console.log("\n▶ CHECK 375'S SHAPE: he comes off the meter at the announce and
   const left = evs().filter((e) => e.kind === "charlie_leave").pop();
   ok(!!left && (!ack || left.atMs <= ack.atMs),
     `his meter stops before our recorded hold reply plays, never after it (off at ${left?.atMs}ms, recording at ${ack?.atMs ?? "not in this scene"})`);
-  // The wait itself, then Staff come back mid sentence: he must NOT join while they are talking.
+  // The wait itself, then Staff come back mid sentence. HE COMES BACK THE MOMENT THEIR VOICE DOES
+  // (owner, 08-18). For one evening he waited for their sentence to end, to save the seconds of
+  // meter that ran while Echo wrote those words down; it lost their answer on checks 373 and 371,
+  // so the saving was thrown away. Nothing may move WHEN his ear switches on again.
   quiet(tw, 60);
   await sleep(200);
   const sockets = f.sockets.length;
-  for (let i = 0; i < 90; i++) { tw.media(frame(SPEECH(i))); await sleep(8); }
-  ok(f.sockets.length === sockets, "while Staff are still talking, no session is opened and no meter runs");
   const joinsBefore = joins();
-  quiet(tw, 120);
-  await sleep(800);
-  ok(f.sockets.length > sockets, "their sentence ends and Charlie joins then");
+  for (let i = 0; i < 90; i++) { tw.media(frame(SPEECH(i))); await sleep(8); }
+  await sleep(500);
+  ok(f.sockets.length > sockets, "their voice came back and he was opened right then, mid sentence");
   ok(joins() > joinsBefore, "…and the record has his second join");
-  ok(evs().some((e) => (e.detail as { step?: string } | null)?.step === "joined_at_their_pause"),
-    "the record says he waited for Staff to finish their sentence before joining");
+  ok(!evs().some((e) => (e.detail as { step?: string } | null)?.step === "joined_at_their_pause"),
+    "nothing holds his session back for their pause any more");
   echoListening(room, false);
   restore(); tw.close(); f.close();
 }
@@ -2644,11 +2647,9 @@ console.log("\n▶ CHECK 374'S SHAPE: the comeback wait, the whole goodbye, and 
   quiet(tw, HOLD_QUIET_MS / 20 + 40);
   await sleep(400);
   const sockets = f.sockets.length;
-  // STAFF COME BACK. He joins at their pause now (owner, 08-17 late), and Echo's words are handed
-  // to him there, so the whole wait Staff stand in is his session opening plus his own reply.
+  // STAFF COME BACK. His session opens the moment their voice does, so he hears them finish.
   for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
-  quiet(tw, 120);
-  await sleep(800);
+  await sleep(500);
   ok(f.sockets.length > sockets, "Staff came back and he is opened again");
   const back = f.sockets[f.sockets.length - 1];
   // He listens through the end of their sentence, their sound stops, and HIS OWN answer arrives
@@ -2743,11 +2744,8 @@ console.log("\n▶ CHECK 371'S SHAPE: the hold reply plays as a recording, and l
   const sockets = f.sockets.length;
   // STAFF COME BACK and stop talking BEFORE the writing lands: 371's late writer.
   for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
-  // …and their sentence ends, which is when he joins now (owner, 08-17 late): while Staff are
-  // still talking his meter would be paying to hear words Echo is already writing down.
-  quiet(tw, 120);
-  await sleep(800);
-  ok(f.sockets.length > sockets, "somebody spoke and their sentence ended, so he is opened again");
+  await sleep(400);
+  ok(f.sockets.length > sockets, "somebody spoke, so he is opened again");
   quiet(tw, 50);
   await sleep(150);
   // …the two pieces land 120ms apart, AFTER the voice stopped, like 371's 73.58 and 73.70.

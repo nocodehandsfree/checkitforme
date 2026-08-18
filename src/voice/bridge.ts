@@ -827,11 +827,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let lastHoldEndAtMs = 0;
   /** When he last answered Staff off his own hearing instead of our written words. */
   let answeredFromHisEarsAtMs = 0;
-  /** A comeback where Staff were still mid sentence: his session opens when their voice stops. */
-  let joinWhenTheyFinish: { secs: number; newPerson: boolean; handedOn: boolean; atMs: number } | null = null;
-  let joinBackstopTimer: NodeJS.Timeout | null = null;
-  /** …and if they simply keep talking, he opens anyway rather than leaving nobody on our end. */
-  const JOIN_BACKSTOP_MS = 6_000;
   /** ONCE THE ANSWER IS IN HAND, a quiet line is the check ending, not a person thinking. He is
    *  told to say his goodbye rather than standing there (owner, 08-17 late, off check 376's 13
    *  silent seconds). Restarted by anything Staff say, so nobody is ever cut off mid sentence. */
@@ -870,15 +865,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     && Date.now() - answeredAtMs < Math.max(HIS_FIRST_WORD_MS, THEIR_TURN_QUIET_MS);
   function armTheMeterOff(why: string): void {
     if (meterOffTimer) { clearTimeout(meterOffTimer); meterOffTimer = null; }
-    // A TURN IN FLIGHT IS NOT SILENCE. Their comeback being handed to him, or his session still
-    // opening for it, is the conversation mid stride: nothing about it is a wait.
-    if (ended || onHold || !eleven || reconnectFeed || joinWhenTheyFinish || !itIsTheirTurn()) return;
+    // A TURN IN FLIGHT IS NOT SILENCE. Their comeback being handed to him is the conversation mid
+    // stride: nothing about it is a wait.
+    if (ended || onHold || !eleven || reconnectFeed || !itIsTheirTurn()) return;
     meterOffTimer = setTimeout(() => {
       meterOffTimer = null;
       // Everything is re-read at the moment it would cost money: they may have started talking
       // again, the answer may have landed, our own voice may still be going out, or the word owed
       // may be HIS, which is him thinking and never a wait.
-      if (ended || onHold || !eleven || theirVoiceOn || reconnectFeed || joinWhenTheyFinish || !itIsTheirTurn()) return;
+      if (ended || onHold || !eleven || theirVoiceOn || reconnectFeed || !itIsTheirTurn()) return;
       // The word owed may still be HIS, which is him thinking, and our own voice may still be
       // going out. Neither is a wait, so the beat simply runs again rather than being given up on.
       if (heOwesThemAWord()) { armTheMeterOff("the word owed was still his"); return; }
@@ -887,20 +882,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       beginHold("quiet", Date.now());
     }, THEIR_TURN_QUIET_MS);
   }
-  /** Open the session that has been waiting for Staff to finish their sentence. */
-  function joinNow(why: string): void {
-    const waiting = joinWhenTheyFinish;
-    joinWhenTheyFinish = null;
-    if (joinBackstopTimer) { clearTimeout(joinBackstopTimer); joinBackstopTimer = null; }
-    if (!waiting || ended || eleven) return;
-    const waited = Date.now() - waiting.atMs;
-    emit(room, "unknown", "Charlie waited for Staff to finish their sentence before joining",
-      { step: "joined_at_their_pause", waitedMs: waited, why });
-    log(`reopen: ${why} -> opening Charlie now (${waited}ms of their sentence he did not pay for)`);
-    openHimForTheComeback(waiting.secs, waiting.newPerson, waiting.handedOn);
-  }
   /** THE REOPEN ITSELF, exactly as it has always run: the note he is owed, the reconnect feed, and
-   *  his session. Called the moment Staff came back, or at their pause when they were mid sentence. */
+   *  his session. Called the moment Staff's voice comes back, never a moment later. */
   function openHimForTheComeback(secs: number, newPerson: boolean, handedOn: boolean): void {
     if (ended || eleven) return;
     gapNote = { secs, newPerson, replayed: handedOn };
@@ -1291,12 +1274,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // never pass through here; the goodbye door above already took the signed-off case.
     // A hand-over he asked for, or Staff said they were making, is ALSO an announcement: the next
     // quiet is the phone changing hands, which is the one wait the runtime already knew was coming.
-    // THE INVERSION'S GATE, NOW READ OFF THE CHECK'S OWN MEMORY (owner, 08-17 late). A quiet in the
-    // middle of a conversation is still just a beat, and he still stays on the line for it. What
-    // lets a wait through is no longer a phrase Staff used: it is that they OWE us the answer and
-    // have stopped talking, which is the same evidence in every language and on a silent hold, hold
-    // music or a handset on a counter alike.
-    if ((reason === "quiet" || reason === "room") && !itIsTheirTurn() && !expectHandover && !backstopFired) {
+    // THE CHECK'S OWN MEMORY IS A SECOND LOCK ON THIS DOOR, NEVER A NEW KEY (owner, 08-18). For one
+    // evening the memory replaced the evidence: any quiet at all became a wait as long as the answer
+    // was still owed, and that dropped him in the middle of a person thinking — the exact fault the
+    // inversion was written to end, and it broke three shapes in the bank. The evidence list is back
+    // as it was: an announcement, hold music, a transfer, a hand-over, or the backstop. The memory
+    // now only ever holds him ON the line, in `armTheMeterOff`, so a quiet after the answer is
+    // already in hand is the check ending rather than a wait.
+    if ((reason === "quiet" || reason === "room") && !waitAnnounced && !expectHandover && !backstopFired) {
       if (!quietBackstopTimer) {
         const already = Math.max(0, tune.holdQuietMs);
         const left = Math.max(0, Math.max(0, tune.quietBackstopMs) - already);
@@ -1452,20 +1437,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // opens it, and the 9 second backstop below is the same one the opening question uses, so a
       // comeback nobody says a word into cannot gag him forever. Never on a hand-over to a NEW
       // person: there the recording asks again and its own gates run.
-      // HE JOINS WHEN THEY FINISH THEIR SENTENCE, NOT IN THE MIDDLE OF IT (owner, 08-17 late, off
-      // check 375: he joined at 66.1 seconds while their comeback sentence ran 62.4 to 68.8, so
-      // 2.8 seconds of his meter went on hearing words Echo was already writing down and hands him
-      // at the end anyway). The ear opens the WAIT on the sound of them coming back, which is right
-      // for the record; his own session opens at their pause. Everything below is the same reopen
-      // it always was, run a moment later, so nothing about its order changes. The backstop still
-      // opens him if they simply talk on, so a long comeback never leaves nobody on our end.
-      if (echoRooms.has(room) && !handedOn && theirVoiceOn && !joinWhenTheyFinish) {
-        joinWhenTheyFinish = { secs, newPerson, handedOn, atMs: Date.now() };
-        log("hold over: Staff are still talking, so Charlie joins when their sentence ends");
-        if (joinBackstopTimer) clearTimeout(joinBackstopTimer);
-        joinBackstopTimer = setTimeout(() => { joinBackstopTimer = null; joinNow("they were still talking after the backstop"); }, JOIN_BACKSTOP_MS);
-        return;
-      }
+      // HE COMES BACK THE MOMENT THEIR VOICE DOES (owner, 08-18). For one evening he waited for
+      // Staff to finish their comeback sentence before opening, to save the seconds of his meter
+      // that ran while Echo was writing those same words down. It cost us their answer twice, on
+      // the replays of checks 373 and 371: their finished line landed while his session was still
+      // opening, so nobody was there to hear it. Never missing an answer is worth those 3 seconds,
+      // and the standing law from here is that no cost trimming may change WHEN his ear switches
+      // on or off. Savings of that kind wait for the rebuild after the twenty tests.
       openHimForTheComeback(secs, newPerson, handedOn);
       return;
     }
@@ -1875,9 +1853,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         reconnectFeed = null;
       }
     }
-    // Their finished line is the same news the ear's stop is: their sentence is over, so a session
-    // still waiting for it opens now rather than sitting through whatever they say next.
-    if (fromEcho && fresh && joinWhenTheyFinish) joinNow("their sentence was written down whole");
     if (fromEcho) openTurnPieces = [];
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard. `!ready` too: a line landing while his session is still
@@ -2942,8 +2917,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // THE EAR HEARD THEIR VOICE STOP, and during a reconnect feed that is what opens his turn
         // (owner task 08-15): the pieces already landed are handed now, and the writer's one second
         // end-of-turn quiet is never waited for. The same sound test that stamps every line's start.
-        // THEIR SENTENCE ENDED, so the session that was waiting for it opens now (owner 08-17 late).
-        if (joinWhenTheyFinish) joinNow("their voice stopped");
         // …AND THE METER GOES OFF WHEN IT IS THEIR TURN AND NOBODY IS SAYING ANYTHING TO US (owner,
         // 08-17 late, the behaviour rule: no wording decides money). The check's own memory says
         // they owe us the answer, which is our question asked and no answer read off the record
