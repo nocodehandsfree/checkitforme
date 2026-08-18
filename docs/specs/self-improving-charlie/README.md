@@ -242,6 +242,27 @@ and merge only between tests, never while a check is in the air, with the robot-
 and meter suites rerun green before any merge. Owner-reviewed drawings beside this file:
 mock-simulations-closed.png · mock-simulations-open.png.
 
+**THE SIMULATIONS VIEW — the build contract (LAW 2; builds on the owner's yes to the drawings).**
+The shipped end state: Admin ▸ Voice ▸ Testing carries ONE switch at the top, Real checks |
+Simulations, the same two-sided switch the Admin already uses for Live | Staging. Flipped to Real
+checks the section is today's screen; flipped to Simulations it is runs only. Drawings beside this
+file: mock-simulations-list.png (the switch and the run list) · mock-simulations-closed.png (a
+run's report as it always opens) · mock-simulations-open.png (one failure tapped open). Testable
+assertions, built to this list:
+1. On Real checks the section renders byte for byte as before the build; a spec test compares.
+2. On Simulations the page lists runs only, newest first: colon name · pretend call count · when,
+   with one pass/fail pill.
+3. A run's report matches the approved drawings: counts · average meter seconds in the meter
+   color · phone money 0¢ · failures closed by default · the one red why sentence only inside an
+   opened failure · the last line naming the robot store confirm call.
+4. The grader is the SAME `TEST_CARDS` + `meterVerdict` real checks use, imported, never copied.
+5. Pretend calls live in their own store; a test asserts no write touches `call_results`, the
+   twenty tests' scenes, or the robot store's settings.
+6. A pretend call is numbered inside its run (call N of M); no check-style id is ever minted.
+7. No projected money number renders anywhere in the view.
+8. The build merges only between the owner's tests, with the robot-store, robot-menu and meter
+   suites rerun green first.
+
 **The genes of a call.** Real calls that already exist on the internet get broken down into genes,
 the behaviors that make calls what they are: Staff pissed off, the caller pissed off, a caller who
 talks about family and never gets to the point, calls that keep getting hung up on, a sixteen year
