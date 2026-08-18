@@ -370,5 +370,27 @@ console.log("\n▶ THE DRIFT ALARM: the joining Charlie gets the same words, plu
   ok(!/[—–]/.test(JOINING_RULE), "no dashes in what he is told (they read strangely through ElevenLabs)");
 }
 
+console.log("▶ every way the robot store announces a wait really reads as one (check 386)");
+{
+  // Check 386, test six: "Let me put this down a sec and go check." announced the phone going down
+  // on the counter and the matcher missed it, so the room hold the ear rightly declared sat behind
+  // the inversion gate and Charlie billed through 20 seconds of store noise. Every hold scene's own
+  // announce is pinned here, so a reworded scene can never quietly stop announcing its wait.
+  const { saidGoingToCheck } = await import("../src/voice/prompts");
+  for (const line of [
+    "Sure, let me check on that for you, one moment.",     // scene 20
+    "Hang on, let me go and see for you.",                 // scene 21
+    "One moment, I'll go and have a look.",                // scene 22
+    "Hold on, let me go look.",                            // scene 23
+    "Let me put this down a sec and go check.",            // scene 24 — the one 386 missed
+    "Hold on, let me check.",                              // scene 5's family
+  ]) ok(saidGoingToCheck(line), `announces a wait: "${line}"`);
+  for (const line of [
+    "Yeah. There's some on the shelf.",
+    "The pitch black boxes, I think they are.",
+    "Larry Vásquez. How can I help you?",
+  ]) ok(!saidGoingToCheck(line), `never a wait: "${line}"`);
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);
