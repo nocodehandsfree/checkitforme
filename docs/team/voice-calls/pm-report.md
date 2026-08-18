@@ -106,3 +106,22 @@ this/the phone down" now read as an announce, and every hold scene's own announc
 in test-prompts with negatives. Suites all green (prompts 226, bank 347/0, the usual set), tsc
 clean, one-question's 2 reds are the documented pre-existing baseline. Re-dialing 24 next, then
 scene 6 (test seven, hold where nobody returns).
+
+## SCENE 24 PASSED on the re-dial (check 387): meter 29s yellow, answer gap 2s green, handover 1s
+green, drop gap 3s green, profit 68% green. The louder room declares, drops at 3, and holds.
+Scene 23 re-dialed once more (check 388): card pass, structural rows green, meter 45s — the
+provider swung slow again (its twin scene 24 passed at 29). Re-dialing until the provider's coin
+lands green would be padding; the floor math covers it.
+
+## TEST SEVEN (scene 6, nobody returns): TWO REAL FAULTS FOUND AND FIXED, one dial from green.
+Check 389: meter finally trivially green (7 seconds — dropped at the announce, off for 118), but
+the status came back "No clear answer" against the card's "Left on hold". Two causes, both fixed:
+(1) the robot's own hangup at 134s beat our 120-second hold cap by two seconds, and the record's
+answer for that death was racing the hangup row's database write, so the settle saw no ending at
+all. New decider `diedOnAHold` (a hold that opened and never closed IS the ending, whoever hung
+up) anchors on the hold events committed two minutes earlier, so it cannot lose that race.
+(2) Check 390 then showed the fix not landing: THREE doors settle a verdict (the sweep, the
+on-demand settle a watcher triggers, the webhook) and only the sweep carried ANY of the record's
+rules — died-mid-hold, our own cap, Staff hung up, no-straight-answer. Law 11: one shared decider
+(`statusFromTheRecord`, service.ts) now runs at all three doors. dropped-call 33, tsc clean, all
+suites green. Scene 6 re-dials on this deploy.
