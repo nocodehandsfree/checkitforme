@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-18T19:26:54.100Z",
+  "at": "2026-08-18T19:38:55.246Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -22,7 +22,7 @@
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
           "pass": true,
-          "detail": "Calling → Getting through the menu → Talking to Staff → Getting results"
+          "detail": "Calling → Talking to Staff → Getting results"
         },
         {
           "n": 4,
@@ -70,7 +70,7 @@
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 113px"
+          "detail": "19px → 90px"
         },
         {
           "n": 13,
@@ -94,25 +94,25 @@
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Tue, Aug 18 · 7:24 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you th"
+          "detail": " Result Tue, Aug 18 · 7:36 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
           "pass": true,
-          "detail": "the screen said unclear, the record says unclear (no_clear_answer)"
+          "detail": "the screen said unclear, the record says unclear (left_on_hold)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
-          "pass": false,
-          "detail": "got no_clear_answer · this scenario is left_on_hold"
+          "pass": true,
+          "detail": "got left_on_hold · this scenario is left_on_hold"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 9.0¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 9.2¢"
         }
       ],
       "shots": [
@@ -121,13 +121,13 @@
         "./robot-run/06-live.png",
         "./robot-run/06-result.png"
       ],
-      "startedAt": 1787081031840,
-      "checkId": 390,
-      "cost": 0.089954,
-      "costReadable": "9.0¢",
+      "startedAt": 1787081752713,
+      "checkId": 391,
+      "cost": 0.091781,
+      "costReadable": "9.2¢",
       "robotCost": null,
       "charged": true,
-      "statusKey": "no_clear_answer"
+      "statusKey": "left_on_hold"
     }
   ],
   "jsErrors": []
