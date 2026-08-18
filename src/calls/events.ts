@@ -247,13 +247,17 @@ export function emit(room: string, kind: EventKind, note?: string, detail?: Reco
  * are attached to the single line rather than each getting one of their own. Best-effort, like every
  * other recorder here — a missing event is simply not amended.
  */
-export function amend(room: string, kind: EventKind, patch: Record<string, unknown>): void {
+export function amend(room: string, kind: EventKind, patch: Record<string, unknown>, note?: string): void {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return;
     for (let i = r.events.length - 1; i >= 0; i--) {
       if (r.events[i].kind !== kind) continue;
       r.events[i].detail = { ...(r.events[i].detail ?? {}), ...patch };
+      // …and the step's own words, when what we learned changes what it should say (owner 08-17
+      // late: a wait he came off the meter for on Staff's words, that then turns out to be hold
+      // music or a handset on a counter, says so instead of keeping the first guess).
+      if (note) r.events[i].note = note;
       return;
     }
   } catch { /* recording must never break a call */ }

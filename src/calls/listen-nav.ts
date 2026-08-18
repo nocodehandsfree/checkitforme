@@ -884,6 +884,12 @@ export class ConversationEar {
     }
   }
 
+  /** THE WAIT WAS ANNOUNCED IN WORDS, so the ear is told rather than left to hear it (owner,
+   *  08-17 late: Staff saying they are going to check takes Charlie off the meter at once). The ear
+   *  still owns the comeback: without this it would never know a wait had begun and would never
+   *  report anybody coming back, and the check would sit there with nobody on our end. */
+  public theyAnnouncedAWait(reason: HoldReason = "quiet"): void { this.enter(reason); }
+
   private enter(reason: HoldReason): void {
     if (this.reason) return;                       // already away; do not re-announce
     if (!this.heardVoiceMs) return;                // never had anybody, so nobody left

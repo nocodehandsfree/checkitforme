@@ -181,7 +181,12 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
       pass, tone: pass === false ? "r" : pass === true ? "g" : undefined,
       say: { pre: "This check made ", num: `${m.profitPct}%`, post: ".",
         tail: floor == null ? undefined : `The floor is ${floor}.` },
-      open: "The price of the check, minus what it cost to run, as a share of the price. The Check cost card below says where the money went." });
+      // A FLOOR THAT IS NOT THE USUAL ONE ALWAYS SAYS WHY (owner, 08-17 late). The hold tests grade
+      // against 56 because their own scene forces the phone line's second billed minute; tapping
+      // the row opens that sentence in his own words. Nothing else about a hold test is softened:
+      // the meter colors and every gap row are exactly as strict here as on any other card.
+      open: "The price of the check, minus what it cost to run, as a share of the price. The Check cost card below says where the money went."
+        + (b.floorWhy ? ` ${b.floorWhy}` : "") });
     if (pass === false) { fails.push(`The check made ${m.profitPct}% gross profit against the ${floor}% floor.`); shortFails.push(`profit ${m.profitPct}% under the ${floor}% floor`); }
   }
 
