@@ -1282,6 +1282,26 @@ export async function weHungUpOnAHold(room: string | null | undefined): Promise<
   } catch { return false; }
 }
 
+/** Did this check END while Staff still had us waiting? The customer's word for it is the one we
+ *  already have, left on hold: "They kept us on hold and the call dropped." (scene 6's card).
+ *  Read off the hold events ALONE, which were committed seconds or minutes before the ending, so
+ *  the answer cannot lose the race the hang-up row itself can (check 389, test seven: the store's
+ *  hang-up beat our hold cap by two seconds AND the settle read the database in the same
+ *  millisecond that hang-up row was being written, saw no ending at all, and the reader's "no
+ *  clear answer" stood over a check that died mid-hold). A hold that opened and never closed IS
+ *  the ending, whoever put the phone down. Never throws: a check must never fail to finalize
+ *  because a lookup did. */
+export async function diedOnAHold(room: string | null | undefined): Promise<boolean> {
+  if (!room) return false;
+  try {
+    const rows = await db.select({ id: callEvents.id, kind: callEvents.kind, atMs: callEvents.atMs }).from(callEvents)
+      .where(and(eq(callEvents.room, room), inArray(callEvents.kind, ["hold_start", "hold_end"])));
+    if (!rows.length) return false;
+    rows.sort((a, b) => (a.atMs - b.atMs) || (a.id - b.id));
+    return rows[rows.length - 1].kind === "hold_start";
+  } catch { return false; }
+}
+
 /** Did the STORE end this check, read off the check's own timeline (the round 2 subtraction:
  *  we know every time it was us, so an ending that was not ours and not a failure is theirs).
  *  Never throws: a check must never fail to finalize because a lookup did. */
@@ -1411,7 +1431,11 @@ export async function ingestPending(): Promise<number> {
     // words before they went. The check's own record knows, so it decides — and the word is the one
     // we already have, "left on hold", never a new one (owner's ruling 08-01).
     // Only ever over an answer we do not have: if Staff came back and answered, that answer stands.
-    if (finalConfirmed === null && await weHungUpOnAHold(row.room)) finalStatusKey = "left_on_hold";
+    // …and a hold that opened and never closed is the same fact from the customer's side, whoever
+    // put the phone down (check 389: the store's hang-up beat our cap by two seconds and the check
+    // read "no clear answer" over a death mid-hold). Anchored on the hold events, not the hang-up
+    // row, so it cannot lose the settle-vs-hangup write race that hid 389's ending.
+    if (finalConfirmed === null && (await weHungUpOnAHold(row.room) || await diedOnAHold(row.room))) finalStatusKey = "left_on_hold";
     // STAFF HUNG UP ON US BEFORE GIVING AN ANSWER (owner 08-04, the Hungup: Staff card). The engine
     // already knows who put the phone down by subtraction; this is the customer's word for it. Only
     // ever over an answer we do not have: an answer they gave before hanging up still stands.
