@@ -394,5 +394,52 @@ console.log("▶ the wait is measured to when they STARTED talking, not when we 
 }
 
 
+console.log("▶ CHECK 377'S SHAPE: a dip in the hold music is not somebody coming back");
+{
+  // 08-18, test five (hold with music). The music dipped at 25.6s and Charlie rejoined, six seconds
+  // before Staff spoke at 31.9s. The dip had poisoned the music test's window, so the music RESUMING
+  // read as a person: sound that was not yet provably music banked as speech at 400ms and ended the
+  // wait. Music resuming is ONE unbroken run of sound; a person's speech has gaps all through it.
+  const { e, said } = ear();
+  talk(e, 3000);
+  music(e, 7000);
+  ok(said[0] === "away:music", "the hold with music is declared");
+  silence(e, 800);                 // the dip
+  music(e, 5000);                  // …and the music comes back
+  ok(said.length === 1, `the music resuming after a dip is not a person (${said.join(" · ")})`);
+  silence(e, 800);
+  talk(e, 1500);
+  ok(String(said[1] || "").startsWith("back:"), "a real voice, with its gaps, still ends the hold");
+}
+
+console.log("▶ …and music that keeps dipping never brings him back either");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  music(e, 7000);
+  ok(said[0] === "away:music", "the hold with music is declared");
+  // A loop with a beat of quiet in it, over and over: every resumed stretch is one unbroken run.
+  for (let i = 0; i < 3; i++) { silence(e, 600); music(e, 2000); }
+  ok(said.length === 1, `three dips and three resumes are still nobody (${said.join(" · ")})`);
+  silence(e, 600);
+  talk(e, 1500);
+  ok(String(said[1] || "").startsWith("back:"), "and the person who finally speaks is heard");
+}
+
+console.log("▶ THE SWELL: music rising out of a quiet hold is not somebody coming back");
+{
+  // Scene 21's danger. Music that starts under the ear's threshold reads as a quiet hold; when it
+  // swells, the loud stretch is one unbroken run — the exact shape the dip bug rejoined Charlie on.
+  const { e, said } = ear();
+  talk(e, 3000);
+  silence(e, 4000);
+  ok(said[0] === "away:quiet", "quiet music opens a quiet hold");
+  music(e, 5000);                  // the swell: unbroken loud sound
+  ok(said.length === 1, `a swell is not a person (${said.join(" · ")})`);
+  silence(e, 600);
+  talk(e, 1500);
+  ok(String(said[1] || "").startsWith("back:"), "a real voice after the swell ends the hold");
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
