@@ -811,8 +811,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  him in a loop at about five metered seconds a cycle. A real comeback is untouched: its words
    *  land inside the window (the writer's worst measured first piece runs 3.2s behind the sound),
    *  and a real person behind a proven-wordless hold reopens him the moment their words land,
-   *  backdated to the moment the ear heard their voice come back. */
-  const REJOIN_WORDLESS_MS = 5000;
+   *  backdated to the moment the ear heard their voice come back.
+   *
+   *  THE WINDOW IS THE WRITER'S OWN WORST, measured, plus a margin (check 381: at 5s the metered
+   *  stretch of waltz cost the sheet's meter row its pass by 2 seconds). The bench's worst first
+   *  written piece ran 3.16s behind the sound; 4s covers it. A long unbroken opening sentence that
+   *  beats the window anyway is caught by the release below: the first written word ends the hold
+   *  backdated, so the comeback is never lost, only heard through Echo. */
+  const REJOIN_WORDLESS_MS = 4000;
   let wordlessRejoinTimer: NodeJS.Timeout | null = null;
   let heardWordsSinceEarsBack = false;
   let holdProvedWordless = false;
@@ -1407,7 +1413,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // both are somebody DOING something, and neither is Charlie holding his tongue.
       const owedHimAWord = charlieMaySpeak && !spokeThisSession && answeredAtMs > 0 && HIS_FIRST_WORD_MS > 0
         ? Math.max(0, answeredAtMs + HIS_FIRST_WORD_MS - Date.now()) : 0;
-      const wait = Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
+      // A rejoin that proved wordless drops AT ONCE: the minimum-on-line window exists so a real
+      // person never hears him come and go choppily, and a hold that just proved it holds wordless
+      // sound has proven there is nobody to hear anything (owner 08-18, check 381: the politeness
+      // second was a metered second of hold music).
+      const wait = holdProvedWordless ? 0 : Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
       if (wait <= 0) dropHim();
       else {
         log(`hold (${reason}): ${owedHimAWord > 0 ? "he has their answer and has not spoken yet" : `his session is only ${Math.round(onLineFor / 1000)}s old`}, giving him ${Math.round(wait / 1000)}s before closing him`);

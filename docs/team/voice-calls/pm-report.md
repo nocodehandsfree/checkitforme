@@ -46,6 +46,31 @@ an unbroken run past 1.2s is struck as the music. The rejoin still backdates to 
 **Known reds not the card's:** the customer screen said "Left on hold" while the record says
 in_stock on 378 and 379 — the 08-07 screen-vs-record list fault, pre-existing.
 
-**Next: scene 21 (waltz).** Pre-measured off the committed clip: its quiet intro plucks every
-~340ms, so neither the quiet path (plucks reset the 3s) nor the music path (needs 6s unbroken)
-can declare the hold until the swell, ~12s in. Dialing it next and fixing what the sheet shows.
+## Test five, scene 21 (the swelling waltz): dialed once (check 380, pill FAILED), the fault it
+## showed is built and rig-proven, re-dial next.
+
+**What check 380 showed.** The intro read as a room hold and dropped at exactly 3s (that row went
+green). Then the waltz itself — which on the line plays at speech level with gaps in it, measured
+off 380's own tape — fooled the ear into a rejoin 3s into the clip, and Charlie sat OPEN through
+the whole swell, ~10 metered seconds of music with nobody there, never re-dropped: the exact fault
+the owner named ("if he sits in music with no voice he drops again"). Meter 48s red, profit 54%
+red, card half green (rosily: the sheet cannot see the open-line music).
+
+**The fix, built and proven on the rig (nothing about it dialed yet).** No energy rule can refuse
+the waltz — its sound IS speech-shaped — but Echo can: it writes every word said on the line, and
+a "voice" that writes nothing inside 5 seconds was the music. So after a wordless rejoin Charlie
+drops again, and THAT hold has proven it holds wordless sound, so its next comeback needs Echo's
+first written word — backdated to the moment the ear heard the voice — or the same music would
+rejoin him in a loop at ~5 metered seconds a cycle. A real comeback is untouched: its words land
+inside the window. src/voice/bridge.ts, owner-named task, .unlock opened and deleted. New bank
+scene "CHECK 380'S SHAPE" fails on the old engine, passes now: delta-clip 347/0 · listen-nav 68 ·
+bridge 13 · dropped-call 28 · call-events 124 · behaved 99 · meter 65 · clips 10 · gates 9 · robot
+store held · tsc clean · spec suite 6 reds, all on the pre-existing list (baseline has 7).
+
+**Known ahead of the re-dial:** even clean, scene 21's meter lands ~42s — the same floor family as
+scene 20 — so the pill will likely still say failed on cost while the record shows the hold honest.
+
+**For the owner's eye, not built:** scene 22 (advert in the music) will write the AD'S OWN WORDS
+through Echo, so the wordless test cannot catch it and the fingerprint only catches a repeat. The
+honest catch is the reader judging the words (the same family as the Spanish announce already on
+his list). Dialing 22 after 21 to put its true shape on a record.

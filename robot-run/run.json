@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-18T18:14:16.916Z",
+  "at": "2026-08-18T18:33:15.916Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -64,7 +64,7 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 32 looks · header held at 62px"
+          "detail": "0 bounce(s) over 35 looks · header held at 62px"
         },
         {
           "n": 8,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 60 seconds and the line closed at 60 — 0 seconds of nothing"
+          "detail": "the answer was in at 52 seconds and the line closed at 52 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Tue, Aug 18 · 6:13 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
+          "detail": " Result Tue, Aug 18 · 6:32 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 11.6¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 8.4¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/21-live.png",
         "./robot-run/21-result.png"
       ],
-      "startedAt": 1787076747856,
-      "checkId": 380,
-      "cost": 0.1155,
-      "costReadable": "11.6¢",
+      "startedAt": 1787077887898,
+      "checkId": 381,
+      "cost": 0.084427,
+      "costReadable": "8.4¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"
