@@ -2595,6 +2595,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // NOBODY IS COMING BACK. Not the same as stepping away to check a shelf: this is a handset
         // left on a counter. Recorded, and the give-up cap owns what to do about it.
         deadAir: (quietMs) => emit(room, "unknown", `Nothing has been said for ${Math.round(quietMs / 1000)}s, the line is dead air`, { deadAirSec: Math.round(quietMs / 1000) }),
+        // ECHO RECOGNISED THE MUSIC (owner, 08-18 night). Written down the moment the ear knows,
+        // about a second in, and dated to the music's own first note. It is a REPORT and nothing
+        // else: the wait it belongs to is still declared on the one drop number, so nothing about
+        // when Charlie's meter stops rides on this line being here.
+        musicHeard: (afterMs, atMs) => emit(room, "unknown", "Echo recognised hold music",
+          { step: "music_heard", afterMs, atMs }, earMoment(atMs)),
         // THE LINE IS GONE. A dropped leg stops sending audio entirely, which is an absence no
         // silence detector can see — so it is reported by whoever owns the socket, not heard.
         // THE LINE IS GONE. If we were mid hand-over when it went, that is its own thing and the

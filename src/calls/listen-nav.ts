@@ -602,7 +602,16 @@ function carriesAPersonsWords(line: string, ctx: { knownMenuLines?: string[]; pr
 /** Fallbacks ONLY — the live values arrive from the `call_tuning` setting via the constructor.
  *  Every one of these has to be tuned against real calls, so none of them may need a release. */
 const HOLD_QUIET_MS = 3000;   // cut from 6 on 08-07, see the note beside it in tuning.ts
-const HOLD_MUSIC_MS = 6000;
+/** ONE NUMBER FOR THE DROP (owner, 08-18 night): music waits exactly as long as silence does.
+ *  It was 6 seconds while silence was 3, which cost 3 seconds of Charlie's meter on every music
+ *  hold and made the sheet's drop row permanently red on the loud classic hold music (green is 3,
+ *  the proof took 6). Safe at 3 because the test underneath it is a FRACTION, not a clock: real
+ *  speech never fills a window this solidly. Measured on the robot store's own recordings before
+ *  it was cut, over the same 3 seconds this now waits: the loudest three seconds of real speech
+ *  on checks 384, 382, 387 and 391 filled 71%, 73%, 53% and 54% of the window, against the 96%
+ *  bar below. The one 90% reading is check 383, and that is the advert INSIDE the hold music,
+ *  which is a recording and is meant to be caught. */
+const HOLD_MUSIC_MS = 3000;
 const VOICED_WINDOW_MS = 3000;
 const MUSIC_VOICED_FRACTION = 0.96;
 const NEW_PERSON_AFTER_MS = 20000;
@@ -741,6 +750,8 @@ export class ConversationEar {
   private runSpeech: number[] = [];
   /** The current run outgrew a word, so it is the music: nothing more of it banks until it breaks. */
   private runIsMusic = false;
+  /** Already reported this stretch of music, so one walk-away says it once (see `musicHeard`). */
+  private musicSaidAtMs = -1;
   /** How much of the current wait was sound from across the room rather than plain silence. */
   private roomMs = 0;
   /** The last third of a second of sound, so the room test reads a stretch and not one frame. */
@@ -758,6 +769,12 @@ export class ConversationEar {
     /** THE LINE IS GONE. Fired once, when the audio itself stops arriving — a dropped carrier leg
      *  sends nothing at all, which is silence a silence-detector can never see. */
     disconnected?: (atMs: number) => void;
+    /** THIS SOUND IS HOLD MUSIC, and we know it about a second in (owner, 08-18 night: "Echo learns
+     *  music by its sound"). Fired the moment sound has run longer unbroken than any voice can
+     *  manage, which is the same evidence and the same number the comeback rule already trusts
+     *  (MAX_SPEECH_RUN_MS). It is a REPORT, never a decision: the wait itself still declares on the
+     *  one drop number above, so nothing about when Charlie's meter stops rides on this. */
+    musicHeard?: (afterMs: number, atMs: number) => void;
   }, t?: EarTuning) {
     this.deadAirMs = t?.deadAirMs ?? DEAD_AIR_MS;
     this.quietMax = t?.holdQuietMs ?? HOLD_QUIET_MS;
@@ -870,6 +887,15 @@ export class ConversationEar {
       const mid = recent.length ? recent[Math.floor(recent.length / 2)] : energy;
       this.closeLevel = Math.max(mid, this.closeLevel);
       this.closePeak = Math.max(this.closePeak, this.closeLevel);
+      // ECHO RECOGNISES THE MUSIC HERE, about a second in. Sound that has run this long without a
+      // single gap is not a person: the longest unbroken run inside real speech on the robot
+      // store's own recordings was 980ms (checks 384, 382, 387, 391), and the only run past this
+      // bar was check 383's advert, which is a recording. Reported once per walk-away, and the
+      // report changes nothing about the wait itself — that is still the one drop number.
+      if (this.soundMs >= MAX_SPEECH_RUN_MS && this.musicSaidAtMs < 0) {
+        this.musicSaidAtMs = this.elapsed;
+        this.on.musicHeard?.(this.soundMs, this.elapsed - this.soundMs);
+      }
       const full = this.voiced.length * FRAME_MS >= this.windowMs
         && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
       if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.backSpeech = []; this.runSpeech = []; this.runIsMusic = false; this.enter("music"); }
@@ -911,6 +937,10 @@ export class ConversationEar {
       if (room) this.roomMs += FRAME_MS;
       // A pause long enough to break a word breaks the run of speech with it.
       if (this.quietMs >= VOICE_GAP_MS) this.voiceRunMs = 0;
+      // …and a real gap while nobody is away means the conversation is still going, so the next
+      // stretch of music is a new one to report. Inside a wait it stays reported once, however
+      // many times the music dips.
+      if (!this.reason && this.quietMs >= VOICE_GAP_MS) this.musicSaidAtMs = -1;
       // Silence and a room nobody is talking to us from are the same fact for the meter, so they add
       // up together. Which of the two it mostly was decides only what the log calls it.
       if (this.quietMs >= this.quietMax) this.enter(this.roomMs * 2 >= this.quietMs ? "room" : "quiet");
@@ -959,6 +989,7 @@ export class ConversationEar {
     this.voiceRunMs = 0;
     this.backSpeech = [];
     this.runSpeech = []; this.runIsMusic = false;
+    this.musicSaidAtMs = -1;
     this.on.holdEnd(gap, gap >= this.newPersonMs, back);
   }
 }

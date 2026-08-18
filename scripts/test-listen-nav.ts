@@ -441,5 +441,80 @@ console.log("▶ THE SWELL: music rising out of a quiet hold is not somebody com
   ok(String(said[1] || "").startsWith("back:"), "a real voice after the swell ends the hold");
 }
 
+console.log("▶ ECHO RECOGNISES HOLD MUSIC ABOUT A SECOND IN (owner, 08-18 night)");
+{
+  // His words: Echo learns music by its sound. The sound it learns from is the one this file
+  // already trusts everywhere else — sound running on with no gap in it, longer than any voice
+  // manages. Measured on the robot store's own recordings: the longest unbroken run inside real
+  // speech was 980ms (checks 384, 382, 387 and 391), so a run past 1.2 seconds is the music.
+  const said: string[] = [];
+  const heard: Array<{ afterMs: number; atMs: number }> = [];
+  const e = new ConversationEar({
+    holdStart: (r, at) => said.push(`${(at / 1000).toFixed(1)}s away:${r}`),
+    holdEnd: (gap) => said.push(`back:${Math.round(gap / 1000)}s`),
+    musicHeard: (afterMs, atMs) => heard.push({ afterMs, atMs }),
+  });
+  talk(e, 3000);
+  const musicStartedAt = e.heardMs;
+  music(e, 1400);
+  ok(heard.length === 1, `the music is recognised while it plays, not at the end of it (${heard.length} report(s))`);
+  ok(heard[0] && heard[0].afterMs <= 1300,
+    `…about a second in (${heard[0] ? heard[0].afterMs : "never"}ms of it was enough)`);
+  ok(heard[0] && Math.abs(heard[0].atMs - musicStartedAt) <= 40,
+    "…and it says WHEN the music started, not when we were sure");
+  ok(said.length === 0, "recognising it is a report, never the drop: the wait has not been declared yet");
+}
+
+console.log("▶ …and the wait it opens is the SAME three seconds as silence, his one number");
+{
+  const said: string[] = [];
+  const e = new ConversationEar({
+    holdStart: (r, at) => said.push(`${(at / 1000).toFixed(1)}s away:${r}`),
+    holdEnd: (gap) => said.push(`back:${Math.round(gap / 1000)}s`),
+  });
+  talk(e, 3000);
+  music(e, 2900);
+  ok(said.length === 0, "under three seconds of music is not a wait yet");
+  music(e, 200);
+  ok(said[0] === "3.0s away:music", `three seconds of music IS the wait, dated to its first note (${said[0]})`);
+  // …and that is what the sheet's drop row measures: Charlie leaves at the declaration, three
+  // seconds after the row's own start, which is the owner's green.
+}
+
+console.log("▶ …and the longest run a REAL person ever made still never reads as music");
+{
+  // 980ms, measured on check 382's own recording: the longest stretch of speech on the robot
+  // store's tapes with no gap in it at all. The bar sits above it on purpose.
+  const heard: string[] = [];
+  const e = new ConversationEar({
+    holdStart: () => { /* not what this scene is about */ },
+    holdEnd: () => { /* … */ },
+    musicHeard: (afterMs) => heard.push(`${afterMs}ms`),
+  });
+  talk(e, 3000);
+  for (let i = 0; i < 49; i++) e.feed(LOUD_E);   // 980ms, unbroken, the real worst case
+  silence(e, 400);
+  talk(e, 1000);
+  ok(heard.length === 0, `a person's longest unbroken run is never called music (${heard.join(" · ")})`);
+}
+
+console.log("▶ …and one walk-away is reported once, however long the music runs");
+{
+  const heard: number[] = [];
+  const said: string[] = [];
+  const e = new ConversationEar({
+    holdStart: (r) => said.push(`away:${r}`),
+    holdEnd: () => said.push("back"),
+    musicHeard: (afterMs) => heard.push(afterMs),
+  });
+  talk(e, 3000);
+  music(e, 20000);
+  ok(heard.length === 1, `twenty seconds of music is one report, not twenty (${heard.length})`);
+  talk(e, 1500);
+  ok(said.includes("back"), "they come back");
+  music(e, 2000);
+  ok(heard.length === 2, "…and the NEXT time they walk off into music, that is its own report");
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
