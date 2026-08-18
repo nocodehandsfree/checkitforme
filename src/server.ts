@@ -47,6 +47,7 @@ import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, type BehavedRow } from "./calls/behaved";
 import { meterVerdict } from "./calls/meter";
+import { listSimRuns, readSimRun, fileSimRun, type SimRunIn, type SimCallIn } from "./calls/simulations";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
 import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce, onAutoCheckPaused, mutedReasons } from "./calls/healing";
@@ -6715,6 +6716,19 @@ app.get("/api/admin/check-audio/:room", async (c) => {
   }
   headers["content-length"] = String(buf.length);
   return new Response(new Uint8Array(buf), { status: 200, headers });
+});
+// SIMULATIONS (docs/specs/self-improving-charlie/README.md, the build contract). Runs of
+// simulated calls, graded by the SAME cards and meter law as a real check, stored apart in
+// sim_runs, listed behind the Testing section's switch. Admin-gated by the /api/* wall.
+app.get("/api/admin/sim-runs", async (c) => c.json({ rows: await listSimRuns(Number(c.req.query("limit")) || 50) }));
+app.get("/api/admin/sim-runs/:id", async (c) => {
+  const run = await readSimRun(Number(c.req.param("id")));
+  return run ? c.json(run) : c.json({ error: "no such run" }, 404);
+});
+app.post("/api/admin/sim-runs", async (c) => {
+  const b = (await c.req.json().catch(() => null)) as { run?: SimRunIn; calls?: SimCallIn[] } | null;
+  if (!b?.run?.name || !Array.isArray(b.calls) || !b.calls.length) return c.json({ error: "run { name } and calls[] required" }, 400);
+  return c.json({ ok: true, run: await fileSimRun(b.run, b.calls) });
 });
 app.get("/api/admin/call-timing", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings

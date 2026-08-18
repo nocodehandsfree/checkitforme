@@ -270,6 +270,24 @@ export const scheduleTargets = sqliteTable(
 );
 
 // Global app settings (key/value) — e.g. the voicemail master toggle.
+/** SIMULATION RUNS — simulated calls graded by the SAME cards as real checks, filed APART from
+ *  the checks record on purpose (the PM's wall, 08-16; the build contract in
+ *  docs/specs/self-improving-charlie/README.md): ONE row per run, its calls inside as JSON,
+ *  failures keeping their conversations. Never a check-style id anywhere. */
+export const simRuns = sqliteTable("sim_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  sub: text("sub").notNull().default(""),
+  info: text("info").notNull().default(""),
+  startedAt: integer("started_at").notNull(),
+  calls: integer("calls").notNull(),
+  passed: integer("passed").notNull(),
+  failed: integer("failed").notNull(),
+  avgMeterSec: real("avg_meter_sec"),
+  verdictLine: text("verdict_line").notNull().default(""),
+  callsJson: text("calls_json").notNull().default("[]"),
+});
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

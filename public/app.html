@@ -980,11 +980,20 @@
     <button class="k-cta" onclick="showSection('designer')"><span>NEW WORKFLOW →</span></button>
   </section>
   <section id="testing">
-    <div class="k-title">Test calls</div>
+    <!-- THE TESTING SWITCH (owner 08-18, approved drawing mock-simulations-list.png in
+         docs/specs/self-improving-charlie/). Real checks = this section byte for byte as it was;
+         Simulations = runs of simulated calls, stored apart, no money numbers. The pixels are the
+         comp's own segmented pill (the range track, same as the header's Live | Staging). -->
+    <div style="display:flex;background:#141419;border-radius:999px;padding:4px;margin:0 0 16px">
+      <div id="sw_real" onclick="simSide('real')" style="flex:1;text-align:center;font-size:13px;font-weight:800;padding:9px 0;border-radius:999px;cursor:pointer;background:#26262E;color:#fff">Real checks</div>
+      <div id="sw_sims" onclick="simSide('sims')" style="flex:1;text-align:center;font-size:13px;font-weight:800;padding:9px 0;border-radius:999px;cursor:pointer;color:#8A8A96">Simulations</div>
+    </div>
+    <div class="k-title" id="testing_title">Test calls</div>
     <div class="k-sub" id="testing_sub">Checks you placed.</div>
     <div id="testing_src"></div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
+    <div id="testing_sims" style="display:none"><div class="empty">Loading…</div></div>
   </section>
 
   <section id="retailers">
@@ -2475,6 +2484,74 @@ function splitCard(c,priced,tl){
     ${row('Charlie',rd.charlie||'')}
     ${row('Total',rd.total||'')}
   </div>`;
+}
+// ---- SIMULATIONS behind the Testing switch (owner 08-18; the contract + approved drawings in
+// docs/specs/self-improving-charlie/). Real checks is the section untouched; this side lists RUNS
+// of simulated calls, newest first, each opening to one report. Graded server-side by the SAME
+// cards as a real check (src/calls/simulations.ts); no money number exists on this side; the
+// pixels are the page's own segmented pill, cards, stat wells and chat bubbles.
+function simSide(side){
+  const real=side==='real';
+  ['testing_src','testing_summary','testing_log'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=real?'':'none';});
+  const sims=document.getElementById('testing_sims');if(sims)sims.style.display=real?'none':'';
+  const t=document.getElementById('testing_title');if(t)t.textContent=real?'Test calls':'Simulation runs';
+  const sub=document.getElementById('testing_sub');if(sub)sub.textContent=real?'Checks you placed.':'Simulations only. No phone is used and nothing here is a real check.';
+  const on='flex:1;text-align:center;font-size:13px;font-weight:800;padding:9px 0;border-radius:999px;cursor:pointer;background:#26262E;color:#fff';
+  const off='flex:1;text-align:center;font-size:13px;font-weight:800;padding:9px 0;border-radius:999px;cursor:pointer;color:#8A8A96';
+  const a=document.getElementById('sw_real'),b=document.getElementById('sw_sims');
+  if(a)a.style.cssText=real?on:off; if(b)b.style.cssText=real?off:on;
+  if(!real)simRuns();
+}
+async function simRuns(){
+  const box=document.getElementById('testing_sims');if(!box)return;
+  box.innerHTML='<div class="empty">Loading…</div>';
+  const d=await srcApi('/api/admin/sim-runs');
+  const rows=(d&&d.rows)||[];
+  if(!rows.length){box.innerHTML='<div class="empty">No simulation runs yet.</div>';return;}
+  const ago=t=>{const s=Math.max(0,Math.floor(Date.now()/1000-t));const m=Math.floor(s/60),h=Math.floor(m/60),dd=Math.floor(h/24);return dd?dd+'d ago':h?h+'h ago':m?m+'m ago':'now';};
+  box.innerHTML=rows.map(r=>`<div class="card" onclick="simOpen(${r.id})" style="margin-bottom:10px;padding:15px 17px;display:flex;align-items:center;gap:10px;cursor:pointer">
+    <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:#fff">${esch(r.name)}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:3px">${r.calls} simulations · ${ago(r.startedAt)}</div></div>
+    <span style="font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:4px 10px;flex:0 0 auto;${r.failed?'color:var(--red);background:rgba(239,68,68,.13)':'color:var(--green);background:rgba(74,222,128,.13)'}">${r.failed?r.failed+' failed':'All passed'}</span>
+  </div>`).join('');
+}
+async function simOpen(id){
+  const box=document.getElementById('testing_sims');if(!box)return;
+  box.innerHTML='<div class="empty">Loading…</div>';
+  const r=await srcApi('/api/admin/sim-runs/'+id);
+  if(!r||r.error){simRuns();return;}
+  const when=new Date((r.startedAt||0)*1000).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'});
+  const fails=(r.callList||[]).filter(c=>!c.pass);
+  // The average wears the meter's own colors: green to 23, yellow to 30, red at 31 (owner 08-16).
+  const meterC=r.avgMeterSec==null?'var(--muted)':r.avgMeterSec<=23?'var(--green)':r.avgMeterSec<=30?'var(--yellow)':'var(--red)';
+  const chev='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:#5C5C68;flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>';
+  const bub=(who,tx)=>{const ai=who==='charlie';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF (SIMULATED)'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
+  box.innerHTML=`
+    <div style="font-size:12.5px;font-weight:700;color:var(--muted);margin:0 0 10px;cursor:pointer" onclick="simRuns()">‹ All runs</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px">Simulation run · ${r.calls} simulations · ${esch(when)}</div>
+    <div style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff">${esch(r.name)}${r.info?` <span data-tip="${esch(r.info)}" style="font-size:13px;color:#5C5C68">ⓘ</span>`:''}</div>
+    ${r.sub?`<div class="meta" style="margin:5px 0 0;font-size:13px">${esch(r.sub)}</div>`:''}
+    <div style="display:flex;gap:7px;margin:12px 0 14px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;color:var(--green);background:rgba(74,222,128,.13)">${r.passed} passed</span>
+      ${r.failed?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;color:var(--red);background:rgba(239,68,68,.13)">${r.failed} failed</span>`:''}
+    </div>
+    <div class="stats" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px">
+      <div class="stat"><div class="n" style="color:#fff">${r.calls}</div><div class="l">Simulations run</div></div>
+      <div class="stat"><div class="n" style="color:${meterC}">${r.avgMeterSec==null?'':r.avgMeterSec+'s'}</div><div class="l">Charlie on the meter, average</div></div>
+      <div class="stat"><div class="n" style="color:#fff">0¢</div><div class="l">Phone money spent</div></div>
+    </div>
+    ${fails.length?`<div class="card" style="margin-bottom:14px;padding:16px 18px">
+      <div class="k-eyebrow" style="margin:0 0 4px">The ${fails.length} that failed</div>
+      ${fails.map(c=>`<details class="v2c"><summary style="list-style:none;cursor:pointer"><div class="row" style="align-items:center;padding:8px 0;gap:8px">
+        <span style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,.15);display:grid;place-items:center;flex:0 0 auto;color:var(--red);font-size:12px;font-weight:800">✕</span>
+        <span class="grow" style="font-size:13.5px;font-weight:700;color:var(--text-strong)">${esch(c.failName||((c.meterFails||[])[0]||'Failed'))}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto">call ${c.n} of ${r.calls}</span>${chev}</div></summary>
+        <div style="background:rgba(255,255,255,.03);border-radius:12px;margin:2px 0 10px;padding:12px">
+          ${(c.lines||[]).map(l=>bub(l.who,l.text)).join('')}
+          ${(c.why||(c.meterFails||[]).length)?`<div style="font-size:12.5px;color:var(--red);margin:8px 2px 2px;line-height:1.5">${esch(c.why||(c.meterFails||[]).join(' '))}</div>`:''}
+        </div></details>`).join('')}
+    </div>`:''}
+    ${r.verdictLine?`<div style="display:flex;align-items:center;gap:10px;background:rgba(74,222,128,.09);border-radius:14px;padding:14px 16px;font-size:13.5px;font-weight:700;color:#D9FBE7">${esch(r.verdictLine)}</div>`:''}`;
 }
 // ---- THE CHECK SHEET (owner-approved comp 08-04, wired to the real record the same day). Every
 // element is the page's own: .stat tiles, .card, the ladder metrics from chainRung, and the

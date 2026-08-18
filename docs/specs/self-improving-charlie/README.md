@@ -250,8 +250,8 @@ file: mock-simulations-list.png (the switch and the run list) · mock-simulation
 run's report as it always opens) · mock-simulations-open.png (one failure tapped open). Testable
 assertions, built to this list:
 1. On Real checks the section renders byte for byte as before the build; a spec test compares.
-2. On Simulations the page lists runs only, newest first: colon name · pretend call count · when,
-   with one pass/fail pill.
+2. On Simulations the page lists runs only, newest first: colon name · simulation count · when,
+   with one pass/fail pill. THE WORD ON SCREEN IS SIMULATIONS, never pretend calls (owner 08-18).
 3. A run's report matches the approved drawings: counts · average meter seconds in the meter
    color · phone money 0¢ · failures closed by default · the one red why sentence only inside an
    opened failure · the last line naming the robot store confirm call.

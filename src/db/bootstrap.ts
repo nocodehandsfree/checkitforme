@@ -235,6 +235,20 @@ export async function bootstrap() {
   )`).catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS call_events_call_idx ON call_events (call_id, at_ms)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS call_events_room_idx ON call_events (room, at_ms)").catch(() => {});
+  // Simulation runs live in their OWN table, never in call_results (the PM's wall, 08-16).
+  await client.execute(`CREATE TABLE IF NOT EXISTS sim_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    sub TEXT NOT NULL DEFAULT '',
+    info TEXT NOT NULL DEFAULT '',
+    started_at INTEGER NOT NULL,
+    calls INTEGER NOT NULL,
+    passed INTEGER NOT NULL,
+    failed INTEGER NOT NULL,
+    avg_meter_sec REAL,
+    verdict_line TEXT NOT NULL DEFAULT '',
+    calls_json TEXT NOT NULL DEFAULT '[]'
+  )`).catch(() => {});
   for (const col of [
     "lane TEXT", "room TEXT", "talk_seconds INTEGER", "menu_seconds INTEGER",
     "charlie_connected_seconds INTEGER", "charlie_talking_seconds INTEGER",
