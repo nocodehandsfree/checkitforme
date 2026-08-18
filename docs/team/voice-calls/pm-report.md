@@ -125,3 +125,17 @@ on-demand settle a watcher triggers, the webhook) and only the sweep carried ANY
 rules — died-mid-hold, our own cap, Staff hung up, no-straight-answer. Law 11: one shared decider
 (`statusFromTheRecord`, service.ts) now runs at all three doors. dropped-call 33, tsc clean, all
 suites green. Scene 6 re-dials on this deploy.
+
+## TEST SEVEN PASSED (check 391): Left on hold, meter 10s green, drop gap 0 green, card whole —
+and the dial doubles as live proof of the three-door fix. The harness's one red is the
+word-for-word row on a dropped "Um" filler, the documented 08-04 teach-the-matcher shape.
+
+## WHERE THE THREE TESTS STAND AT SESSION END (checks 378-391, ~$1.10 of dials):
+- Test five: scene 21 (swell) SHEET GREEN · scene 20 (classic) hearing correct on two clean dials,
+  meter floor 39-43s (6s music proof + provider swing; the drop-gap row structurally red, grading
+  vs standing law, HIS call) · scene 22 (advert) needs HIS reader ruling.
+- Test six: scene 24 (louder room) SHEET GREEN · scene 23 (quieter room) behavior perfect, meter a
+  provider-swing coin flip (twin scene passed at 29s).
+- Test seven: SHEET GREEN.
+Every fix rode the rig first, the bank grew to 347 replays with zero reds, no old shape moved, and
+every dial's record and photos are pushed. His final dials are rehearsed.
