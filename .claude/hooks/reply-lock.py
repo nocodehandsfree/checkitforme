@@ -640,13 +640,53 @@ if "--check-file" in sys.argv:
     if not draft:
         print("empty draft"); sys.exit(2)
 
+    # THREE REFUSALS AND THE REPLY GOES OUT (owner 08-08, from his own screenshot). A chat
+    # spent 30 minutes in a loop: the check refused, the agent fixed the named thing, the
+    # next run found something NEW to refuse, seven rounds and he never got his answer.
+    # Every refusal path below goes through refuse(). After the second refusal in a chat
+    # within 30 minutes, the third run stops hunting: the draft goes out AS THE AGENT
+    # WROTE IT. His words beat his silence; the Stop hook's third strike already says so.
+    STRIKES_TTL = 1800
+    _sf = os.path.join(state_dir(root), "strikes")
+    os.makedirs(_sf, exist_ok=True)
+    _sfile = os.path.join(_sf, (os.environ.get("CLAUDE_CODE_SESSION_ID") or "default")[:36])
+
+    def _strikes():
+        if os.path.exists(_sfile) and (time.time() - os.path.getmtime(_sfile)) < STRIKES_TTL:
+            try:
+                return int(open(_sfile).read().strip() or 0)
+            except Exception:
+                return 0
+        return 0
+
+    def clear_strikes():
+        if os.path.exists(_sfile):
+            os.remove(_sfile)
+
+    def refuse(lines):
+        # lines: list of strings to print as the refusal. Overridden on the third strike.
+        if _strikes() >= 2:
+            record_approval(root, draft)
+            judge_clear_bounce(root)
+            clear_strikes()
+            print("VERDICT: APPROVED AS WRITTEN (third refusal in this chat, the loop "
+                  "stops here). Send your answer exactly as drafted; the owner would "
+                  "rather read it now than wait another round.")
+            sys.exit(0)
+        n = _strikes() + 1        # read BEFORE open("w") truncates the file
+        with open(_sfile, "w") as fh:
+            fh.write(str(n))
+        for l in lines:
+            print(l)
+        sys.exit(0)
+
     if skips_writer(draft):
         fails = word_scan(draft)
         if fails:
-            print("VERDICT: NOT SENDABLE. Broken: " + "; ".join(fails))
-            print("Fix the wording and send; short replies need no other check.")
-            sys.exit(0)
+            refuse(["VERDICT: NOT SENDABLE. Broken: " + "; ".join(fails),
+                    "Fix the wording and send; short replies need no other check."])
         record_approval(root, draft)
+        clear_strikes()
         print("VERDICT: APPROVED (short reply, no rendering needed). Send it.")
         sys.exit(0)
 
@@ -665,21 +705,20 @@ if "--check-file" in sys.argv:
     toolong = [f for f in hard if "line limit" in f and
                int(re.search(r"about (\d+) lines", f).group(1)) > HARD_STOP]
     if toolong:
-        print("VERDICT: NOT SENDABLE, and no rewrite can save it. " + toolong[0])
-        print("This costs you a second instead of 30. Cut it to the answer and the "
-              "decisions yourself, then run the check once on the shorter draft.")
-        sys.exit(0)
+        refuse(["VERDICT: NOT SENDABLE, and no rewrite can save it. " + toolong[0],
+                "This costs you a second instead of 30. Cut it to the answer and the "
+                "decisions yourself, then run the check once on the shorter draft."])
 
     def fail_open(reason):
         # A broken renderer can never mute or hang the chat (owner + both reviews).
         fails = word_scan(draft, cap=cap)
         if fails:
-            print("VERDICT: NOT SENDABLE. The renderer is unavailable (" + reason + ") "
-                  "and your answer breaks hard rules: " + "; ".join(fails))
-            print("Fix those in your own words and run the check once more.")
-            sys.exit(0)
+            refuse(["VERDICT: NOT SENDABLE. The renderer is unavailable (" + reason + ") "
+                    "and your answer breaks hard rules: " + "; ".join(fails),
+                    "Fix those in your own words and run the check once more."])
         record_approval(root, draft)
         judge_clear_bounce(root)
+        clear_strikes()
         print("VERDICT: APPROVED AS WRITTEN (renderer unavailable: " + reason + "). "
               "Send your answer exactly as drafted.")
         sys.exit(0)
@@ -697,16 +736,16 @@ if "--check-file" in sys.argv:
         if not j_passes and j_breaks:
             if not judge_already_bounced(root):
                 judge_mark_bounced(root)
-                print("VERDICT: NOT SENDABLE. The judge read your draft against the "
-                      "owner's locked rules. Fix these sentences in YOUR OWN draft — "
-                      "only you know the facts they are missing — then run the check "
-                      "once more:")
+                out = ["VERDICT: NOT SENDABLE. The judge read your draft against the "
+                       "owner's locked rules. Fix these sentences in YOUR OWN draft — "
+                       "only you know the facts they are missing — then run the check "
+                       "once more:"]
                 for b in j_breaks:
-                    print("- SENTENCE: " + b["sentence"])
-                    print("  BROKE: " + b["rule"])
+                    out.append("- SENTENCE: " + b["sentence"])
+                    out.append("  BROKE: " + b["rule"])
                     if b["fix_hint"]:
-                        print("  PLAIN WAY: " + b["fix_hint"])
-                sys.exit(0)
+                        out.append("  PLAIN WAY: " + b["fix_hint"])
+                refuse(out)
             judge_notes = "the judge failed these sentences, fix each one: " + "; ".join(
                 f"\"{b['sentence'][:80]}\" ({b['fix_hint'] or b['rule']})" for b in j_breaks[:6])
     except Exception as ex:
@@ -786,6 +825,7 @@ if "--check-file" in sys.argv:
 
     record_approval(root, final)
     judge_clear_bounce(root)
+    clear_strikes()
     if " ".join(final.split()) == " ".join(draft.split()):
         print("VERDICT: APPROVED AS WRITTEN. Send your answer exactly as drafted.")
     else:
