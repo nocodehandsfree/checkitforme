@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
 import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { callEvents, callResults, retailers, categories, statuses } from "../src/db/schema";
-import { findRecentCheck, recentlyDropped, weHungUpOnAHold, staffHungUpOn, billableOutcome } from "../src/calls/service";
+import { findRecentCheck, recentlyDropped, weHungUpOnAHold, diedOnAHold, staffHungUpOn, billableOutcome } from "../src/calls/service";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -60,6 +60,27 @@ async function main() {
     ok(!/[\u2014\u2013]/.test(s?.note ?? ""), "no dash inside the sentence (copy law)");
     await db.delete(callEvents).where(eq(callEvents.room, room));
     ok((await db.select().from(callEvents).where(eq(callEvents.room, room))).length === 0, "and it leaves nothing of its own behind, so running it twice reads the same");
+  }
+
+  console.log("\n▶ a check that DIES mid-hold reads as left on hold, whoever hung up (check 389, test seven)");
+  {
+    // Scene 6's card: "They kept us on hold and the call dropped." On check 389 the robot store's
+    // own hang-up beat our 120s hold cap by two seconds, and the settle read the database in the
+    // same millisecond the hang-up row was being written — so no ending was found and the reader's
+    // "no clear answer" stood over a check that died mid-hold. The hold events were committed two
+    // minutes earlier, so the answer anchored on THEM cannot lose that race: a hold that opened and
+    // never closed IS the ending, whoever put the phone down.
+    const room = "room-died-on-hold-test";
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+    ok(!(await diedOnAHold(room)), "a check with no hold claims nothing");
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 16000, atSec: 16, kind: "hold_start", note: "Staff stepped away, the line went quiet", detail: JSON.stringify({ reason: "quiet" }) });
+    ok(await diedOnAHold(room), "a hold that opened and never closed died on hold");
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 60000, atSec: 60, kind: "hold_end", note: "Staff back after 44s", detail: JSON.stringify({ gapSec: 44 }) });
+    ok(!(await diedOnAHold(room)), "…and Staff coming back closes it, so a normal check claims nothing");
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 80000, atSec: 80, kind: "hold_start", note: "Staff stepped away, hold music", detail: JSON.stringify({ reason: "music" }) });
+    ok(await diedOnAHold(room), "a second hold that never closed dies on hold too");
+    ok(!(await diedOnAHold(null)), "a row with no name can never claim it");
+    await db.delete(callEvents).where(eq(callEvents.room, room));
   }
 
   console.log("\n▶ Staff hanging up before an answer reads as Staff hung up (owner 08-04)");
