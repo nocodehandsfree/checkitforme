@@ -112,6 +112,82 @@ export async function classifyVerdict(
   }
 }
 
+/**
+ * WAS THAT STAFF, OR A RECORDING? (owner, 08-18 night — item 7 of his box.)
+ *
+ * THE FAULT IT ANSWERS, from check 383: the store's hold music had an advert mixed into it, a
+ * recorded voice saying "Thanks for holding. Did you know we price match any local competitor?".
+ * On the line an advert measures as a person — it IS a person, recorded — so no listening rule can
+ * refuse it, and Echo wrote its words down as Staff. Charlie answered the advert and his meter ran
+ * through the whole hold. Nothing about sound can fix that; only the WORDS say it, and a model
+ * reads words in any language, which is the same reason this is the honest fix for check 376's
+ * hold announced in Spanish (named in the bank at CHECK 376'S SHAPE, unbuilt until now).
+ *
+ * IT RUNS AFTER THE CALL AND ONLY AFTER THE CALL, and it is a report, never a brake: a live check
+ * never waits on it, is never stopped by it, and a wrong answer here costs a line on the record
+ * and nothing else. His rule: if it judges wrong, reword it and run it again on the same saved
+ * recordings (`scripts/hold-voice-bench.ts`), never stop a live call over it.
+ *
+ * Same reader, same model, same door as every other second read in this file — nothing new built
+ * beside a working piece.
+ */
+export interface HoldVoiceRead {
+  /** The Clerk line as it was written down. */
+  line: string;
+  /** Who really said it: a live person on the phone, or something the store plays. */
+  voice: "person" | "recording";
+  /** …and whether that line tells us we are about to be left waiting, in any language. */
+  announcesWait: boolean;
+  confidence: number;
+  why: string;
+}
+export async function judgeHoldVoice(
+  lines: Array<{ who: string; text: string }>,
+  /** Override for measuring candidate wordings against the saved recordings. Live checks never pass it. */
+  model?: string,
+): Promise<HoldVoiceRead[] | null> {
+  const clerk = lines.filter((l) => l.who === "Clerk" && String(l.text || "").trim().length > 2);
+  if (!clerk.length) return null;
+  const sys =
+    `You are reading the written record of a phone call OUR caller (Agent) made to a retail store. ` +
+    `For each numbered CLERK line, say who really said it: a live person talking to us, or something ` +
+    `the store PLAYS at us (hold music with a voice over it, an advert, an automated hold message, a ` +
+    `menu, a voicemail greeting).\n` +
+    `A RECORDING sounds like this: it thanks you for holding, tells you your call matters, advertises ` +
+    `the store or its offers, tells you to ask an associate or visit the website, reads opening hours, ` +
+    `says all representatives are busy, or plays on regardless of what we just asked. It never answers ` +
+    `our actual question and it never reacts to us.\n` +
+    `A PERSON reacts to us: they answer what we asked, they say they will go and look, they greet us, ` +
+    `they name a product, they apologise for the wait in their own words.\n` +
+    `Also say whether the line tells us we are about to be left waiting ("let me check", "one moment", ` +
+    `"I'll go look", "please hold") — in ANY language, judged by meaning, not by matching English words.\n` +
+    `Judge only from the words. Reply with STRICT JSON only: ` +
+    `{"lines":[{"n":1,"voice":"person|recording","announcesWait":true|false,"confidence":0..1,"why":"short"}]}`;
+  const body = clerk.map((l, i) => `${i + 1}. ${String(l.text).slice(0, 400)}`).join("\n");
+  try {
+    const raw = await llm(
+      model || VERDICT_MODEL,
+      [{ role: "system", content: sys }, { role: "user", content: body.slice(0, 6000) }],
+      { job: "hold-voice", json: true, temperature: 0, maxTokens: 500 },
+    );
+    const d = JSON.parse(raw) as { lines?: Array<Record<string, unknown>> };
+    const out = Array.isArray(d.lines) ? d.lines : [];
+    return clerk.map((l, i) => {
+      const r = out.find((o) => Number(o.n) === i + 1) || {};
+      const conf = Number(r.confidence);
+      return {
+        line: String(l.text),
+        voice: String(r.voice ?? "").toLowerCase() === "recording" ? "recording" : "person",
+        announcesWait: r.announcesWait === true,
+        confidence: Number.isFinite(conf) ? Math.max(0, Math.min(1, conf)) : 0.5,
+        why: String(r.why ?? "").slice(0, 140),
+      };
+    });
+  } catch {
+    return null;   // no read → the record simply does not carry this line. Never a brake.
+  }
+}
+
 /** A clean one-line label for the verdict card, e.g. "3-pack blister · Surging Sparks". */
 export function productDetailLabel(v: ClerkVerdict | null): string | null {
   if (!v) return null;
