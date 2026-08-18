@@ -639,20 +639,15 @@ const VOICE_GAP_MS = 300;
 /** HOW LONG ONE UNBROKEN RUN OF SOUND CAN BE AND STILL BE SPEECH (check 377, 08-18, test five).
  *  Hold music dipped and Charlie rejoined six seconds before Staff spoke: the dip had emptied the
  *  music test's window, so the music RESUMING banked as "a person with gaps in their speech" and
- *  400ms of it ended the wait. A person's sound has gaps in it, or it swings hard from syllable to
- *  syllable (see RUN_SWING below); music is unbroken AND steady. So on a hold, a run of steady
- *  sound is banked as comeback evidence only when it BREAKS at word scale, and a steady run that
- *  outgrows this is struck: it is the music, however it started. The rejoin still backdates to
- *  their first banked word, so the wait's length never pays for the proof. */
+ *  400ms of it ended the wait. The one thing that tells the two apart — measured on check 378's
+ *  own tape, never guessed — is the gaps: real music held the line 100% loud for fourteen straight
+ *  seconds while real speech never passed about two thirds loud inside any one second, because
+ *  every word's edges dip under the threshold. (Loudness SWING does not tell them apart: on the
+ *  same tape the music swung 600 to 6500 inside single seconds, exactly like a voice.) So on a
+ *  hold, a run is banked as comeback evidence only when it BREAKS at word scale, and a run that
+ *  outgrows this unbroken is struck: it is the music, however it started. The rejoin still
+ *  backdates to their first banked word, so the wait's length never pays for the proof. */
 const MAX_SPEECH_RUN_MS = 1200;
-/** …AND THE SWING THAT PROVES A VOICE MID RUN. Speech swings hard between one syllable and the
- *  next — the rig's own speech shape moves ninefold inside six frames — while music, a ringback and
- *  a hold loop hold their loudness nearly still over any stretch this short. Threefold inside the
- *  last ten loud frames (200ms) says this run is a voice, so it banks at once and the wait can end
- *  mid run, exactly as fast as it ever did. Judged over a SHORT window on purpose: hold music that
- *  swells does cross threefold eventually, but only slowly, never inside a fifth of a second. */
-const RUN_SWING = 3;
-const RUN_SWING_FRAMES = 10;
 /** Nobody has made a sound for a very long time. Different from "they walked away to go and look":
  *  at this point the line is probably not a conversation any more — the handset was put down and
  *  forgotten, or the far end went away without hanging up. The runtime decides what to do about it;
@@ -741,16 +736,11 @@ export class ConversationEar {
    *  hold be backdated to the moment they STARTED talking rather than the moment we were sure. */
   private backSpeech: number[] = [];
   /** The run of sound currently in progress, held apart from the banked evidence while we are on a
-   *  hold: it banks when it BREAKS at word scale or proves itself a voice by swinging (RUN_SWING),
-   *  because until then it cannot be told from the hold music resuming (check 377). */
+   *  hold: it only banks when it BREAKS at word scale, because until it breaks it cannot be told
+   *  from the hold music resuming (check 377 — see MAX_SPEECH_RUN_MS). */
   private runSpeech: number[] = [];
-  /** The current run outgrew a word without ever swinging, so it is the music: nothing more of it
-   *  banks until it breaks — unless a voice starts swinging over it. */
+  /** The current run outgrew a word, so it is the music: nothing more of it banks until it breaks. */
   private runIsMusic = false;
-  /** The current run swung like a voice, so the rest of it banks frame by frame, as always. */
-  private runIsSpeech = false;
-  /** The last few loud energies of the current run, for the swing test. */
-  private runLevels: number[] = [];
   /** How much of the current wait was sound from across the room rather than plain silence. */
   private roomMs = 0;
   /** The last third of a second of sound, so the room test reads a stretch and not one frame. */
@@ -882,7 +872,7 @@ export class ConversationEar {
       this.closePeak = Math.max(this.closePeak, this.closeLevel);
       const full = this.voiced.length * FRAME_MS >= this.windowMs
         && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
-      if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.backSpeech = []; this.runSpeech = []; this.runIsMusic = false; this.runIsSpeech = false; this.runLevels = []; this.enter("music"); }
+      if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.backSpeech = []; this.runSpeech = []; this.runIsMusic = false; this.enter("music"); }
       // Sound with gaps in it is a person. If we thought they were away, they are back — but only
       // once they have actually said SOMETHING. A single frame ending a hold is the other half of the
       // flapping bug: it ended a hold that had lasted nothing, and the next ring opened another one.
@@ -892,31 +882,18 @@ export class ConversationEar {
       // (owner's check 298). One click is still one frame and can never add up to it.
       else if (!full) {
         this.heardVoiceMs += FRAME_MS; this.voiceRunMs += FRAME_MS; this.deadAirCalled = false;
-        // ON A HOLD, A RUN BANKS WHEN IT PROVES ITSELF A VOICE (check 377, 08-18). The music
-        // resuming after a dip used to bank here frame by frame and end the wait at 400ms, six
-        // seconds before Staff spoke, because sound the window cannot yet prove is music reads
-        // exactly like a person. A voice proves itself two ways: it swings hard between syllables
-        // (the swing test, which banks mid run at full speed), or it breaks at word scale (the
-        // else branch below, where the wait still ends backdated to the run's first frame). A
-        // steady run that outgrows a word without doing either is the music, however it started,
-        // and is struck. Off a hold there is no wait to end, so frames bank straight away, as before.
+        // ON A HOLD, A RUN ONLY BANKS WHEN IT BREAKS (check 377, 08-18). The music resuming after a
+        // dip used to bank here frame by frame and end the wait at 400ms, six seconds before Staff
+        // spoke, because sound the window cannot yet prove is music reads exactly like a person —
+        // until it runs on without a gap, which no speech does and all music does (check 378's
+        // tape). So the run in progress is held apart, struck the moment it outgrows a word, and
+        // banked at its first break (the else branch below), where the wait still ends backdated
+        // to its first frame. Off a hold there is no wait to end, so frames bank straight away.
         if (!this.reason) {
           this.backSpeech.push(this.elapsed);
-        } else if (this.runIsSpeech) {
-          this.backSpeech.push(this.elapsed);
-          if (this.backSpeech.length * FRAME_MS >= this.backVoiceMs) this.leave();
-        } else {
-          this.runLevels.push(energy);
-          while (this.runLevels.length > RUN_SWING_FRAMES) this.runLevels.shift();
-          if (Math.max(...this.runLevels) >= Math.min(...this.runLevels) * RUN_SWING) {
-            this.runIsSpeech = true; this.runIsMusic = false;
-            this.backSpeech.push(...this.runSpeech, this.elapsed);
-            this.runSpeech = [];
-            if (this.backSpeech.length * FRAME_MS >= this.backVoiceMs) this.leave();
-          } else if (!this.runIsMusic) {
-            this.runSpeech.push(this.elapsed);
-            if (this.soundMs > MAX_SPEECH_RUN_MS) { this.runSpeech = []; this.runIsMusic = true; }
-          }
+        } else if (!this.runIsMusic) {
+          this.runSpeech.push(this.elapsed);
+          if (this.soundMs > MAX_SPEECH_RUN_MS) { this.runSpeech = []; this.runIsMusic = true; }
         }
       }
     } else {
@@ -928,7 +905,7 @@ export class ConversationEar {
           this.backSpeech.push(...this.runSpeech);
           if (this.backSpeech.length * FRAME_MS >= this.backVoiceMs) this.leave();
         }
-        this.runSpeech = []; this.runIsMusic = false; this.runIsSpeech = false; this.runLevels = [];
+        this.runSpeech = []; this.runIsMusic = false;
       }
       this.soundMs = 0; this.quietMs += FRAME_MS;
       if (room) this.roomMs += FRAME_MS;
@@ -962,7 +939,7 @@ export class ConversationEar {
     // they were still here, so it can never be part of the proof that somebody has come back.
     this.soundRecent = [];
     this.backSpeech = [];
-    this.runSpeech = []; this.runIsMusic = false; this.runIsSpeech = false; this.runLevels = [];
+    this.runSpeech = []; this.runIsMusic = false;
     const already = reason === "quiet" || reason === "room" ? this.quietMs : reason === "music" ? this.soundMs : this.toneRunMs;
     this.holdStartedAt = Math.max(0, this.elapsed - already);
     this.holdMs += already;
@@ -981,7 +958,7 @@ export class ConversationEar {
     this.reason = null;
     this.voiceRunMs = 0;
     this.backSpeech = [];
-    this.runSpeech = []; this.runIsMusic = false; this.runIsSpeech = false; this.runLevels = [];
+    this.runSpeech = []; this.runIsMusic = false;
     this.on.holdEnd(gap, gap >= this.newPersonMs, back);
   }
 }

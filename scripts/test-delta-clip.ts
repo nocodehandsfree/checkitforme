@@ -51,11 +51,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // μ-law: 0x00 decodes to a very loud sample, 0x7F to silence. That is all we need to make the ear
 // hear "someone is talking" or "the line is quiet".
 const LOUD = (n = 160, jitter = 0) => Buffer.alloc(n, 0x00).map((_, i) => (jitter && i % (3 + jitter) === 0 ? 0x10 : 0x00)) as Buffer;
-/** SPEECH, NOT A TONE. LOUD holds the same loudness on every frame, and over about a second of it the
- *  ear rightly calls that a machine tone — a ringback holds a steady amplitude, speech swings hard
- *  from syllable to syllable. Any scene that has to keep somebody TALKING for seconds (a recording
- *  reading its announcement) needs that swing, or it is testing the ringback rule by accident. */
-const SPEECH = (i: number) => Buffer.alloc(160, [0x00, 0x22, 0x08, 0x34, 0x02, 0x18][i % 6]);
+/** SPEECH, NOT A TONE, AND NOT MUSIC EITHER. LOUD holds the same loudness on every frame, and over
+ *  about a second of it the ear rightly calls that a machine tone — a ringback holds a steady
+ *  amplitude, speech swings hard from syllable to syllable. Any scene that has to keep somebody
+ *  TALKING for seconds needs that swing, or it is testing the ringback rule by accident. And every
+ *  fifth frame is SILENT, the same gap the `speak` helper below has always had, because that is
+ *  what real speech measures as on a real tape (check 378's carrier recording, 08-18): a voice
+ *  never held the line more than about two thirds loud inside any one second — word edges dip
+ *  under the threshold — while the hold music ran 100% loud for fourteen straight seconds. The
+ *  gaps are how the ear tells a person coming back from the music resuming, so a speech shape
+ *  with no gaps in it is a music shape by the ear's own measure, and it tests the wrong thing. */
+const SPEECH = (i: number) => Buffer.alloc(160, i % 5 === 4 ? 0x7f : [0x00, 0x22, 0x08, 0x34, 0x02, 0x18][i % 6]);
 const frame = (b: Buffer) => b.toString("base64");
 
 // ---- the fake voice provider -----------------------------------------------------------------
