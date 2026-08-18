@@ -205,6 +205,10 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
     ? `<?xml version="1.0" encoding="UTF-8"?><Response>${listenNavOpeningTwiml(fork, bridgeUrl, room)}</Response>`
     : `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="${bridgeUrl}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Twiml: inlineTwiml });
+  // EVERY check we dial ourselves is recorded at the carrier (owner, 08-17), the same flag mapping
+  // checks have carried since 07-30. The hear-the-call button on the check's sheet plays this; a
+  // simulated check never dials, so it never has one and shows no player at all.
+  body.set("Record", "true");
   // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually
   // happening (dialing → ringing → answered → done) instead of guessing from timers.
   body.set("StatusCallback", `https://${host}/twiml/bridge-status?room=${room}`);

@@ -126,7 +126,17 @@ for (const scene of ROBOT_SCENES) {
   }
   const wantGreeting = scene.greeting || GREETINGS[0];
   is(spoken[0], wantGreeting, `scene ${scene.n}: the greeting is the FIRST thing said`);
-  is(spoken.slice(1), WORDS[scene.n], `scene ${scene.n} (${scene.name}): the answers are verbatim`);
+  // THE LINE FOR WHEN THE SCRIPT IS SPENT (owner, 08-17 late, off check 376). A scene is written
+  // with a fixed number of answers in it; when Charlie asks anything after the last of them, the
+  // store used to sit there saying nothing, and the check ran on in silence until a clock ended it.
+  // It says this one line instead, and it says it once, at the end, never in the middle of a
+  // scripted answer. Typed out here a second time, the way every other robot line is.
+  const said = spoken.slice(1);
+  const spent = "Sorry, that's all I know.";
+  const ranOut = said[said.length - 1] === spent;
+  is(ranOut ? said.slice(0, -1) : said, WORDS[scene.n], `scene ${scene.n} (${scene.name}): the answers are verbatim`);
+  is(said.filter((t) => t === spent).length, ranOut ? 1 : 0,
+    `scene ${scene.n}: nothing left to say is said once, at the end, or not at all`);
 }
 
 console.log("\n── the greeting is its own line, never welded to an answer ──");
@@ -158,7 +168,7 @@ console.log("\n── the two that break us most ──");
   const p = pauses(all);
   if (p.includes(45)) ok("scene 5: the walk to the shelf is 45 seconds"); else fail(`scene 5: the hold is ${p.join("/")}s, not 45`);
   if (!/<Play>[^<]*hold/i.test(all) && !/music/i.test(all)) ok("scene 5: the hold is SILENCE, no music"); else fail("scene 5: something is playing during the hold");
-  is(run.said.length, 5, "scene 5: greeting, the walk away, the answer they came back with, when more are coming, and what time");
+  is(run.said.length, 6, "scene 5: greeting, the walk away, the answer they came back with, when more are coming, what time, and nothing left to say");
   // Once they have answered they WAIT for us to say goodbye, the way a real person does. A store that
   // puts the phone down instantly would hide a caller who never signs off (owner, 08-02).
   const listens = (all.match(/<Gather/g) || []).length;
@@ -192,7 +202,10 @@ console.log("\n── cannot hear us, and the wrong department ──");
   is(run.greeting, "MVP's pharmacy, this is Larry.", "scene 10 opens in the wrong department, with his name");
   if (/\/robot\/ring\?secs=6/.test(all)) ok("scene 10: the desk really rings for 6 seconds"); else fail("scene 10: no ringing before the new voice");
   const voices = run.said.map((s) => s.voice);
-  is(voices, ["staff", "staff", "staff", "transfer", "transfer", "transfer", "transfer"], "scene 10: a DIFFERENT person picks up after the transfer, and stays on");
+  // …and the last line, the one for an ask this scene never scripted, is in THAT person's voice
+  // too: Staff's voice coming back after the transfer would be a third person on the call.
+  is(voices, ["staff", "staff", "staff", "transfer", "transfer", "transfer", "transfer", "transfer"],
+    "scene 10: a DIFFERENT person picks up after the transfer, and stays on");
 }
 
 console.log("\n── the ringing is a real ringback, not a beep ──");

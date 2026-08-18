@@ -40,7 +40,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, setMappingHandoff } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, navOutcomeOf, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, navOutcomeOf, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, oneSlowestReplyRow, type Rollup } from "./calls/events";
 import { buildCharlieSetup } from "./calls/charlie-setup";
 import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
@@ -1469,9 +1469,9 @@ app.get("/api/calls/:id/receipt", async (c) => {
   // `atMs` rides beside `atSec` on every step: the sheet orders the steps and the spoken lines as ONE
   // list on the call's own clock, and whole seconds cannot say which of two things in one second
   // happened first (owner 08-06).
-  const timeline = live
+  const timeline = oneSlowestReplyRow(live
     ? live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
-    : rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as unknown : null }));
+    : rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as Record<string, unknown> : null })));
 
   // A finished call is served from its own stamped row, so a replay always agrees with the numbers
   // the reports are summing. A null here means we never measured it — not that it was zero.
@@ -4899,6 +4899,11 @@ app.get("/api/admin/test-calls", async (c) => {
   const avg = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
   return c.json({
     count: rows.length,
+    // THE PAGE'S BIG NUMBER IS THE NEWEST CHECK'S OWN NUMBER (owner, 08-17 evening). It used to
+    // count the rows, and the count had drifted below the numbering: 372 counted against a newest
+    // check numbered 373, so a report naming a check named a number this page never showed. From
+    // here the two are the same number moving forward, and nothing in the history is renumbered.
+    newest: rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) || null,
     summary: {
       calls: timed.length,
       avgNavSec: avg(timed.map((r) => r.navSec || 0)),
@@ -6506,6 +6511,9 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // check is finished, same as the verdict — an unfinished test has not failed either.
       meter: graded ? meterVerdict(card, { meterSec: sums?.charlieConnectedSeconds ?? null,
         speakingSec: sums?.speakingSecs ?? null, listeningSec: sums?.listeningSecs ?? null,
+        // THE SET-ASIDE IS GONE (owner, 08-17 evening: "we already have a system, I didn't ask to
+        // change shit"). A hold test is priced and graded exactly like every other check: the real
+        // profit the check made, against the 67% floor, and no second number of any kind.
         profitPct,
         // THE NAMED GAPS, read off the check's own record (owner box 08-16 late): the engine
         // stamped each as it was measured, so nothing here is re-derived or guessed.
@@ -6537,7 +6545,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   if (live && !live.closed) {
     const sums = rollup(live);
     const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
-    const timeline = live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }));
+    const timeline = oneSlowestReplyRow(live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })));
     return c.json({
       room, live: true, stamped: true,
       timeline,
@@ -6556,14 +6564,14 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // the earlier "move mapping out": "it would allow me to see in the testing area a complete end
       // to end log of the entire transaction which is huge for myself and any agent"). The steps were
       // already here; what was missing was the conversation itself, which is half of what he reads.
-      lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000), atMs: l.atMs })),
+      lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000), atMs: l.atMs, endMs: l.endMs })),
       v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
   if (!rows.length) return c.json({ error: "no receipt for that call" }, 404);
   const parse = (s: string | null) => { try { return s ? JSON.parse(s) as Record<string, unknown> : null; } catch { return null; } };
-  const timeline = rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) }));
+  const timeline = oneSlowestReplyRow(rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })));
   // An UNATTACHED call rolls its seconds and cost onto the LAST event's detail (receipt-store.ts),
   // because there is no call_results row to stamp and the event set is a closed sixteen.
   const tail = parse(rows[rows.length - 1]?.detail ?? null);
@@ -6609,13 +6617,16 @@ app.get("/api/admin/receipt/:room", async (c) => {
     // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
     // is found by searching back rather than assumed to be last). Older checks predate the stamp and
     // fall back to the flat transcript with no clock, exactly as before.
-    lines: ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null }> | null => {
-      type Said = { who: string; text: string; atSec: number | null; atMs?: number | null };
+    lines: ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null; endMs: number | null }> | null => {
+      type Said = { who: string; text: string; atSec: number | null; atMs?: number | null; endMs?: number | null };
       // ONE CLOCK FOR THE WHOLE SHEET (owner 08-06): a line's real millisecond is what puts it in
       // order against the steps. A check recorded before the writer kept it has seconds only, and
       // its second stands in — the same number it always drew at, never a millisecond we invented.
       const timed = (ls: Said[]) => ls.map((l) => ({ who: l.who, text: l.text, atSec: l.atSec ?? null,
-        atMs: l.atMs != null ? l.atMs : (l.atSec != null ? l.atSec * 1000 : null) }));
+        atMs: l.atMs != null ? l.atMs : (l.atSec != null ? l.atSec * 1000 : null),
+        // The END of the sound, on the same clock. A check recorded before we kept ends has none,
+        // and it says so rather than borrowing its own start.
+        endMs: l.endMs ?? null }));
       // The row's full timed conversation first (uncapped; owner 08-05: the record holds everything,
       // the unexpected included) — then the 16-line copy an unattached call leaves on its events.
       try { const t = attached?.transcriptTimed ? JSON.parse(attached.transcriptTimed) as Said[] : null; if (Array.isArray(t) && t.length) return timed(t); } catch { /* fall through */ }
@@ -6627,12 +6638,83 @@ app.get("/api/admin/receipt/:room", async (c) => {
     })()
       ?? String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
         const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
-        return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null };
+        return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null, endMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null, endMs: null };
       }),
     v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null,
       { rows: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
         statusKey: attached?.statusKey ?? attached?.status ?? null }),
   });
+});
+// THE HEAR-THE-CALL BUTTON'S AUDIO (owner box 08-17). Every check we dial ourselves is recorded at
+// the carrier (bridge-place sets the same flag mapping checks have carried since 07-30); this finds
+// the check's carrier call and streams its recording, exactly the way the mapper's play button
+// does. `?probe=1` answers only whether a recording EXISTS, so the sheet shows the button only
+// where one does — a simulated check never dialed, has no carrier call, and shows no player at all.
+/** THE RECORDING, HELD WHILE HE IS LISTENING TO IT. A player asks for a dozen pieces of the same
+ *  file as he drags around it, and fetching the whole thing from the carrier each time would be a
+ *  dozen downloads of one call. Three recordings are kept for five minutes, which covers listening
+ *  to a check and comparing it with the one before it, and nothing here is a store's live audio:
+ *  it is the finished recording the carrier already holds for us. */
+const checkAudioHeld = new Map<string, { bytes: Buffer; atMs: number }>();
+async function checkAudioBytes(accountSid: string, auth: string, recSid: string): Promise<Buffer | null> {
+  const held = checkAudioHeld.get(recSid);
+  if (held && Date.now() - held.atMs < 5 * 60_000) return held.bytes;
+  const media = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Recordings/${recSid}.mp3`, { headers: { Authorization: auth } });
+  if (!media.ok) return null;
+  const bytes = Buffer.from(await media.arrayBuffer());
+  if (!bytes.length) return null;
+  checkAudioHeld.set(recSid, { bytes, atMs: Date.now() });
+  while (checkAudioHeld.size > 3) { const oldest = checkAudioHeld.keys().next().value; if (oldest === undefined) break; checkAudioHeld.delete(oldest); }
+  return bytes;
+}
+app.get("/api/admin/check-audio/:room", async (c) => {
+  const room = c.req.param("room");
+  if (!room) return c.json({ error: "room required" }, 400);
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !tok) return c.json({ error: "carrier not configured" }, 500);
+  // The check's carrier call id: the live map first, then the answered stamp on its own record.
+  let callSid = roomCallSids.get(room) || "";
+  if (!callSid) {
+    const rows = await db.select({ kind: callEvents.kind, detail: callEvents.detail })
+      .from(callEvents).where(eq(callEvents.room, room));
+    for (const r of rows) {
+      if (r.kind !== "connected" || !r.detail) continue;
+      try { const d = JSON.parse(r.detail) as { callSid?: string }; if (d.callSid) { callSid = d.callSid; break; } } catch { /* keep looking */ }
+    }
+  }
+  if (!/^CA[a-zA-Z0-9]{32}$/.test(callSid)) return c.json({ error: "this check never dialed", exists: false }, 404);
+  const auth = "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64");
+  const list = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}/Recordings.json`, { headers: { Authorization: auth } });
+  if (!list.ok) return c.json({ error: `carrier ${list.status}` }, 502);
+  const recs = ((await list.json()) as { recordings?: Array<{ sid: string; duration?: string }> }).recordings || [];
+  // The probe also carries HOW LONG the tape is, straight off the carrier's own record of it, so the
+  // player can print the total length and size its bar before a single byte of sound is fetched.
+  if (c.req.query("probe")) return c.json({ exists: recs.length > 0, seconds: recs.length ? Number(recs[0].duration || 0) || null : null });
+  if (!recs.length) return c.json({ error: "no recording for this check", exists: false }, 404);
+  // DRAGGING TO ANY POINT IS OUR OWN JOB (owner, 08-17 evening, after the PM drove it). Handing the
+  // browser's ask for a piece of the file through to the carrier does nothing: the carrier answers
+  // the WHOLE recording every time, asked from the start or from the middle, so the browser could
+  // never jump and every drag fell back to the beginning. We cut the piece ourselves now: the whole
+  // recording is fetched once, held for a few minutes, and the asked bytes are answered with their
+  // own place in the whole, which is the answer a player needs to seek.
+  const buf = await checkAudioBytes(sid, auth, recs[0].sid);
+  if (!buf) return c.json({ error: "carrier would not send the recording" }, 502);
+  const headers: Record<string, string> = { "content-type": "audio/mpeg", "cache-control": "private, max-age=3600", "accept-ranges": "bytes" };
+  const asked = /^bytes=(\d*)-(\d*)$/.exec((c.req.header("range") || "").trim());
+  if (asked && (asked[1] !== "" || asked[2] !== "")) {
+    // "bytes=500-" is everything from 500 on; "bytes=-500" is the LAST 500 bytes; both are legal.
+    const start = asked[1] === "" ? Math.max(0, buf.length - Number(asked[2])) : Number(asked[1]);
+    const end = asked[1] === "" ? buf.length - 1 : (asked[2] === "" ? buf.length - 1 : Math.min(Number(asked[2]), buf.length - 1));
+    if (!Number.isFinite(start) || start >= buf.length || end < start) {
+      return new Response(null, { status: 416, headers: { ...headers, "content-range": `bytes */${buf.length}` } });
+    }
+    const piece = buf.subarray(start, end + 1);
+    headers["content-range"] = `bytes ${start}-${end}/${buf.length}`;
+    headers["content-length"] = String(piece.length);
+    return new Response(new Uint8Array(piece), { status: 206, headers });
+  }
+  headers["content-length"] = String(buf.length);
+  return new Response(new Uint8Array(buf), { status: 200, headers });
 });
 app.get("/api/admin/call-timing", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings
@@ -7385,7 +7467,10 @@ app.post("/twiml/bridge-status", async (c) => {
     // The carrier's own view of the call goes on the receipt — the only truthful source for when the
     // line was actually answered (our sockets open later, and on a menu call much later).
     if (status === "ringing") emit(room, "ringing", "The store's phone is ringing", { leg: "store" });
-    if (status === "in-progress") { markNow(room, "answeredMs"); emit(room, "connected", "The line was answered"); }
+    // The carrier's own id for this call rides the answered stamp, so a finished check can still
+    // find its recording later (the hear-the-call button, owner box 08-17) — the in-memory
+    // room-to-call map forgets after ten minutes and a restart forgets it entirely.
+    if (status === "in-progress") { markNow(room, "answeredMs"); emit(room, "connected", "The line was answered", { callSid: String((form as Record<string, unknown>).CallSid || "") || undefined }); }
     if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status)) {
       setTimeout(() => roomCallProgress.delete(room), 60_000);
       // Headless bridge calls (schedules/zones/admin call-now) registered a finalizer so a call
@@ -7844,11 +7929,13 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string, wantsWo
           try {
             const t = line.text.trim();
             if (!t) return;
-            // How far into the audio the sentence starts, turned into the real moment it was said.
+            // How far into the audio the sentence starts, turned into the real moment it was said,
+            // and the moment its sound STOPPED, which is what a reply gap counts from (owner 08-17).
             const at = firstFrameAtEpochMs ? firstFrameAtEpochMs + line.atAudioMs : undefined;
+            const ended = firstFrameAtEpochMs ? firstFrameAtEpochMs + line.atAudioMs + line.forMs : undefined;
             // The check itself takes the line when it is up. Before that (the menu, the first hello)
             // it goes onto the record here and the live screen is told by us.
-            if (!echoHeardStaff(room, t, at)) { try { relayLine(room, "Clerk", t); } catch { /* the screen is best-effort */ } }
+            if (!echoHeardStaff(room, t, at, ended)) { try { relayLine(room, "Clerk", t); } catch { /* the screen is best-effort */ } }
           } catch (e) { bridgeLog(`echo line dropped: ${String(e).slice(0, 90)}`); }
         }, bridgeLog,
         // Each final, confirmed piece of the turn still being written, so a reconnected Charlie can

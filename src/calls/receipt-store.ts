@@ -68,7 +68,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
     if (r.events.length && r.transcript.length) {
       const last = r.events[r.events.length - 1];
       last.detail = { ...(last.detail ?? {}),
-        lines: r.transcript.slice(0, 16).map((l) => ({ who: l.who, text: l.text.slice(0, 100), atSec: Math.round(l.atMs / 1000), atMs: l.atMs })) };
+        lines: r.transcript.slice(0, 16).map((l) => ({ who: l.who, text: l.text.slice(0, 100), atSec: Math.round(l.atMs / 1000), atMs: l.atMs, endMs: l.endMs })) };
     }
     if (r.events.length) {
       await db.insert(callEvents).values(r.events.map((e) => ({
@@ -113,7 +113,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       // The 16-line copy on the last event stays for UNATTACHED calls, which have no row to carry it.
       // `atMs` is the line's real place on the call's own clock, the same clock every step is
       // stamped on, so the sheet can order steps and spoken lines as ONE list (owner 08-06).
-      ...(r.transcript.length ? { transcriptTimed: JSON.stringify(r.transcript.slice(0, 200).map((l) => ({ who: l.who, text: l.text.slice(0, 300), atSec: Math.round(l.atMs / 1000), atMs: l.atMs }))) } : {}),
+      ...(r.transcript.length ? { transcriptTimed: JSON.stringify(r.transcript.slice(0, 200).map((l) => ({ who: l.who, text: l.text.slice(0, 300), atSec: Math.round(l.atMs / 1000), atMs: l.atMs, endMs: l.endMs }))) } : {}),
       // navSeconds = dial -> a person is on the line. Only overwrite when the receipt actually
       // measured it; the provider's own figure stays if we never heard a human.
       ...(sums.navSeconds !== null ? { navSeconds: sums.navSeconds } : {}),

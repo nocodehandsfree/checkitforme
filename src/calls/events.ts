@@ -129,7 +129,10 @@ export interface Receipt {
   segments: CharlieSegment[];
   /** WHAT WAS SAID, as we heard it live (hard rule 2). Text only — never audio, on any path. The
    *  provider's own post-call version becomes supporting evidence, not the record. */
-  transcript: Array<{ atMs: number; who: "Agent" | "Clerk"; text: string }>;
+  /** Every spoken line files with a START and an END on the call's own clock (owner, 08-17
+   *  evening). `endMs` is when the SOUND of that line stopped, which is what a reply gap is
+   *  measured from; null on a line whose end nobody measured, never a guessed number. */
+  transcript: Array<{ atMs: number; endMs: number | null; who: "Agent" | "Clerk"; text: string }>;
   events: RtEvent[];
   meters: Meters;
   closed: boolean;
@@ -244,13 +247,17 @@ export function emit(room: string, kind: EventKind, note?: string, detail?: Reco
  * are attached to the single line rather than each getting one of their own. Best-effort, like every
  * other recorder here — a missing event is simply not amended.
  */
-export function amend(room: string, kind: EventKind, patch: Record<string, unknown>): void {
+export function amend(room: string, kind: EventKind, patch: Record<string, unknown>, note?: string): void {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return;
     for (let i = r.events.length - 1; i >= 0; i--) {
       if (r.events[i].kind !== kind) continue;
       r.events[i].detail = { ...(r.events[i].detail ?? {}), ...patch };
+      // …and the step's own words, when what we learned changes what it should say (owner 08-17
+      // late: a wait he came off the meter for on Staff's words, that then turns out to be hold
+      // music or a handset on a counter, says so instead of keeping the first guess).
+      if (note) r.events[i].note = note;
       return;
     }
   } catch { /* recording must never break a call */ }
@@ -286,7 +293,12 @@ export function amend(room: string, kind: EventKind, patch: Record<string, unkno
 /** @param certain WE produced this line ourselves (a recording we played down the wire), so it can
  *  never be an echo and the echo protection must not eat it. A recording really can ask the same
  *  question twice inside ten seconds on a fast hand-over, and both askings belong on the record. */
-export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtEpochMs?: number, certain?: boolean): boolean {
+/** @param earMeasured the moment came from OUR OWN ear (the energy ear's voice start, the held
+ *  greeting's arrival) rather than a transcriber's mapped clock. Only such a moment may still file
+ *  a line ABOVE lines already written: Staff's hello really is spoken before our question and only
+ *  becomes words later (owner screenshot 07-31), and the moment their voice started is ours, not
+ *  guessed. A transcriber's stamp gets the one-clock clamp below (owner box 08-17, off check 372). */
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtEpochMs?: number, certain?: boolean, earMeasured?: boolean, endedAtEpochMs?: number): boolean {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return true; // no record to guard — the caller may still show the line
@@ -302,13 +314,30 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string, s
     // whether the line was fresh, so a relay can skip exactly what the record skipped.
     const key = `${who}:${normSaid(t)}`;
     if (!certain && r.transcript.slice(-4).some((l) => Math.abs(l.atMs - at) < 10_000 && `${l.who}:${normSaid(l.text)}` === key)) return false;
-    const line = { atMs: at, who, text: t.slice(0, 1000) };
+    // The end of the sound, on the same clock. A line that never had its end measured keeps null:
+    // the gap that would have been measured from it falls back to the ear, never to a made up end.
+    const ended = (endedAtEpochMs != null && endedAtEpochMs > 1e12) ? Math.max(at, endedAtEpochMs - r.startMs) : null;
+    const line = { atMs: at, endMs: ended, who, text: t.slice(0, 1000) };
+    // ONE CLOCK, MONOTONIC (owner box 08-17, off check 372). A reply can only ever ARRIVE after the
+    // line it answers — every path that writes here transcribes what was already said — so arrival
+    // order IS the conversation's order. This used to re-sort on any backdate: a line whose stamp
+    // came out wrong was inserted ABOVE lines already written, which is exactly how Staff's "Next
+    // week maybe?" printed above the question Charlie asked first on 372's screen. A transcriber's
+    // stamp may never rearrange the story: it is clamped to the last written line's moment instead,
+    // and the line files where it arrived. The ONE exception is a moment our own ear measured
+    // (`earMeasured`): Staff's hello really is spoken before our question and only becomes words
+    // later, so it still files where it belongs (owner screenshot 07-31, both laws kept).
     const last = r.transcript[r.transcript.length - 1];
     if (last && last.atMs > at) {
-      // Out of order, so put it in its place. Insert BEFORE the first line said later than this one;
-      // ties keep the order they arrived in, which is what a real back-and-forth reads like.
-      const i = r.transcript.findIndex((l) => l.atMs > at);
-      r.transcript.splice(i < 0 ? r.transcript.length : i, 0, line);
+      if (earMeasured && spoken != null) {
+        let i = r.transcript.length;
+        while (i > 0 && r.transcript[i - 1].atMs > at) i--;
+        r.transcript.splice(i, 0, line);
+      } else {
+        line.atMs = last.atMs;
+        if (line.endMs != null && line.endMs < line.atMs) line.endMs = line.atMs;
+        r.transcript.push(line);
+      }
     } else r.transcript.push(line);
     if (r.transcript.length > 300) r.transcript.splice(0, r.transcript.length - 300); // runaway guard
     // READ AS IT GOES: hand the line to the reader now, while the check is still running, so the
@@ -446,6 +475,11 @@ export function closeReceipt(room: string, note?: string, reason?: string): Rece
   emit(room, "hangup", note || "Check ended", reason ? { reason } : undefined);
   r.closed = true;
   if (r.meters.endMs === null) r.meters.endMs = Math.max(0, Date.now() - r.startMs);
+  // AN END CAN NEVER BE LATER THAN THE CALL'S OWN END (owner, 08-17 late, off check 374: the hold
+  // reply was marked as ending at 81.3 seconds and Charlie's question at 90.0 on a call that ended
+  // at 88.0). A line's end is stamped from the sound still queued to play, so a line cut short by
+  // the check ending would otherwise keep the end it was HEADING for. Trimmed to the truth here.
+  for (const l of r.transcript) if (l.endMs != null && l.endMs > r.meters.endMs) l.endMs = r.meters.endMs;
   // A session still open when the line drops was billing right up to the end.
   if (r.meters.charlieOpenMs !== null && r.meters.charlieCloseMs === null) r.meters.charlieCloseMs = r.meters.endMs;
   flushed.add(room);
@@ -684,3 +718,62 @@ export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEve
 
 /** Test-only: forget every in-memory receipt. */
 export function _reset(): void { receipts.clear(); flushed.clear(); sink = null; }
+
+/**
+ * ONE ROW FOR THE SLOWEST REPLY, THE WORST ONE (owner, 08-17 evening, off check 373's own sheet,
+ * where it printed at 75 seconds and again at 83). The engine stamps that number every time the
+ * worst grows, on purpose: the close-time stamp lost a race on check 372 and the row never wrote
+ * at all. Every stamp but the biggest is the SAME fact measured earlier, so the record keeps the
+ * winner and drops the interim ones, and the survivor wears the engine's own closing words instead
+ * of "so far". Nothing is invented and no other step is touched.
+ */
+/**
+ * STAMP THE END OF THE LINE THAT SPEAKER IS STILL SAYING (owner, 08-17 evening). Charlie's line is
+ * written down the moment his words exist and his voice plays out over the seconds after it, so his
+ * end is stamped as the sound goes and only ever moves later, never earlier.
+ */
+export function stampLineEnd(room: string, who: "Agent" | "Clerk", endedAtEpochMs: number): void {
+  const r = receipts.get(room);
+  if (!r || r.closed || !(endedAtEpochMs > 1e12)) return;
+  for (let i = r.transcript.length - 1; i >= 0; i--) {
+    const l = r.transcript[i];
+    if (l.who !== who) continue;
+    const end = Math.max(l.atMs, endedAtEpochMs - r.startMs);
+    if (l.endMs == null || end > l.endMs) l.endMs = end;
+    return;
+  }
+}
+
+/**
+ * WHEN THE LAST THING THAT SPEAKER SAID STOPPED (owner, 08-17 evening: a reply gap counts from the
+ * END of the line before it, never from its start). Answers on the wall clock, so the engine can
+ * measure a gap against it directly. Null when nobody has spoken yet; a line whose end was never
+ * measured answers with its start, which is the only honest number we hold for it.
+ */
+export function lastLineEndEpoch(room: string, who: "Agent" | "Clerk"): number | null {
+  const r = receipts.get(room);
+  if (!r) return null;
+  for (let i = r.transcript.length - 1; i >= 0; i--) {
+    const l = r.transcript[i];
+    if (l.who !== who) continue;
+    return r.startMs + (l.endMs ?? l.atMs);
+  }
+  return null;
+}
+
+export function oneSlowestReplyRow<T extends { kind: string; note?: string; detail?: Record<string, unknown> | null }>(timeline: T[]): T[] {
+  const isGap = (e: T) => (e.detail || {}).step === "gaps";
+  const worst = timeline.filter(isGap).reduce<number | null>((m, e) => {
+    const ms = Number((e.detail || {}).answerGapWorstMs);
+    return Number.isFinite(ms) && (m == null || ms > m) ? ms : m;
+  }, null);
+  if (worst == null) return timeline;
+  let kept = false;
+  return timeline.filter((e) => {
+    if (!isGap(e)) return true;
+    if (kept || Number((e.detail || {}).answerGapWorstMs) !== worst) return false;
+    kept = true;
+    (e as { note?: string }).note = "Charlie's slowest reply on this check";
+    return true;
+  });
+}

@@ -1189,7 +1189,11 @@ const robotRuns: RobotRun[] = [];
 export function robotLastRun(): RobotRun | null { return robotRuns[0] || null; }
 export function robotRunFor(callSid: string): RobotRun | null { return robotRuns.find((r) => r.callSid === callSid) || null; }
 
+/** The store's own words when a caller asks something this scene never scripted an answer for. */
+export const ROBOT_ALL_I_KNOW = "Sorry, that's all I know.";
 interface RobotState { run: RobotRun; acts: RobotAct[]; act: number; clips: (Buffer | null)[]; quiet: number;
+  /** The one off-script line for an ask the scene cannot answer. Once, ever, like "Hello?". */
+  saidAllIKnow?: boolean;
   /** The one "Hello?" the robot may say into a silence (the honest store, 08-08). Once, ever. */
   saidHello: boolean;
   /** THE MENU'S SIDE OF A CALL, on a scene that has a key table. `sentMs` is when the document we are
@@ -1316,6 +1320,14 @@ export async function robotAnswer(callSid: string, from?: string, opts?: {
   // THE ONE LINE OFF SCRIPT (the honest store, 08-08): "Hello?", in the Staff voice, for a caller
   // who has gone silent. It rides one slot past the acts' own clips; cached like every other line.
   clips.push(await mp3Clip(staff, "Hello?", { stability: 0.45, similarity_boost: 0.8 }).catch(() => null));
+  // AND ONE HONEST LINE FOR AN ASK NO SCENE SCRIPTED (owner, 08-17 late, off check 376: Charlie
+  // asked something the scene had no answer for and the store simply went quiet, so the check paid
+  // for a minute of dead air no real person would have given). Real Staff say they do not know.
+  // In BOTH voices, because whoever is on the line has to say it themselves: after a transfer the
+  // person we are talking to is a different person, and Staff's voice answering there would be a
+  // third person nobody handed the phone to.
+  clips.push(await mp3Clip(staff, ROBOT_ALL_I_KNOW, { stability: 0.45, similarity_boost: 0.8 }).catch(() => null));
+  clips.push(await mp3Clip(transfer, ROBOT_ALL_I_KNOW, { stability: 0.45, similarity_boost: 0.8 }).catch(() => null));
   const missing = acts.findIndex((a, i) => "say" in a && !clips[i]);
   if (missing >= 0) { console.error("[robot] clip synthesis failed — check ElevenLabs credits"); return twiml("<Hangup/>"); }
   const run: RobotRun = {
@@ -1470,7 +1482,21 @@ export function robotStep(callSid: string, speech: string, digits?: string): str
   // A KEY, at a scene that has a key table. Everything else ignores keys exactly as it always has.
   if (key && isMenu) { st.quiet = 0; return menuKey(callSid, st, key); }
   const said = (speech || "").trim();
-  if (said) { st.run.heard.push(said.slice(0, 300)); st.quiet = 0; return robotPlay(callSid, st); }
+  if (said) {
+    st.run.heard.push(said.slice(0, 300));
+    st.quiet = 0;
+    // NOTHING LEFT TO SAY IS NOT SILENCE (owner, 08-17 late). If every line of this scene has been
+    // spoken and somebody is still asking us things, the store answers the way a person would,
+    // once, and then goes on waiting instead of leaving the caller on a dead line.
+    const moreToSay = st.acts.slice(st.act).some((a) => "say" in a);
+    if (!moreToSay && !st.saidAllIKnow) {
+      st.saidAllIKnow = true;
+      const who = [...st.run.said].reverse().find((l) => l.voice === "staff" || l.voice === "transfer")?.voice || "staff";
+      st.run.said.push({ text: ROBOT_ALL_I_KNOW, atSec: Math.round((Date.now() - st.run.startedAt) / 1000), voice: who });
+      return twiml(robotClipUrl(callSid, st.acts.length + (who === "transfer" ? 2 : 1)) + robotGather(callSid, 10));
+    }
+    return robotPlay(callSid, st);
+  }
   // NOTHING PRESSED AT A MENU is the owner's six seconds: the whole list plays again from the top,
   // unless a key was held from the greeting, which acts the moment the options would have started.
   if (isMenu) { st.quiet = 0; return menuTop(callSid, st); }

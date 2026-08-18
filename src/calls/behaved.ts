@@ -70,7 +70,10 @@ import { askedToBePutThrough as saysPutMeThrough, signedOff } from "../voice/pro
 /** The meter half's per-card overrides (graded by src/calls/meter.ts, the 08-16 build). `null`
  *  switches that number off for the card; absent = the owner's two numbers bind (23s meter ·
  *  67% floor). The rows above stay money-free — this rides BESIDE them, never inside them. */
-export interface MeterBounds { meterCapSec?: number | null; profitFloorPct?: number | null }
+export interface MeterBounds { meterCapSec?: number | null; profitFloorPct?: number | null;
+  /** WHY THIS CARD'S FLOOR IS ITS OWN (owner, 08-17 late). Printed under the profit row when the
+   *  row is tapped, so a floor that is not the usual 67 always says what moved it. */
+  floorWhy?: string }
 
 export interface TestCard { name: string; sub: string; info: string; needs: BehavedKey[]; status: string | null; meter?: MeterBounds }
 
@@ -94,7 +97,11 @@ export const TEST_CARDS: Record<string, TestCard> = {
   hold_silence: { name: "Hold: silence",
     sub: "Staff put us on a silent hold.",
     info: "Charlie dropped on a silent hold, reconnected when they came back, and we displayed the right status.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock" },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock",
+    // THE HOLD TESTS OWN FLOOR (owner, 08-17 late): the scene scripts a hold that forces the
+    // phone line's second billed minute, and his goal on one of these is 11 cents on a 25 cent
+    // check, which is 56 percent. Every other card and every real customer check keeps 67.
+    meter: { profitFloorPct: 56, floorWhy: "This scene scripts a hold long enough to force the phone line's second billed minute, so the goal on a hold test is 11 cents on a 25 cent check." } },
   // METER EXEMPTIONS (owner's go 08-16, per-card list proposed in the spec, his to re-rule): a
   // scene built to burn the clock can never hold the 67% floor, so grading it there fails it
   // forever and the red becomes noise. The meter cap stays on every card — Charlie's own seconds
@@ -107,11 +114,19 @@ export const TEST_CARDS: Record<string, TestCard> = {
   hold_music: { name: "Hold: music",
     sub: "Staff put us on hold with music and Charlie dropped until a person came back.",
     info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock",
+    // THE HOLD TESTS OWN FLOOR (owner, 08-17 late): the scene scripts a hold that forces the
+    // phone line's second billed minute, and his goal on one of these is 11 cents on a 25 cent
+    // check, which is 56 percent. Every other card and every real customer check keeps 67.
+    meter: { profitFloorPct: 56, floorWhy: "This scene scripts a hold long enough to force the phone line's second billed minute, so the goal on a hold test is 11 cents on a 25 cent check." } },
   hold_phone_down: { name: "Hold: phone down",
     sub: "Staff set the phone on the counter and Charlie dropped until someone spoke to us again.",
     info: "This test proves that background store noise stops Charlie's meter the same way silence does. Someone talking across the room is not someone talking to us.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock",
+    // THE HOLD TESTS OWN FLOOR (owner, 08-17 late): the scene scripts a hold that forces the
+    // phone line's second billed minute, and his goal on one of these is 11 cents on a 25 cent
+    // check, which is 56 percent. Every other card and every real customer check keeps 67.
+    meter: { profitFloorPct: 56, floorWhy: "This scene scripts a hold long enough to force the phone line's second billed minute, so the goal on a hold test is 11 cents on a 25 cent check." } },
   hungup_staff: { name: "Hungup: Staff",
     sub: "Staff hung up on us before giving an answer and we showed a Staff hung up status.",
     info: "This test proves that when Staff hung up on us, the record shows they ended the check, not us.",

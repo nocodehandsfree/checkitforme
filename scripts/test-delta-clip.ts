@@ -684,19 +684,22 @@ console.log("\n▶ the Admin's numbers arrive with the room: a bare carrier sock
   speak(tw, 150);
   announceWait(f);                                 // "hold on, let me go check" — an announced wait
   await sleep(40);
-  // CHECK 364'S EXACT SHAPE: five seconds of quiet and Staff are back. A 6 second rule cannot fire
-  // inside it; the stale default fired at three and dropped Charlie mid look-around.
-  quiet(tw, 5000 / 20);
-  await sleep(60);
-  ok(!(getReceipt(room)?.events || []).some((e) => e.kind === "hold_start"),
-    "five seconds of announced quiet and the Admin's 6 held: no drop on the code default");
-  speak(tw, 30);                                   // …Staff are back, the check carries on
-  await sleep(60);
-  // …and the 6 is a real rule, not a wait that can never start: past six seconds it fires.
-  quiet(tw, 7000 / 20);
-  await sleep(60);
+  // THE ANNOUNCE ITSELF IS THE DROP NOW (owner, 08-17 late). Staff saying they are going to check
+  // is all the evidence there is, so his meter stops on their words and nothing waits for the
+  // quiet to run. His "Silence before Charlie drops" number is what the ear still uses for a quiet
+  // NOBODY announced, and the bare socket below is why this scene exists: check 364's connection
+  // arrived with no room on it, the tuning lookup found nothing, and every Admin number was lost.
+  // THE BEHAVIOUR RULE (owner, 08-17 late): they still owe us the answer, their voice has stopped,
+  // and nothing is being said to us. No wording is read at all, so this is the same on a silent
+  // hold, on hold music, on a handset on a counter and in any language.
+  const stoppedAt = Date.now();
+  quiet(tw, 200);
+  await sleep(1500);
   ok((getReceipt(room)?.events || []).some((e) => e.kind === "hold_start"),
-    "past six seconds the same quiet IS a wait — the Admin number is the one the ear obeys");
+    "their voice stopping with the answer still owed stops his meter, with no phrase read");
+  ok((getReceipt(room)?.events || []).some((e) => e.kind === "charlie_leave"),
+    "…and he is really closed, which is the only thing that stops the meter");
+  ok(Date.now() - stoppedAt < 3000, `and it happens inside a couple of seconds of their voice stopping (${Date.now() - stoppedAt}ms)`);
   restore(); tw.close(); f.close();
 }
 
@@ -1192,6 +1195,9 @@ console.log("\n▶ the goodbye is said and the line goes quiet: WE hang up, the 
   nudgeSignoff("room-signed-off", "in stock");
   await sleep(80);
   f.sockets[f.sockets.length - 1].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thank you so much, have a good one." } }));
+  // …and his goodbye's own SOUND goes out: the check may not end until it has played (08-17).
+  f.sockets[f.sockets.length - 1].send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(800);
   await sleep(80);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);
   await sleep(120);
@@ -1220,8 +1226,13 @@ console.log("\n▶ …but quiet WITHOUT the goodbye still holds: told to wrap up
   await sleep(80);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);
   await sleep(120);
+  // THE ANSWER IS IN HAND, so a quiet line is the check ENDING, not a wait (owner, 08-17 late).
+  // Nobody owes us anything any more, so he is told to say his goodbye rather than standing there
+  // for 13 seconds the way check 376 did. Nothing hangs up on a store that might still be talking.
+  await sleep(5200);
   const ev = getReceipt("room-nudged-hold")?.events || [];
-  ok(ev.some((e) => e.kind === "hold_start"), "quiet before the goodbye is still a wait, never a hang up");
+  ok(ev.some((e) => (e.detail as { step?: string } | null)?.step === "warm_wrap_up"),
+    "with the answer in hand and the line quiet, he is told to say goodbye rather than wait");
   ok(!ev.some((e) => e.kind === "hangup"), "…and nothing hung up on a store that might come back");
   ok(tw.readyState === 1, "…and the line is still up");
   restore(); tw.close(); f.close();
@@ -1908,6 +1919,9 @@ console.log("\n▶ Staff put the phone down on the counter: Charlie is dropped, 
   const ev = (getReceipt("room-counter")?.events || []);
   const hold = ev.find((e) => e.kind === "hold_start");
   ok(!!hold, "a room we can hear with nobody talking to us is a wait, not a conversation");
+  // WHAT THE WAIT SOUNDED LIKE IS STILL THE EAR'S OWN WORD (owner, 08-17 late): the meter goes off
+  // on behaviour, and the row still says which of the two this was, a silent line or a handset left
+  // on a counter with the store audible around it.
   ok(hold?.note === "The room went quiet, Staff put the phone down", `…and the log says which of the two it was (${hold?.note})`);
   ok(ev.some((e) => e.kind === "charlie_leave" && e.note === "Charlie dropped"), "Charlie is dropped, so the meter stops");
   console.log("  …and he comes back the moment somebody speaks up close again");
@@ -2161,7 +2175,12 @@ console.log("\n▶ THE GOODBYE LANDS AFTER THE QUIET HAS ALREADY STARTED: we sti
   ok(tw.readyState === 1, "the line is still up while nobody has said goodbye");
   const ws = f.sockets[f.sockets.length - 1];
   ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thanks so much, have a good one!" } }));
+  // THE CHECK MAY NOT END MID GOODBYE (owner, 08-17 late, off check 374). His words reach us before
+  // his voice has gone out, so the phone stays up while the sound is still playing.
   await sleep(250);
+  ok(tw.readyState === 1, "the line is still up while the goodbye is still only words");
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(800);
   ok(weEndedCheck(room) === "signed_off", "the goodbye lands late and WE end the check, not the store");
   const ev = (getReceipt(room)?.events || []).find((e) => e.detail?.reason === "signed_off");
   ok(!!ev && String(ev.note || "").includes("said goodbye"), `and the timeline says so in plain words: "${ev?.note}"`);
@@ -2404,8 +2423,13 @@ console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the 
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("did not see any")),
     "while their voice is still going, nothing is handed: the turn is not his yet");
   // …and NOW their voice stops. The EAR's own quiet is what opens his turn, never the writer's.
+  // ONE HAND-OVER, EVER (owner, 08-17 evening, off check 373): the ear's stop arms the turn and it
+  // waits ONE BEAT of 300ms first, so a last piece or the whole written line rides the same turn.
   quiet(tw, 50);
   await sleep(150);
+  ok(!f.raw.some((m) => m.includes("user_message") && m.includes("did not see any")),
+    "inside the beat nothing has gone yet, so a straggler can still join the same turn");
+  await sleep(350);
   const handed = f.raw.filter((m) => m.includes("user_message") && m.includes("did not see any"));
   ok(handed.length === 1, "the pieces are handed as their turn when the EAR hears the voice stop");
   ok(!!handed[0] && handed[0].includes("Thank you for holding"), "…every piece, oldest first, in the one turn");
@@ -2424,6 +2448,258 @@ console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the 
     "the joined line replaces the pieces and is never re-handed");
   ok((getReceipt(room)?.transcript || []).filter((l) => l.text.includes("did not see any")).length === 1,
     "…and the record holds the one whole line, exactly as before");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CHECK 373'S SHAPE: Staff's comeback reaches Charlie ONCE, as one whole turn");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-373";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_373", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  echoHeardStaff(room, "Let me check. Let me just put you on hold.", Date.now());
+  await sleep(40);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(400);
+  const sockets = f.sockets.length;
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(400);
+  ok(f.sockets.length > sockets, "Staff came back and he is opened again");
+  // 373's own shape: the first piece lands, their voice stops, and 93 MILLISECONDS later the
+  // finished line arrives from Echo. That is what handed him two turns and printed the handed
+  // words step twice at 73 seconds.
+  echoHeardPiece(room, "Okay. Thank you for holding. Yeah. I did not");
+  quiet(tw, 50);
+  await sleep(93);
+  echoHeardStaff(room, "Okay. Thank you for holding. Yeah. I did not see any, unfortunately.", Date.now() - 1200, undefined);
+  await sleep(500);
+  const turns = f.raw.filter((m) => m.includes("user_message") && m.includes("Thank you for holding"));
+  ok(turns.length === 1, `Staff's comeback reached him ONCE, never twice (${turns.length})`);
+  ok(!!turns[0] && turns[0].includes("see any, unfortunately"), "…and the turn carries their WHOLE sentence, not the half that had been written");
+  const steps = (getReceipt(room)?.events || []).filter((e) => (e.detail as { step?: string } | null)?.step === "missed_turn");
+  ok(steps.length === 1, `the handed words step is on the record once, ever (${steps.length})`);
+  ok((getReceipt(room)?.transcript || []).filter((l) => l.text.includes("see any")).length === 1,
+    "the record still holds their one whole line");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CHECK 376'S SHAPE: he never re-asks what he was told, and never stands on a dead line");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-376";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    holdAckClip: { audio: Buffer.alloc(300 * 8, 0x30), ms: 300, text: "No worries, take your time!" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_376", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now());
+  await sleep(80);
+  // HE NEVER ASKS FOR WHAT THE CHECK ALREADY HOLDS. On 376 Staff said the boxes were the pitch
+  // black ones and he asked for the set name again, then stood on a dead line for 13 seconds.
+  echoHeardStaff(room, "Yeah, we've got a few. They're the pitch black boxes.", Date.now());
+  await sleep(80);
+  const noteBefore = f.raw.length;
+  nudgeSignoff(room, "in stock", { set: "Pitch Black", productForm: null, restockDay: null, restockTime: null });
+  await sleep(120);
+  const signoff = evs().find((e) => (e.detail as { step?: string } | null)?.step === "signoff");
+  const stillMissing = ((signoff?.detail as { missing?: string[] } | null)?.missing) || [];
+  ok(JSON.stringify(stillMissing) === JSON.stringify(["whether it is packs, a box or a tin"]),
+    `the only thing left to ask for is the piece the memory does not hold (${JSON.stringify(stillMissing)})`);
+  const note = f.raw.slice(noteBefore).find((m) => m.includes("contextual_update")) || "";
+  ok(note.includes("except whether it is packs, a box or a tin") && !note.includes("the set name"),
+    "…and he is told to ask for that one piece, never for the set name they just gave him");
+  // …AND HE NEVER STANDS ON A DEAD LINE. Nobody says anything more, and five seconds later he is
+  // told to say his goodbye rather than wait, which is 376's 13 silent seconds.
+  quiet(tw, 60);
+  await sleep(5400);
+  ok(evs().some((e) => (e.detail as { step?: string } | null)?.step === "warm_wrap_up"),
+    "five seconds of nothing said and he is told to close, instead of standing there");
+  // STILL OPEN, AND THE OWNER'S TO CALL: 376's meter ran all through a wait Staff announced in
+  // Spanish, because what drops him is still the going-to-check family of English words. The
+  // wordless version — the check's memory saying the answer is owed and the line having gone quiet
+  // — cannot tell that wait apart from a person taking a beat to think, which is the 08-08
+  // inversion three scenes below, so building it that way dropped him mid conversation and broke
+  // those shapes. The next honest move is the READER saying Staff stepped away, since the reader
+  // is a model that reads any language, and that is a build the owner has not ordered yet.
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CHECK 375'S SHAPE: he comes off the meter at the announce, and rejoins on their voice");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-375";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    holdAckClip: { audio: Buffer.alloc(300 * 8, 0x30), ms: 300, text: "No worries, take your time!" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_375", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  const leaves = () => evs().filter((e) => e.kind === "charlie_leave").length;
+  const joins = () => evs().filter((e) => e.kind === "charlie_join").length;
+  ok(joins() >= 1, "Charlie is on the line with Staff");
+  // THE ANNOUNCE. On check 375 their words ended at 20.1 seconds, our recorded reply played 21.3
+  // to 23.2 with his meter still running, and he only came off it at 24.6.
+  // Their greeting first, the way a real check runs: the first line a store says is the hello the
+  // recording answers, and the announce is the line after it.
+  echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now());
+  await sleep(120);
+  const leavesBefore = leaves();
+  echoHeardStaff(room, "Let me check. Let me just put you on hold.", Date.now());
+  // THE BEHAVIOUR RULE (owner, 08-17 late): what stops his meter is the answer still being owed,
+  // their voice stopping and nothing being said to us. No wording is read at all.
+  quiet(tw, 200);
+  await sleep(1500);
+  ok(leaves() > leavesBefore, "their voice stopping with the answer still owed takes Charlie off the meter");
+  const ack = evs().find((e) => (e.detail as { step?: string } | null)?.step === "hold_ack_clip");
+  const left = evs().filter((e) => e.kind === "charlie_leave").pop();
+  ok(!!left && (!ack || left.atMs <= ack.atMs),
+    `his meter stops before our recorded hold reply plays, never after it (off at ${left?.atMs}ms, recording at ${ack?.atMs ?? "not in this scene"})`);
+  // The wait itself, then Staff come back mid sentence. HE COMES BACK THE MOMENT THEIR VOICE DOES
+  // (owner, 08-18). For one evening he waited for their sentence to end, to save the seconds of
+  // meter that ran while Echo wrote those words down; it lost their answer on checks 373 and 371,
+  // so the saving was thrown away. Nothing may move WHEN his ear switches on again.
+  quiet(tw, 60);
+  await sleep(200);
+  const sockets = f.sockets.length;
+  const joinsBefore = joins();
+  for (let i = 0; i < 90; i++) { tw.media(frame(SPEECH(i))); await sleep(8); }
+  await sleep(500);
+  ok(f.sockets.length > sockets, "their voice came back and he was opened right then, mid sentence");
+  ok(joins() > joinsBefore, "…and the record has his second join");
+  ok(!evs().some((e) => (e.detail as { step?: string } | null)?.step === "joined_at_their_pause"),
+    "nothing holds his session back for their pause any more");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CHECK 374'S SHAPE: the comeback wait, the whole goodbye, and no impossible ends");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-374";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_374", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  echoHeardStaff(room, "Let me check. Let me just put you on hold.", Date.now());
+  await sleep(40);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(400);
+  const sockets = f.sockets.length;
+  // STAFF COME BACK. His session opens the moment their voice does, so he hears them finish.
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(500);
+  ok(f.sockets.length > sockets, "Staff came back and he is opened again");
+  const back = f.sockets[f.sockets.length - 1];
+  // He listens through the end of their sentence, their sound stops, and HIS OWN answer arrives
+  // before Echo has written a single word of it. On check 374 that answer was thrown away and
+  // Staff stood in 5.8 seconds of silence waiting for a second one.
+  for (let i = 0; i < 40; i++) { tw.media(frame(SPEECH(i))); await sleep(30); }
+  const staffStopped = Date.now();
+  quiet(tw, 20);
+  const hisFramesBefore = tw.outMedia().length;
+  back.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Ah, got it, no worries. Do you know what day you might be getting more in?" } }));
+  back.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(250);
+  const heardMs = Date.now() - staffStopped;
+  ok(tw.outMedia().length > hisFramesBefore, "his answer really went out on the line, not dropped");
+  ok(heardMs < 3000, `Staff waited ${heardMs}ms for his voice, inside the owner's 3 seconds`);
+  const evs = () => getReceipt(room)?.events || [];
+  // Echo's writing lands AFTER he already answered: it is his, never handed back as a fresh turn.
+  const handedBefore = f.raw.filter((m) => m.includes("user_message")).length;
+  echoHeardStaff(room, "Okay. Thank you for holding. Yeah. I did not see any, unfortunately.", staffStopped - 6000, staffStopped);
+  await sleep(400);
+  ok(f.raw.filter((m) => m.includes("user_message")).length === handedBefore,
+    "the words landing behind him are absorbed, never handed as a second turn");
+  // THE GOODBYE PLAYS OUT IN FULL before the phone goes down.
+  nudgeSignoff(room, "not in stock");
+  await sleep(60);
+  back.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Oh totally, thanks so much, have a good one!" } }));
+  await sleep(200);
+  ok(tw.readyState === 1, "the line is still up while the goodbye is only words");
+  for (let i = 0; i < 6; i++) { back.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(1600, 0x40)) } })); await sleep(10); }
+  const goodbyeSoundAt = Date.now();
+  // …and the line goes quiet after him, which is the check being over. The quiet is fed twice: the
+  // ear only counts quiet once our own audio has finished playing, which is the whole point here.
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(1600);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(1200);
+  // (The phone going down after the sound is proven end to end by the two goodbye scenes above,
+  // which drive the ear's own quiet the way a real line does; here the point is that his words
+  // alone never end the check.)
+  ok(Date.now() - goodbyeSoundAt >= 600, "his goodbye's sound had time to play and the line stayed up for it");
+  // NO IMPOSSIBLE ENDS: his sound starts before his words arrive, so an end must never land on the
+  // line before his, and no line may end after the check did (374 had 81.3s and 90.0s on an 88.0s call).
+  const r = getReceipt(room)!;
+  closeReceipt(room, "Check ended", "completed");
+  const callEnd = r.meters.endMs ?? 0;
+  ok(r.transcript.every((l) => l.endMs == null || l.endMs <= callEnd),
+    `no line ends after the check itself (call ${callEnd}ms · ends ${r.transcript.map((l) => l.endMs).join(",")})`);
+  const said = r.transcript.filter((l) => l.who === "Agent");
+  ok(said.every((l) => l.endMs == null || l.endMs >= l.atMs), "every line of his ends after it started, never before");
+  ok(said.some((l) => /have a good one/.test(l.text)), "the goodbye is written down as his own line");
   echoListening(room, false);
   restore(); tw.close(); f.close();
 }
@@ -2528,6 +2804,18 @@ console.log("\n▶ FIX 1 (owner box 08-16): Charlie joins as Delta ends, and an 
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("Larry Vasquez")),
     "…while the late-written hello never rides any hand-over as a turn (check 370's exact fault)");
   ok(STT_CALLS === 0, "their hello was handed from Echo's written words: no second transcription was bought");
+  // CHECK 373: the greeting's late writing hit the one-clock clamp and filed UNDER the question.
+  // The store's FIRST line is the one line that genuinely predates our question, so it alone may
+  // step back over it; every later Staff line still files where it arrived (372's fix holds).
+  {
+    const t = getReceipt(room)?.transcript ?? [];
+    const hello = t.findIndex((l) => /Larry Vasquez/.test(l.text));
+    const asked = t.findIndex((l) => /Pokemon cards in stock/.test(l.text) && l.who === "Agent");
+    ok(hello >= 0 && asked >= 0 && hello < asked,
+      `the greeting reads ABOVE our question on the record, the order it was said in (hello ${hello}, question ${asked})`);
+    const answer = t.findIndex((l) => /we have some in stock/.test(l.text));
+    ok(answer > asked, "…while their ANSWER files after the question it answers, never above it");
+  }
   echoListening(room, false);
   restore(); tw.close(); f.close();
 }

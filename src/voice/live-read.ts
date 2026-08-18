@@ -75,7 +75,13 @@ async function runRead(room: string): Promise<void> {
       // to go on. On check 354 the one word "Pokemon?" came back "not in stock" at confidence zero,
       // which told Charlie at 14 seconds that the answer was in hand and to wrap up while Staff had
       // not even gone to look yet. A read the reader itself is not sure about is not an answer.
-      if ((v.inStock === "yes" || v.inStock === "no") && v.confidence > 0) nudgeSignoff(room, v.inStock === "yes" ? "in stock" : "not in stock");
+      // WHAT THE CHECK ALREADY HOLDS rides with the knock (owner, 08-17 late): the reader has just
+      // pulled the set, the packaging and the restock day and time out of the record, so Charlie can
+      // be told to ask only for what is genuinely still missing, and never for what Staff just said.
+      if ((v.inStock === "yes" || v.inStock === "no") && v.confidence > 0) {
+        nudgeSignoff(room, v.inStock === "yes" ? "in stock" : "not in stock",
+          { set: v.set, productForm: v.productForm, restockDay: v.restockDay, restockTime: v.restockTime });
+      }
       else if (v.inStock === "yes" || v.inStock === "no") bridgeLog(`reader: ${v.inStock} at confidence zero is not an answer, Charlie is not told to wrap up`);
     } else if (cur && !v) {
       bridgeLog(`reader: no verdict for ${room.slice(0, 8)}${cur.retried ? " (second try spent)" : ", one second try in 4s"}`);

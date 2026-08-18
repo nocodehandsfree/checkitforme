@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-17T17:52:43.532Z",
+  "at": "2026-08-18T03:10:03.023Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 5,
-      "name": "Walks away, comes back",
+      "scenario": 20,
+      "name": "Hold with music, then an answer",
       "items": [
         {
           "n": 1,
@@ -57,14 +57,14 @@
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": false,
-          "detail": "\"Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold.\" → missing"
+          "pass": true,
+          "detail": "3 lines, all exact"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 91 looks · header held at 26px"
+          "detail": "0 bounce(s) over 35 looks · header held at 62px"
         },
         {
           "n": 8,
@@ -76,7 +76,7 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": true,
-          "detail": "we signed off: \"Got it, thanks so much Larry, have a good one!\""
+          "detail": "we signed off: \"Perfect, thanks so much Larry, have a good one!\""
         },
         {
           "n": 14,
@@ -88,46 +88,46 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 81 seconds and the line closed at 81 — 0 seconds of nothing"
+          "detail": "the answer was in at 57 seconds and the line closed at 57 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Mon, Aug 17 · 5:51 PM In stock MVPs has Pokémon.Go grab it before it's gone. Check another store Calling5 steps "
+          "detail": " Result Tue, Aug 18 · 3:09 AM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
           "pass": false,
-          "detail": "the screen said in, the record says out (not_in_stock)"
+          "detail": "the screen said unclear, the record says in (in_stock)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
           "pass": true,
-          "detail": "got not_in_stock · this scenario is not_in_stock"
+          "detail": "got in_stock · this scenario is in_stock"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 9.8¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 10.9¢"
         }
       ],
       "shots": [
-        "./robot-run/05-store-found.png",
-        "./robot-run/05-checking.png",
-        "./robot-run/05-live.png",
-        "./robot-run/05-result.png"
+        "./robot-run/20-store-found.png",
+        "./robot-run/20-checking.png",
+        "./robot-run/20-live.png",
+        "./robot-run/20-result.png"
       ],
-      "startedAt": 1786989026505,
-      "checkId": 372,
-      "cost": 0.097789,
-      "costReadable": "9.8¢",
+      "startedAt": 1787022501932,
+      "checkId": 377,
+      "cost": 0.109329,
+      "costReadable": "10.9¢",
       "robotCost": null,
       "charged": true,
-      "statusKey": "not_in_stock"
+      "statusKey": "in_stock"
     }
   ],
   "jsErrors": []

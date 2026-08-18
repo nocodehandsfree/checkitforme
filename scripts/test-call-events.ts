@@ -6,7 +6,7 @@
 // from the plan, and the phone line bills whole minutes. No database, no network, no clock games.
 import {
   openReceipt, emit, amend, markNow, addMs, closeReceipt, rollup, rollupFromRow, setEventSink,
-  getReceipt, laneNote, laneFor, actualLane, recordLine, _receiptFrom, _reset, type Receipt, type RtEvent,
+  getReceipt, laneNote, laneFor, actualLane, recordLine, oneSlowestReplyRow, lastLineEndEpoch, stampLineEnd, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
 import { costCall, costPerResult, costBuckets, money, MEASURED_RATES, STATUS_READ_USD, USD } from "../src/calls/cost";
 
@@ -371,6 +371,120 @@ console.log("▶ a step can be filed at the moment it really happened");
   emit("room-back", "unknown", "an offset, not a moment", {}, 1_019);
   ok(near(r.events[r.events.length - 1].atMs, 60_000, 60), "a number too small to be a moment is refused");
   ok(r.events.every((e, i, a) => i === 0 || a[i - 1].atMs <= e.atMs), "the timeline stays in the order it happened");
+}
+
+
+// ONE CLOCK, MONOTONIC (owner box 08-17, check 372's screen): Staff's answer printed ABOVE the
+// question Charlie asked first, because a line with a wrongly early backdate was re-sorted up the
+// page. A reply can only ARRIVE after what it answers, so arrival order is the conversation's
+// order and a wrong stamp is clamped, never allowed to rearrange the story.
+console.log("\n== the one clock: an answer can never print before its question ==");
+{
+  _reset();
+  const r = openReceipt("room-oneclock");
+  r.startMs = Date.now() - 80_000;
+  recordLine("room-oneclock", "Clerk", "Okay. Thank you for holding. I did not see any.", Date.now() - 12_000);
+  recordLine("room-oneclock", "Agent", "Ah gotcha, do you know what day you might get more in?", Date.now() - 8_300);
+  // 372's shape: the robot's answer, spoken AFTER the question, arrives with a backdate 120ms
+  // EARLIER than the question's own stamp.
+  recordLine("room-oneclock", "Clerk", "Next week maybe? I'm not certain.", Date.now() - 8_420);
+  const t = r.transcript;
+  ok(t.length === 3, `three lines written (${t.length})`);
+  ok(t[2].who === "Clerk" && /Next week/.test(t[2].text), "the answer files where it ARRIVED, after its question");
+  ok(t[1].atMs <= t[2].atMs, `…and its clamped moment can never draw it above the question (${t[1].atMs} <= ${t[2].atMs})`);
+  ok(t.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the whole conversation is monotonic on the one clock");
+}
+
+// THE ONE EXCEPTION, KEPT ON PURPOSE (owner screenshot 07-31 beside owner box 08-17): Staff's
+// hello is spoken BEFORE our question and only becomes words later, and the moment their voice
+// started is measured by OUR OWN ear, not a transcriber's mapped clock. Only such an ear-measured
+// moment may still file a line above lines already written; everything else keeps the clamp above.
+console.log("\n== the ear-measured hello still files above the question it preceded ==");
+{
+  _reset();
+  const r = openReceipt("room-hello");
+  r.startMs = Date.now() - 80_000;
+  recordLine("room-hello", "Agent", "do you have any Pokemon cards in stock?", undefined, true);
+  // The held greeting, transcribed seconds later, backdated to the ear's own voice-start moment.
+  recordLine("room-hello", "Clerk", "Thanks for calling the Fun store, this is Bob.", Date.now() - 6_000, undefined, true);
+  const t = r.transcript;
+  ok(t[0].who === "Clerk" && /this is Bob/.test(t[0].text), "the ear-measured hello reads first, the order it was said in");
+  ok(t[1].who === "Agent", "…and our question follows it");
+  ok(t.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the record is still in one order, oldest first");
+}
+
+// EVERY SPOKEN LINE FILES WITH A START AND AN END (owner, 08-17 evening), and a reply gap counts
+// from the END of the line before it, never from where that line started.
+console.log("\n== every spoken line files with a start and an end ==");
+{
+  _reset();
+  const r = openReceipt("room-ends");
+  r.startMs = Date.now() - 60_000;
+  const spoke = Date.now() - 40_000;
+  recordLine("room-ends", "Clerk", "Okay. Thank you for holding. Yeah. I did not see any, unfortunately.", spoke, undefined, undefined, spoke + 5_300);
+  const l = r.transcript[0];
+  ok(l.endMs != null && l.endMs - l.atMs === 5_300, `the line knows it took 5.3 seconds to say (${l.atMs} to ${l.endMs})`);
+  ok(Math.abs((lastLineEndEpoch("room-ends", "Clerk") ?? 0) - (spoke + 5_300)) <= 1,
+    "a reply gap counts from the END of that line, not from where it started");
+  // Charlie answers 1.9 seconds after they FINISH: measured from the end, that is 1.9, and measuring
+  // from the start of their line would have called it 7.2 (check 373's shape).
+  const answered = spoke + 5_300 + 1_900;
+  ok(Math.round((answered - (lastLineEndEpoch("room-ends", "Clerk") ?? 0)) / 100) === 19,
+    "his gap reads 1.9 seconds, the wait Staff really stood through");
+  // His own line's end is stamped as his voice plays out.
+  recordLine("room-ends", "Agent", "Ah gotcha, no worries!", answered);
+  stampLineEnd("room-ends", "Agent", answered + 2_100);
+  const his = r.transcript[r.transcript.length - 1];
+  ok(his.who === "Agent" && his.endMs != null && his.endMs - his.atMs === 2_100, `his line carries its own end too (${his.endMs! - his.atMs})`);
+  stampLineEnd("room-ends", "Agent", answered + 900);
+  ok(r.transcript[r.transcript.length - 1].endMs! - his.atMs === 2_100, "an end only ever moves later, never earlier");
+  // A line nobody measured the end of says so, and answers with its start rather than a made up end.
+  _reset();
+  const r2 = openReceipt("room-noend");
+  r2.startMs = Date.now() - 20_000;
+  recordLine("room-noend", "Clerk", "Yeah, we have some.", Date.now() - 10_000);
+  ok(r2.transcript[0].endMs === null, "a line whose end nobody measured keeps none, never a guess");
+  ok(Math.abs((lastLineEndEpoch("room-noend", "Clerk") ?? 0) - (r2.startMs + r2.transcript[0].atMs)) <= 1,
+    "…and the gap falls back to where it started, the only honest number we hold");
+}
+
+// NO IMPOSSIBLE ENDS (owner, 08-17 late, off check 374: the hold reply was marked as ending at
+// 81.3 seconds and Charlie's question at 90.0 on a call that ended at 88.0). An end is stamped from
+// the sound still queued to play, so a line cut short by the check ending kept the end it was
+// heading for. The record trims every end to the call's own end when the check closes.
+console.log("\n== no line can end after the check did ==");
+{
+  _reset();
+  const r = openReceipt("room-ends-late");
+  r.startMs = Date.now() - 88_000;
+  const said = Date.now() - 2_000;
+  // His goodbye: written down at 86 seconds, its sound heading for 90 on an 88 second call.
+  recordLine("room-ends-late", "Agent", "Oh totally, thanks so much, have a good one!", said, undefined, undefined, said + 4_000);
+  ok(r.transcript[0].endMs != null && r.transcript[0].endMs > 88_000, "before the check closes the end is still the one his sound was heading for");
+  closeReceipt("room-ends-late", "Check ended", "completed");
+  const end = r.meters.endMs ?? 0;
+  ok(r.transcript.every((l) => l.endMs == null || l.endMs <= end), `every end is inside the call (${r.transcript[0].endMs} <= ${end})`);
+  ok(r.transcript[0].endMs === end, "…and the goodbye ends exactly where the check did, never a second later");
+}
+
+// CHECK 373'S OWN SHEET: "Charlie's slowest reply so far" printed at 75 seconds and again at 83,
+// two stamps of ONE fact. The record keeps the worst and drops the interim ones (owner, 08-17).
+console.log("\n== the slowest reply is ONE row, the worst one ==");
+{
+  const tl = [
+    { kind: "unknown", note: "Charlie was handed what Staff said while he was off, as their turn", detail: { step: "missed_turn", sinceVoiceStopMs: 800 } },
+    { kind: "unknown", note: "Charlie's slowest reply so far", detail: { step: "gaps", answerGapWorstMs: 1944 } },
+    { kind: "unknown", note: "Charlie's slowest reply so far", detail: { step: "gaps", answerGapWorstMs: 3939 } },
+    { kind: "hangup", note: "Check ended", detail: { reason: "completed" } },
+  ];
+  const out = oneSlowestReplyRow(tl);
+  const gaps = out.filter((e) => (e.detail as { step?: string }).step === "gaps");
+  ok(gaps.length === 1, `one slowest-reply row, not two (${gaps.length})`);
+  ok(Number((gaps[0].detail as { answerGapWorstMs?: number }).answerGapWorstMs) === 3939, "…and the row kept is the WORST gap, 3939ms");
+  ok(gaps[0].note === "Charlie's slowest reply on this check", `…wearing the closing words, never "so far" (${gaps[0].note})`);
+  ok(out.length === 3 && out[0].detail!.step === "missed_turn" && out[2].kind === "hangup", "every other step is untouched, in its own place");
+  const none = oneSlowestReplyRow([{ kind: "hangup", note: "Check ended", detail: null }]);
+  ok(none.length === 1, "a check that never measured a reply gap draws no row at all");
 }
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
