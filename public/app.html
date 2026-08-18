@@ -2495,7 +2495,7 @@ function simSide(side){
   ['testing_src','testing_summary','testing_log'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=real?'':'none';});
   const sims=document.getElementById('testing_sims');if(sims)sims.style.display=real?'none':'';
   const t=document.getElementById('testing_title');if(t)t.textContent=real?'Test calls':'Simulated checks';
-  const sub=document.getElementById('testing_sub');if(sub)sub.textContent=real?'Checks you placed.':'Simulated test checks. No phone is used and nothing here is a real check.';
+  const sub=document.getElementById('testing_sub');if(sub)sub.textContent=real?'Checks you placed.':'Simulated test checks.';
   const on='flex:1;text-align:center;font-size:13px;font-weight:800;padding:9px 0;border-radius:999px;cursor:pointer;background:#26262E;color:#fff';
   const off='flex:1;text-align:center;font-size:13px;font-weight:800;padding:9px 0;border-radius:999px;cursor:pointer;color:#8A8A96';
   const a=document.getElementById('sw_real'),b=document.getElementById('sw_sims');
@@ -2541,10 +2541,12 @@ async function simOpen(id){
       <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;color:var(--green);background:rgba(74,222,128,.13)">${r.passed} passed</span>
       ${r.failed?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;color:var(--red);background:rgba(239,68,68,.13)">${r.failed} failed</span>`:''}
     </div>
-    <div class="stats" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px">
-      <div class="stat"><div class="n" style="color:#fff">${r.calls}</div><div class="l">Total simulations</div></div>
-      <div class="stat"><div class="n" style="color:${meterC}">${r.avgMeterSec==null?'':r.avgMeterSec+'s'}</div><div class="l">Charlie on the meter${split?`<div style="margin-top:3px;font-size:10px;line-height:1.35;color:#8A8A96">${esch(split)}</div>`:''}</div></div>
-      <div class="stat"><div class="n" style="color:#fff">${r.totalSec!=null?mmssT(r.totalSec):''}</div><div class="l">Total time, all simulations</div></div>
+    <!-- Charlie's box sits FAR LEFT and biggest (owner 08-18: it carries the most information,
+         the same weight the real check sheet gives it); the two small tiles stack beside it. -->
+    <div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+      <div class="stat" style="grid-row:span 2;display:flex;flex-direction:column;justify-content:center"><div class="n" style="color:${meterC}">${r.avgMeterSec==null?'':r.avgMeterSec+'s'}</div><div class="l">Charlie on the meter${split?`<div style="margin-top:3px;font-size:10px;line-height:1.35;color:#8A8A96">${esch(split)}</div>`:''}</div></div>
+      <div class="stat"><div class="n" style="color:#fff">${r.calls}</div><div class="l">Simulations</div></div>
+      <div class="stat"><div class="n" style="color:#fff">${r.totalSec!=null?mmssT(r.totalSec):''}</div><div class="l">SIM time</div></div>
     </div>
     ${fails.length?`<div class="card" style="margin-bottom:14px;padding:16px 18px">
       <div class="k-eyebrow" style="margin:0 0 4px">Failed</div>
