@@ -802,6 +802,52 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  never re-handed (the mirror image of the stale hello). `voiceStopped` is the EAR's own word
    *  that their voice ended, which is what opens his turn — never the writer's one second quiet. */
   let reconnectFeed: { handed: string[]; voiceStopped: boolean } | null = null;
+  /** THE WORDLESS REJOIN (owner 08-18, checks 377/380, test five). On the line, hold music can
+   *  play at speech level with gaps in it — the swelling waltz measures exactly like a quiet fast
+   *  talker, so no energy rule can refuse the rejoin. Echo can: it writes every word said on the
+   *  line, and a "voice" that writes nothing inside REJOIN_WORDLESS_MS was the music, so Charlie
+   *  drops again (the owner's sentence: he sits in music with no voice). That hold has then PROVEN
+   *  it holds wordless sound, so its next comeback needs written words, or the same music rejoins
+   *  him in a loop at about five metered seconds a cycle. A real comeback is untouched: its words
+   *  land inside the window (the writer's worst measured first piece runs 3.2s behind the sound),
+   *  and a real person behind a proven-wordless hold reopens him the moment their words land,
+   *  backdated to the moment the ear heard their voice come back.
+   *
+   *  THE WINDOW IS THE WRITER'S OWN WORST, measured, plus a margin (check 381: at 5s the metered
+   *  stretch of waltz cost the sheet's meter row its pass by 2 seconds). The bench's worst first
+   *  written piece ran 3.16s behind the sound; 4s covers it. A long unbroken opening sentence that
+   *  beats the window anyway is caught by the release below: the first written word ends the hold
+   *  backdated, so the comeback is never lost, only heard through Echo. */
+  const REJOIN_WORDLESS_MS = 4000;
+  let wordlessRejoinTimer: NodeJS.Timeout | null = null;
+  let heardWordsSinceEarsBack = false;
+  let holdProvedWordless = false;
+  let wordlessRedropAtMs = 0;
+  let pendingComeback: { gapMs: number; newPerson: boolean; backAtMs?: number } | null = null;
+  /** Written words landed on the line. They spend the wordless-rejoin window, and they are the one
+   *  key that reopens a hold which proved it holds wordless sound. */
+  function heardTheWords(): void {
+    heardWordsSinceEarsBack = true;
+    if (wordlessRejoinTimer) { clearTimeout(wordlessRejoinTimer); wordlessRejoinTimer = null; }
+    if (onHold && holdProvedWordless) {
+      holdProvedWordless = false;
+      const pc = pendingComeback; pendingComeback = null;
+      log("the hold's sound finally carries words: somebody is really back");
+      endHold(pc?.gapMs ?? Math.max(0, Date.now() - wordlessRedropAtMs), pc?.newPerson ?? false, pc?.backAtMs);
+    }
+  }
+  /** The ear says somebody is back. On a hold that has PROVEN it holds wordless sound, the sound
+   *  alone is no longer enough: the comeback is held, its latest moment kept, and Echo's first
+   *  written word releases it through `heardTheWords`. Every other hold ends exactly as it always
+   *  has, on the sound of the voice. */
+  function endHoldOnEvidence(gapMs: number, maybeNewPerson: boolean, backAtMs?: number): void {
+    if (onHold && holdProvedWordless) {
+      pendingComeback = { gapMs, newPerson: maybeNewPerson, backAtMs };
+      log("the ear hears a comeback, but this hold proved wordless: waiting for written words");
+      return;
+    }
+    endHold(gapMs, maybeNewPerson, backAtMs);
+  }
   /** Post-stop pieces coalesce for a beat so a burst of late writing hands as ONE turn, not two
    *  (check 371: two pieces 0.12s apart reached him as two turns). */
   let pieceCoalesceTimer: NodeJS.Timeout | null = null;
@@ -892,6 +938,21 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (echoRooms.has(room) && !handedOn) {
       reconnectFeed = { handed: [], voiceStopped: !theirVoiceOn };
       charlieMaySpeak = false;
+      // The wordless-rejoin window opens with his ears: written words spend it, and a rejoin that
+      // reaches the far side with nothing written was the music (owner 08-18, check 380).
+      heardWordsSinceEarsBack = false;
+      if (wordlessRejoinTimer) clearTimeout(wordlessRejoinTimer);
+      wordlessRejoinTimer = setTimeout(() => {
+        wordlessRejoinTimer = null;
+        if (ended || onHold || heardWordsSinceEarsBack) return;
+        holdProvedWordless = true;
+        wordlessRedropAtMs = Date.now();
+        if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
+        log(`the rejoin wrote no words in ${Math.round(REJOIN_WORDLESS_MS / 1000)}s: the voice was the music, dropping again`);
+        emit(room, "unknown", "The voice that brought Charlie back wrote no words, so it was the music and he is dropped again",
+          { step: "wordless_rejoin", afterMs: REJOIN_WORDLESS_MS });
+        beginHold("music", Date.now());
+      }, REJOIN_WORDLESS_MS);
       if (!answerWaitTimer) {
         answerWaitTimer = setTimeout(() => {
           answerWaitTimer = null;
@@ -1352,7 +1413,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // both are somebody DOING something, and neither is Charlie holding his tongue.
       const owedHimAWord = charlieMaySpeak && !spokeThisSession && answeredAtMs > 0 && HIS_FIRST_WORD_MS > 0
         ? Math.max(0, answeredAtMs + HIS_FIRST_WORD_MS - Date.now()) : 0;
-      const wait = Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
+      // A rejoin that proved wordless drops AT ONCE: the minimum-on-line window exists so a real
+      // person never hears him come and go choppily, and a hold that just proved it holds wordless
+      // sound has proven there is nobody to hear anything (owner 08-18, check 381: the politeness
+      // second was a metered second of hold music).
+      const wait = holdProvedWordless ? 0 : Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
       if (wait <= 0) dropHim();
       else {
         log(`hold (${reason}): ${owedHimAWord > 0 ? "he has their answer and has not spoken yet" : `his session is only ${Math.round(onLineFor / 1000)}s old`}, giving him ${Math.round(wait / 1000)}s before closing him`);
@@ -1373,6 +1438,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
+    holdProvedWordless = false; pendingComeback = null;
     // THE ANNOUNCEMENT IS SPENT (check 369). "Let me check, I'll put you on hold" announces ONE
     // wait, and this is that wait ending. It used to stay armed until Staff's next WRITTEN line
     // landed, and Echo's writing runs seconds behind — so with the drop switch at 3 seconds,
@@ -1532,6 +1598,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function staffPiece(text: string): void {
     const t = String(text || "").trim();
     if (!t || ended) return;
+    // A written piece is real words on the line — see the wordless-rejoin note (owner 08-18).
+    heardTheWords();
     openTurnPieces.push(t);
     // Pieces landing after the voice stopped wait one beat for a trailing piece, so late writing
     // hands as ONE turn (check 371: two pieces 0.12s apart reached him as two separate turns).
@@ -1758,6 +1826,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *        arithmetic against this call's own zero; without it the line stamps on arrival.
    */
   function staffSaid(txt: string, spokenAtEpochMs?: number, fromEcho?: boolean, endedAtEpochMs?: number): boolean {
+    // Echo wrote a whole line: real words on the line, the proof a rejoin was a person and the one
+    // key that reopens a hold which proved wordless (owner 08-18, check 380).
+    if (fromEcho && txt && String(txt).trim() && !ended) heardTheWords();
     // The session path's moment comes from OUR ear (the held greeting's start, the energy ear's
     // voice start), so it may still file the hello above the question it preceded (owner 07-31).
     // Echo's stamps are the transcriber's clock and get the one-clock clamp (owner box 08-17) —
@@ -2520,7 +2591,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // the line. The meter flips from "never checked" to a real measured zero at the same moment.
       startMeter(room, "holdMs");
       convEar = new ConversationEar({
-        holdStart: beginHold, holdEnd: endHold,
+        holdStart: beginHold, holdEnd: endHoldOnEvidence,
         // NOBODY IS COMING BACK. Not the same as stepping away to check a shelf: this is a handset
         // left on a counter. Recorded, and the give-up cap owns what to do about it.
         deadAir: (quietMs) => emit(room, "unknown", `Nothing has been said for ${Math.round(quietMs / 1000)}s, the line is dead air`, { deadAirSec: Math.round(quietMs / 1000) }),
@@ -3090,5 +3161,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // reply by name (owner box 08-16 late). Only when something was measured; an old check reads
     // exactly as it always did.
     if (worstAnswerGapMs > 0) { try { emit(room, "unknown", "Charlie's slowest reply on this check", { step: "gaps", answerGapWorstMs: worstAnswerGapMs }); } catch { /* the stamp is best-effort */ } }
-    log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+    log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (wordlessRejoinTimer) { clearTimeout(wordlessRejoinTimer); wordlessRejoinTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

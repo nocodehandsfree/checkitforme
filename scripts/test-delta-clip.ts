@@ -51,11 +51,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // μ-law: 0x00 decodes to a very loud sample, 0x7F to silence. That is all we need to make the ear
 // hear "someone is talking" or "the line is quiet".
 const LOUD = (n = 160, jitter = 0) => Buffer.alloc(n, 0x00).map((_, i) => (jitter && i % (3 + jitter) === 0 ? 0x10 : 0x00)) as Buffer;
-/** SPEECH, NOT A TONE. LOUD holds the same loudness on every frame, and over about a second of it the
- *  ear rightly calls that a machine tone — a ringback holds a steady amplitude, speech swings hard
- *  from syllable to syllable. Any scene that has to keep somebody TALKING for seconds (a recording
- *  reading its announcement) needs that swing, or it is testing the ringback rule by accident. */
-const SPEECH = (i: number) => Buffer.alloc(160, [0x00, 0x22, 0x08, 0x34, 0x02, 0x18][i % 6]);
+/** SPEECH, NOT A TONE, AND NOT MUSIC EITHER. LOUD holds the same loudness on every frame, and over
+ *  about a second of it the ear rightly calls that a machine tone — a ringback holds a steady
+ *  amplitude, speech swings hard from syllable to syllable. Any scene that has to keep somebody
+ *  TALKING for seconds needs that swing, or it is testing the ringback rule by accident. And every
+ *  fifth frame is SILENT, the same gap the `speak` helper below has always had, because that is
+ *  what real speech measures as on a real tape (check 378's carrier recording, 08-18): a voice
+ *  never held the line more than about two thirds loud inside any one second — word edges dip
+ *  under the threshold — while the hold music ran 100% loud for fourteen straight seconds. The
+ *  gaps are how the ear tells a person coming back from the music resuming, so a speech shape
+ *  with no gaps in it is a music shape by the ear's own measure, and it tests the wrong thing. */
+const SPEECH = (i: number) => Buffer.alloc(160, i % 5 === 4 ? 0x7f : [0x00, 0x22, 0x08, 0x34, 0x02, 0x18][i % 6]);
 const frame = (b: Buffer) => b.toString("base64");
 
 // ---- the fake voice provider -----------------------------------------------------------------
@@ -2879,6 +2885,57 @@ console.log("\n▶ …and the backstop: quiet with no announcement at all still 
   await sleep(2200);
   ok(ev().some((e) => e.kind === "hold_start"), "past it, the handset really was put down, so the wait begins");
   ok(ev().some((e) => e.kind === "charlie_leave"), "and Charlie is dropped for it, so a forgotten handset cannot bill him forever");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CHECK 380'S SHAPE: a rejoin that writes no words is the music, and only words reopen a hold that proved wordless");
+{
+  // 08-18, test five, the swelling waltz. On the line the waltz plays at speech level with gaps in
+  // it, so no energy rule can refuse it: the ear rejoined Charlie 3 seconds into the clip and he
+  // sat open through the whole swell, metered, with nobody there. The proof the owner's sentence
+  // names is Echo's: it writes every word said on the line, and a "voice" that writes nothing was
+  // the music — so he drops again, and THAT hold now needs written words to reopen, or the same
+  // music rejoins him in a loop, five metered seconds a cycle.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-wordless-rejoin";
+  echoListening(room, true);
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0 }, "reopen");
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(evs().some((e) => e.kind === "charlie_join"), "his session is up");
+  const ws = f.sockets[f.sockets.length - 1];
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Fun store, this is Bob." } }));
+  await sleep(40);
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(120);
+  echoHeardStaff(room, "Hang on, let me go and see for you.");
+  await sleep(40);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(400);
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the announced wait");
+  const sockets = f.sockets.length;
+  // THE MUSIC THAT BANKS LIKE SPEECH. Sound with gaps, and not one written word behind it.
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(600);
+  ok(f.sockets.length > sockets, "the music fools the ear and he is opened again");
+  // …but nothing is written down, so the rejoin proves itself wordless and he drops again.
+  await sleep(6200);
+  ok(evs().filter((e) => e.kind === "charlie_leave").length >= 2, "no words came, so he is dropped again");
+  ok(!evs().some((e) => (e.detail || {}).step === "missed_turn"), "and nothing wordless was ever handed to him as a turn");
+  // More of the same music: this hold has proven wordless, so sound alone can never reopen him now.
+  const socketsAfter = f.sockets.length;
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(700);
+  ok(f.sockets.length === socketsAfter, "the same music cannot fool the same hold twice");
+  // Until Staff really speak: their voice AND their written words, and the comeback releases.
+  for (let i = 0; i < 40; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  echoHeardStaff(room, "Yeah. We do have those in.");
+  await sleep(900);
+  ok(f.sockets.length > socketsAfter, "written words reopen him");
+  const missed = evs().filter((e) => (e.detail || {}).step === "missed_turn");
+  ok(missed.length === 1, `their answer is handed to him once (${missed.length})`);
   restore(); tw.close(); f.close();
 }
 

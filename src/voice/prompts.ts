@@ -205,7 +205,12 @@ export function askedToBePutThrough(line: string): boolean {
  * the finalizer has always read a last clerk line by (elevenlabs.ts), so the two can never disagree
  * about what counts as being put on hold.
  */
-const GOING_TO_CHECK = /\b(?:hold on|hang on|one (?:sec|second|moment|minute)|just a (?:sec|second|moment|minute)|let me (?:check|see|look|go|double.?check|find out|ask|grab)|lemme (?:check|see|look|go)|bear with|give me a (?:sec|second|minute|moment)|i'?ll (?:check|go check|go look|go see|be right back)|checking (?:on|for) (?:that|you)|be right (?:back|with you)|put you on hold|i'?m gonna put you on hold)\b/i;
+// "go check/look/see" stands alone, and "put this down" counts (check 386, 08-18, test six): Staff
+// said "Let me put this down a sec and go check." — "let me" only matched with its verb RIGHT after
+// it, and bare "go check" was only known inside "i'll go check", so the phone-down wait was never
+// announced, the room hold sat behind the inversion gate, and Charlie billed through 20 seconds of
+// store noise the ear had rightly called the room. Taught the matcher, never the transcript.
+const GOING_TO_CHECK = /\b(?:hold on|hang on|one (?:sec|second|moment|minute)|just a (?:sec|second|moment|minute)|let me (?:check|see|look|go|double.?check|find out|ask|grab)|lemme (?:check|see|look|go)|bear with|give me a (?:sec|second|minute|moment)|i'?ll (?:check|go check|go look|go see|be right back)|go (?:check|look|see)\b|put (?:this|that|it|the phone) down|checking (?:on|for) (?:that|you)|be right (?:back|with you)|put you on hold|i'?m gonna put you on hold)\b/i;
 export function saidGoingToCheck(line: string): boolean {
   return GOING_TO_CHECK.test(String(line || ""));
 }

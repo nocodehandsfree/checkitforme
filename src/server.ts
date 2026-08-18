@@ -25,7 +25,7 @@ import { allSettings, getSetting, setSetting } from "./db/settings";
 import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
 import { costBuckets, STATUS_READ_USD } from "./calls/cost";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, settleChecksLostToARestart, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, settleChecksLostToARestart, setActiveVoice, statusFromTheRecord, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
@@ -3726,8 +3726,12 @@ app.get("/pub/result/:cid", async (c) => {
       o.transcript, label || "the product", undefined, row.room,
     );
     const productDetail = productDetailLabel(second);
+    // THE RECORD'S FACTS DECIDE OVER THE READER AT THIS DOOR TOO (law 11, check 390): died
+    // mid-hold, our own cap, Staff hanging up, the never-a-straight-answer word — one shared
+    // decider, statusFromTheRecord, the same rules the sweep has always run.
+    const settledKey = await statusFromTheRecord(row.room, consensus.confirmed, consensus.statusKey, o.transcript);
     await db.update(callResults).set({
-      status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
+      status: o.status, confirmed: consensus.confirmed, statusKey: settledKey,
       shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary,
       // Ours if we recorded any, theirs only when we did not (transcriptPatch). This on-demand
       // finalize is what a customer refreshing the page hits, so it was blanking the transcript
@@ -3735,14 +3739,14 @@ app.get("/pub/result/:cid", async (c) => {
       ...(await transcriptPatch(row.id, o.transcript)),
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
-    const charged1 = !!(row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript));
+    const charged1 = !!(row.finderUserId && billableOutcome(settledKey, consensus.definitive, o.transcript));
     if (charged1) await chargeCallOnce(row.id, row.finderUserId!);
     // THE VERDICT TAIL RIDES EVERY DOOR (law 11). Three doors settle a verdict — the sweep, this
     // on-demand settle a watching customer triggers, and the webhook — and a check watched to the
     // end settles HERE first, so a tail written only by the sweep never lands on exactly the checks
     // the owner watches. Same recorder, same three rows, whichever door wins the race (the recorder
     // itself never writes a second verdict onto a check that has one).
-    void recordVerdict(row.id, consensus.statusKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
+    void recordVerdict(row.id, settledKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
       { secondReadModel: second ? VERDICT_MODEL : null, secondReadUsd: second ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: charged1 });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // This on-demand settle used to be the ONE finalize path that never sent the alerts, so a check
@@ -3750,7 +3754,7 @@ app.get("/pub/result/:cid", async (c) => {
     // poller and the webhook, claimed once per check. Fire-and-forget: the verdict response never
     // waits on an email provider.
     void notifyAfterVerdict(row.id);
-    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: (row.transcript && row.transcript.trim()) || o.transcript });
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: settledKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: (row.transcript && row.transcript.trim()) || o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
   return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
@@ -7787,7 +7791,9 @@ app.post("/webhooks/elevenlabs", async (c) => {
           { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
           o.transcript, label || "the product", undefined, row?.room,
         );
-        confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
+        confirmed = consensus.confirmed; definitive = consensus.definitive;
+        // THE RECORD'S FACTS DECIDE OVER THE READER at the webhook door too (law 11, check 390).
+        statusKey = await statusFromTheRecord(row?.room, consensus.confirmed, consensus.statusKey, o.transcript);
         productDetail = productDetailLabel(second);
         restockDayHeard = second?.restockDay ?? null; // staff-volunteered restock day, captured even unprompted
       }
