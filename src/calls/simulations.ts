@@ -34,6 +34,9 @@ export interface SimCallIn {
   meterSec: number;
   speakingSec?: number | null;
   listeningSec?: number | null;
+  /** The whole simulated call's length, for the run's total time tile (owner 08-18). Left out,
+   *  the meter seconds stand in. */
+  callSec?: number | null;
   /** The conversation, in order. `who` is "staff" or "charlie". */
   lines: Array<{ who: string; text: string }>;
   /** A short failure name in the owner's colon style, set by the generator when it saw the
@@ -92,6 +95,14 @@ export async function fileSimRun(run: SimRunIn, calls: SimCallIn[]) {
   const failed = graded.filter((c) => !c.pass);
   const passed = graded.length - failed.length;
   const avg = graded.length ? graded.reduce((s, c) => s + (c.meterSec || 0), 0) / graded.length : 0;
+  // The meter tile mirrors a real check's: the average split into speaking, listening and waiting
+  // (owner 08-18). Averaged over the calls that measured it; none measured = no split drawn.
+  const split = graded.filter((c) => c.speakingSec != null || c.listeningSec != null);
+  const avgOf = (f: (c: SimCallStored) => number) => split.length ? Math.round(split.reduce((t, c) => t + f(c), 0) / split.length) : null;
+  const avgSpeakingSec = avgOf((c) => c.speakingSec ?? 0);
+  const avgListeningSec = avgOf((c) => c.listeningSec ?? 0);
+  const avgWaitingSec = avgOf((c) => Math.max(0, (c.meterSec || 0) - (c.speakingSec ?? 0) - (c.listeningSec ?? 0)));
+  const totalSec = Math.round(graded.reduce((t, c) => t + (c.callSec ?? c.meterSec ?? 0), 0));
   // Passes are kept as their numbers only; a failure keeps its whole conversation so the owner
   // can read exactly how it went wrong. One row per run, never a row per call.
   const kept = graded.map((c) => c.pass
@@ -104,6 +115,7 @@ export async function fileSimRun(run: SimRunIn, calls: SimCallIn[]) {
     startedAt: Math.floor(Date.now() / 1000),
     calls: graded.length, passed, failed: failed.length,
     avgMeterSec: Math.round(avg * 10) / 10,
+    avgSpeakingSec, avgListeningSec, avgWaitingSec, totalSec,
     verdictLine: simVerdictLine(passed, failed.length),
     callsJson: JSON.stringify(kept),
   };

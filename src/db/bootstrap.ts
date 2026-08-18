@@ -249,6 +249,8 @@ export async function bootstrap() {
     verdict_line TEXT NOT NULL DEFAULT '',
     calls_json TEXT NOT NULL DEFAULT '[]'
   )`).catch(() => {});
+  for (const col of ["avg_speaking_sec REAL", "avg_listening_sec REAL", "avg_waiting_sec REAL", "total_sec INTEGER"])
+    await client.execute(`ALTER TABLE sim_runs ADD COLUMN ${col}`).catch(() => {});
   for (const col of [
     "lane TEXT", "room TEXT", "talk_seconds INTEGER", "menu_seconds INTEGER",
     "charlie_connected_seconds INTEGER", "charlie_talking_seconds INTEGER",

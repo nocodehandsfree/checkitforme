@@ -2494,8 +2494,8 @@ function simSide(side){
   const real=side==='real';
   ['testing_src','testing_summary','testing_log'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=real?'':'none';});
   const sims=document.getElementById('testing_sims');if(sims)sims.style.display=real?'none':'';
-  const t=document.getElementById('testing_title');if(t)t.textContent=real?'Test calls':'Simulation runs';
-  const sub=document.getElementById('testing_sub');if(sub)sub.textContent=real?'Checks you placed.':'Simulations only. No phone is used and nothing here is a real check.';
+  const t=document.getElementById('testing_title');if(t)t.textContent=real?'Test calls':'Simulated checks';
+  const sub=document.getElementById('testing_sub');if(sub)sub.textContent=real?'Checks you placed.':'Simulated test checks. No phone is used and nothing here is a real check.';
   const on='flex:1;text-align:center;font-size:13px;font-weight:800;padding:9px 0;border-radius:999px;cursor:pointer;background:#26262E;color:#fff';
   const off='flex:1;text-align:center;font-size:13px;font-weight:800;padding:9px 0;border-radius:999px;cursor:pointer;color:#8A8A96';
   const a=document.getElementById('sw_real'),b=document.getElementById('sw_sims');
@@ -2526,9 +2526,15 @@ async function simOpen(id){
   const meterC=r.avgMeterSec==null?'var(--muted)':r.avgMeterSec<=23?'var(--green)':r.avgMeterSec<=30?'var(--yellow)':'var(--red)';
   const chev='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:#5C5C68;flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>';
   const bub=(who,tx)=>{const ai=who==='charlie';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF (SIMULATED)'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
+  // The owner's 08-18 screen edits, his exact list: no line above the name · the meter tile
+  // mirrors a real check's with the speaking, listening and waiting split under the number ·
+  // "Total simulations" · total time instead of phone money (a 0 cent stat says nothing) · the
+  // failed box is headed "Failed" · the verdict sentence is gone from the screen (it stays on the
+  // record) · the why sentence sits FIRST inside the opened failure, plain white, never red.
+  const mmssT=n=>{n=Math.max(0,Math.round(n||0));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');};
+  const split=(r.avgSpeakingSec!=null||r.avgListeningSec!=null)?`${r.avgSpeakingSec??0}s speaking · ${r.avgListeningSec??0}s listening · ${r.avgWaitingSec??0}s waiting`:'';
   box.innerHTML=`
     <div style="font-size:12.5px;font-weight:700;color:var(--muted);margin:0 0 10px;cursor:pointer" onclick="simRuns()">‹ All runs</div>
-    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px">Simulation run · ${r.calls} simulations · ${esch(when)}</div>
     <div><span${r.info?` data-tip="${esch(r.info)}"`:''} style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff">${esch(r.name)}</span></div>
     ${r.sub?`<div class="meta" style="margin:5px 0 0;font-size:13px">${esch(r.sub)}</div>`:''}
     <div style="display:flex;gap:7px;margin:12px 0 14px;flex-wrap:wrap">
@@ -2536,22 +2542,21 @@ async function simOpen(id){
       ${r.failed?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;color:var(--red);background:rgba(239,68,68,.13)">${r.failed} failed</span>`:''}
     </div>
     <div class="stats" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px">
-      <div class="stat"><div class="n" style="color:#fff">${r.calls}</div><div class="l">Simulations run</div></div>
-      <div class="stat"><div class="n" style="color:${meterC}">${r.avgMeterSec==null?'':r.avgMeterSec+'s'}</div><div class="l">Charlie on the meter, average</div></div>
-      <div class="stat"><div class="n" style="color:#fff">0¢</div><div class="l">Phone money spent</div></div>
+      <div class="stat"><div class="n" style="color:#fff">${r.calls}</div><div class="l">Total simulations</div></div>
+      <div class="stat"><div class="n" style="color:${meterC}">${r.avgMeterSec==null?'':r.avgMeterSec+'s'}</div><div class="l">Charlie on the meter${split?`<div style="margin-top:3px;font-size:10px;line-height:1.35;color:#8A8A96">${esch(split)}</div>`:''}</div></div>
+      <div class="stat"><div class="n" style="color:#fff">${r.totalSec!=null?mmssT(r.totalSec):''}</div><div class="l">Total time, all simulations</div></div>
     </div>
     ${fails.length?`<div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div class="k-eyebrow" style="margin:0 0 4px">The ${fails.length} that failed</div>
+      <div class="k-eyebrow" style="margin:0 0 4px">Failed</div>
       ${fails.map(c=>`<details class="v2c"><summary style="list-style:none;cursor:pointer"><div class="row" style="align-items:center;padding:8px 0;gap:8px">
         <span style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,.15);display:grid;place-items:center;flex:0 0 auto;color:var(--red);font-size:12px;font-weight:800">✕</span>
         <span class="grow" style="font-size:13.5px;font-weight:700;color:var(--text-strong)">${esch(c.failName||((c.meterFails||[])[0]||'Failed'))}</span>
         <span style="font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto">call ${c.n} of ${r.calls}</span>${chev}</div></summary>
         <div style="background:rgba(255,255,255,.03);border-radius:12px;margin:2px 0 10px;padding:12px">
+          ${(c.why||(c.meterFails||[]).length)?`<div style="font-size:12.5px;color:var(--text-strong);margin:0 2px 8px;line-height:1.5">${esch(c.why||(c.meterFails||[]).join(' '))}</div>`:''}
           ${(c.lines||[]).map(l=>bub(l.who,l.text)).join('')}
-          ${(c.why||(c.meterFails||[]).length)?`<div style="font-size:12.5px;color:var(--red);margin:8px 2px 2px;line-height:1.5">${esch(c.why||(c.meterFails||[]).join(' '))}</div>`:''}
         </div></details>`).join('')}
-    </div>`:''}
-    ${r.verdictLine?`<div style="display:flex;align-items:center;gap:10px;background:rgba(74,222,128,.09);border-radius:14px;padding:14px 16px;font-size:13.5px;font-weight:700;color:#D9FBE7">${esch(r.verdictLine)}</div>`:''}`;
+    </div>`:''}`;
 }
 // ---- THE CHECK SHEET (owner-approved comp 08-04, wired to the real record the same day). Every
 // element is the page's own: .stat tiles, .card, the ladder metrics from chainRung, and the

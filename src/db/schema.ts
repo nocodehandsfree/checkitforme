@@ -284,6 +284,10 @@ export const simRuns = sqliteTable("sim_runs", {
   passed: integer("passed").notNull(),
   failed: integer("failed").notNull(),
   avgMeterSec: real("avg_meter_sec"),
+  avgSpeakingSec: real("avg_speaking_sec"),
+  avgListeningSec: real("avg_listening_sec"),
+  avgWaitingSec: real("avg_waiting_sec"),
+  totalSec: integer("total_sec"),
   verdictLine: text("verdict_line").notNull().default(""),
   callsJson: text("calls_json").notNull().default("[]"),
 });
