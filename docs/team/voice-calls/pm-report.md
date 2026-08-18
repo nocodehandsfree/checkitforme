@@ -67,10 +67,42 @@ scene "CHECK 380'S SHAPE" fails on the old engine, passes now: delta-clip 347/0 
 bridge 13 · dropped-call 28 · call-events 124 · behaved 99 · meter 65 · clips 10 · gates 9 · robot
 store held · tsc clean · spec suite 6 reds, all on the pre-existing list (baseline has 7).
 
-**Known ahead of the re-dial:** even clean, scene 21's meter lands ~42s — the same floor family as
-scene 20 — so the pill will likely still say failed on cost while the record shows the hold honest.
+## SCENE 21 PASSED (check 382). The re-dial after two calibrations inside the named fix (the
+wordless window set to the writer's benched worst, 4s, and an immediate drop when a rejoin proves
+wordless — there is provably nobody to be polite to): **the pill says Test passed.** Meter 27s
+yellow passing, profit 70% green, drop gap 3s green, handover 1s green, answer gap 2s green,
+7.4 cents — the cheapest hold check yet. The record: false rejoin at 22s (the plucks), proven
+wordless and dropped the same second at 25s, the escalated hold refused the swell for 7 seconds,
+and Staff's real words reopened him backdated with their answer handed once.
 
-**For the owner's eye, not built:** scene 22 (advert in the music) will write the AD'S OWN WORDS
-through Echo, so the wordless test cannot catch it and the fingerprint only catches a repeat. The
-honest catch is the reader judging the words (the same family as the Spanish announce already on
-his list). Dialing 22 after 21 to put its true shape on a record.
+## SCENE 20 FLOOR CONFIRMED (check 384, second clean dial). Card pass, hold clean, profit 60%
+green. Meter 39s red: the classic clip is loud from its first frame, so only the 6-second unbroken
+music proof can declare it (no quiet for the announced 3s path) — that 6s is the drop-gap row's
+permanent red on this scene — plus the provider's reply swing (his slowest answer ran 7s this
+dial, 4.5s on 379, 2.2s on 382). Both are outside the standing law: shortening the music proof
+moves when his ear switches off, and the provider's turn wait is benched as unmovable. Scene 20's
+meter floor is 39-43 against a pass line of 30.
+
+## SCENE 22 IS A FLOOR THE OWNER HAS TO RULE ON (check 383, dialed once). NO hold was ever
+declared: on the line the ad-mix measures as a VOICE (loud 14-100% by the second, runs under 1s,
+gaps under 0.9s — measured off 383's tape), so neither the quiet path nor the music proof can ever
+fire, and the ad even WRITES real words through Echo ("Thanks for holding. Did you know we price
+match any local competitor? Ask an associate…" is on the record as a Clerk line), so the wordless
+principle cannot catch it either. Charlie sat metered through all 22 seconds (meter 54s, profit
+43%, Meter stopped missing). The owner said it himself on the card: a recorded voice is the
+closest thing to Staff returning that is not Staff. The honest fix is the READER judging the
+words — a recording announcing a hold is not a person answering — the same model-not-word-list
+fix already on his list for check 376's Spanish announce. Nothing sound-level remains.
+
+## TEST SIX: scene 23 (quieter room) hearing PERFECT (check 385) — room hold declared, dropped at
+3s green, no false rejoin through the whole busy room, comeback backdated, handed once, profit 63%
+green; meter 35s red on the provider's reply swing alone (7s slowest answer). Scene 24 (louder
+room, check 386) found a REAL fault, FIXED: the ear rightly called the room (proven by replaying
+386's own tape through it), but the scene's announce — "Let me put this down a sec and go check."
+— was the one wait line the announce matcher missed, so the room hold sat behind the inversion
+gate and Charlie billed through 20 seconds of store noise (meter 42s, Meter stopped missing).
+Taught the matcher, never the transcript (the 08-04 ruling): bare "go check/look/see" and "put
+this/the phone down" now read as an announce, and every hold scene's own announce line is pinned
+in test-prompts with negatives. Suites all green (prompts 226, bank 347/0, the usual set), tsc
+clean, one-question's 2 reds are the documented pre-existing baseline. Re-dialing 24 next, then
+scene 6 (test seven, hold where nobody returns).
