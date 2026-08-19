@@ -303,6 +303,7 @@ export const accounts = sqliteTable("accounts", {
   email: text("email"),
   emailVerifiedAt: integer("email_verified_at"), // set when they tap the confirm-email link; alert emails require it
   alertsPausedAt: integer("alerts_paused_at"),   // master "Pause all alerts": set = every alert paused (fan-out skips this account) until cleared
+  autoChecksPausedAt: integer("auto_checks_paused_at"), // master "Pause all" on the Auto-checks list: set = every auto-check of this account stands down until cleared
   language: text("language"),   // "es" → alert emails/texts go out in Spanish; null/"en" → English
   phone: text("phone"),         // E.164 cell for phone-first (Clerk-free) identity
   callerId: text("caller_id"),  // verified caller-ID number for this account's outbound calls
@@ -399,6 +400,24 @@ export const customerSchedules = sqliteTable("customer_schedules", {
  * (approved defaults false) so nothing unvetted goes public. Storage-agnostic — imageUrl can be an
  * R2 public URL (preferred), CDN, or any link. Gated by policy.flags.community.
  */
+/**
+ * A DAY AN AUTO-CHECK COULD NOT RUN. Every auto-check that fires is already its own record: the
+ * call_results row carries customer_schedule_id. The days it could NOT fire had no record at all,
+ * so the customer saw a silent gap (owner 2026-08-19: "each auto check is its own transaction and
+ * needs a record and somebody needs to be able to see what happened with that record"). One row per
+ * schedule per store-local day, written by the tick and cleared if the check later runs that day.
+ */
+export const customerScheduleSkips = sqliteTable("customer_schedule_skips", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  scheduleId: integer("schedule_id").notNull(),
+  finderUserId: text("finder_user_id").notNull(),
+  retailerId: integer("retailer_id").notNull(),
+  day: text("day").notNull(),            // store-local YYYY-MM-DD
+  reason: text("reason").notNull(),      // store_off | no_checks
+  detail: text("detail"),                // the store's own reason, when it gave one
+  createdAt: integer("created_at").notNull().default(now),
+});
+
 export const communityPosts = sqliteTable("community_posts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   finderUserId: text("finder_user_id"),   // clerk id if signed in (else anonymous)

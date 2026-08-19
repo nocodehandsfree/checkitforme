@@ -18,6 +18,9 @@ const rows = await page.evaluate(() => {
   try { editEmail(); } catch (e) {}
   try { openFeatInfo('restock_alerts'); } catch (e) {}
   try { openAlerts(); } catch (e) {}
+  // Auto-checks: the list, one store's report and the edit sheet are all built on demand too.
+  try { window.SCHEDS = [{ id: 1, retailerId: 1, store: 'Test', storeFull: 'Test — Town', category: 'Pokémon', daysOfWeek: '2,5', timeLocal: '10:00', active: true, paused: false, nextDow: 5 }];
+    openAutoChecks(); openAutoReport(1); openAutoEdit(1); } catch (e) {}
   // My checks builds its head (and its handle) only when opened, so open it or it reports a false gap
   try { window.isAuthed = () => true;
     ACCOUNT = { subscription:'active', subTier:'hunter', credits:9, callsMade:4, comp:false, phone:'+13105551234' };

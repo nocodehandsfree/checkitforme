@@ -102,8 +102,8 @@ export async function notifyAfterVerdict(callId: number): Promise<void> {
     await notifyAutoCheckResult(callId); // no-op unless this check came from an auto-check
   } catch { /* alerts must never break a finalize */ }
 }
-/** Auto-check results alert: a scheduled check just reached a terminal state → tell the schedule's
- *  owner what happened (in stock, not, nobody answered), on the channel their contact implies.
+/** Auto-check results alert: an auto-check just reached a terminal state → tell the schedule's
+ *  owner IF we found it in stock, on the channel their contact implies.
  *  Email rides the account address (confirm-gated); a phone contact gets the text directly. */
 async function notifyAutoCheckResult(callId: number): Promise<void> {
   try {
@@ -114,6 +114,11 @@ async function notifyAutoCheckResult(callId: number): Promise<void> {
     const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
     const cat = (await db.select().from(categories).where(eq(categories.id, row.categoryId)))[0];
     const st = row.statusKey ? (await db.select().from(statuses).where(eq(statuses.key, row.statusKey)))[0] : null;
+    // THE PING GOES OUT ON IN STOCK ONLY (owner 2026-08-19). Every other outcome is still written
+    // down and still shows on that auto-check's own record in My Checks; it just does not buzz a
+    // phone. The owner's own tone bucket decides what "in stock" is, as everywhere else.
+    const inStock = st ? st.tone === "in" : row.confirmed === true;
+    if (!inStock) return;
     const result = st?.label || (row.confirmed === true ? "In stock" : row.confirmed === false ? "Not in stock" : "No clear answer");
     // Language rides the schedule owner's account so {result} and the copy match (Copper's ES).
     const acct = await getAccount(sched.finderUserId).catch(() => null);
