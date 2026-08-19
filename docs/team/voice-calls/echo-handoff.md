@@ -112,6 +112,36 @@ window across real speech — the decision the live ear actually makes — it wo
   I did NOT build that tonight: it is not in the box, it can swallow a real answer if it misfires,
   and what the engine should DO about an advert is the owner's open ruling. Written up, not built.
 
+## ADDED 08-19: HIS OWN NOTE NEVER REACHES THE LINE
+- **THE FAULT, twice on the record**: on checks 398 and 399 the store's advert was handed to
+  Charlie as if Staff had spoken, and he described it onto the line, in brackets. His section 12
+  directions were changed to forbid exactly that, and I read them back off ElevenLabs to be sure
+  they had landed (both the main agent and the joining agent carried all three new lines). He said
+  it anyway. That is the 08-06 pattern written down again: telling him did not fix it, a gate did.
+- **THE GATE**: `isPrivateNote` (`src/voice/prompts.ts`, pure, tested both ways) judges ONLY what
+  Charlie is about to say. Nothing Staff say is ever passed to it, so it can never take a real
+  answer off the line. Two shapes and no more: anything in square brackets (never speech), and a
+  short list of phrases that describe the call instead of talking to Staff. Wired at two doors in
+  `bridge.ts`: at `agent_response` the words are judged, the note is never recorded or relayed, and
+  `note_silenced` goes on the record with the note's own words; at the audio door that turn's
+  frames are simply not sent, so the store hears silence and the turn counts as skipped. The flag
+  is reassigned on EVERY `agent_response`, so an ordinary reply clears it and one note can never
+  gag the rest of a check (asserted).
+- **PROVEN THE WAY HE ASKED, before dialing**: check 399's own moment is rebuilt as a rig scene
+  ("CHECK 399'S MOMENT") using the real note off that check. Today's code speaks it and fails 4 of
+  its 5 asserts; the fixed code is silent and passes all 5. Suites: prompts 253 (three real notes
+  caught, ten real replies never caught) · bank 360 · behaved 99 · call-events 124 · bridge 13 ·
+  listen-nav 78 · going-to-check 159 · meter 65 · clips 10 · gates 9 · robot store held · tsc clean.
+- **CHECK 400 (scene 22, the advert): all four of his pass conditions met.** No spoken note
+  anywhere on the record (399 had one at 31s). Silence right through the advert, which plays 18s to
+  37s with nothing from Charlie in it. The caught line on the record instead, at 30s: "Charlie
+  started to say a note to himself, so it was silenced and never played", carrying the note's own
+  words, "[In-store announcement/recording, not Staff talking to me]" — he worded it differently
+  from 399 and it was caught anyway. And the set question still played as a recording at 42s.
+  The card still fails on "Meter stopped" (meter 49s) and that is his separate open ruling, not
+  this build.
+- Nothing else changed: no listening changes, no direction changes, nothing about his voice.
+
 ## WHAT IS LEFT
 1. **Scene 22, the advert in the music, has not been re-dialed.** The judge is proven on its saved
    record but has never run on a fresh dial of it. That is the next dial. Expect the sound rules
