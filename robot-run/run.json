@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-19T06:34:26.197Z",
+  "at": "2026-08-19T07:25:35.641Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -63,8 +63,8 @@
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
-          "pass": true,
-          "detail": "0 bounce(s) over 77 looks · header held at 0px"
+          "pass": false,
+          "detail": "1 bounce(s) over 75 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -76,7 +76,7 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": true,
-          "detail": "we signed off: \"Perfect, thanks so much, have a good one!\""
+          "detail": "we signed off: \"Thanks so much, have a good one!\""
         },
         {
           "n": 14,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 56 seconds and the line closed at 56 — 0 seconds of nothing"
+          "detail": "the answer was in at 55 seconds and the line closed at 55 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Wed, Aug 19 · 6:33 AM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
+          "detail": " Result Wed, Aug 19 · 7:24 AM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 11.1¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 10.9¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787121163477,
-      "checkId": 402,
-      "cost": 0.110926,
-      "costReadable": "11.1¢",
+      "startedAt": 1787124228695,
+      "checkId": 405,
+      "cost": 0.108869,
+      "costReadable": "10.9¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"

@@ -196,6 +196,68 @@ window across real speech — the decision the live ear actually makes — it wo
   this build.
 - Nothing else changed: no listening changes, no direction changes, nothing about his voice.
 
+## TWO, THE RECORDED GOODBYE — BUILT (commits e12fce53 + 73fd2964)
+His sign-off is the owner's ruled line, "Thanks so much, have a good one!", one recording per voice
+(Spanish beside it, `GOODBYE_LINE`/`_ES` in charlie-setup.ts, phoneClip cache), NO name in it.
+`sayTheRecordedGoodbye` (bridge.ts, .unlock opened and deleted twice) plays it at the moments the
+engine already knows the check is complete: the reader's knock with NOTHING missing — the first
+knock or a re-knock as follow-up answers land (the reader re-reads on every Staff line, so the
+knock after the set answer IS the close; only the signoff NOTE stays once-only) — and the warm
+wrap-up's quiet line. The check ends through `hangUpAfterGoodbye` exactly as his spoken goodbye
+did. His late generated goodbye's sound drops behind `ackPlayingUntil`, its words never file
+(`goodbye_covered`). No clip = today's behaviour on every path, asserted.
+- **CHECK 403 (scene 22): the goodbye RODE THE DIAL and the pill says TEST PASSED** — his ruled
+  words on the record at 46.8s (`wrap_up`, goodbyeClip true, 1625ms), signed off, 9.7¢ (was
+  11.1-11.3), meter 39s real / 20s graded GREEN, profit 61% real / 75% graded.
+- **AND 403 CAUGHT A FAULT THE INSTANT GOODBYE CREATED, fixed + pinned same session**: the warm
+  wrap-up's 5 seconds counted from when its timer was ARMED (the set clip's start), so it fired
+  219ms after the clip ended and the goodbye closed the check before Staff could answer the set
+  question — "Pitch Black, the booster boxes" never made 403's record (the old engine survived
+  this only because a GENERATED goodbye's thinking seconds accidentally gave Staff the race). The
+  five seconds now count from the last SOUND on the line, ours or theirs; their voice re-arms.
+  Rig scene CHECK 403'S SHAPE (delta-clip 378). Fresh dial proof: see the next check's entry.
+- **CHECK 404 (scene 22, on the quiet fix): the OTHER race, found and fixed (commit fd51c97b)**.
+  The robot answered slowly; Charlie re-asked the set question in his own words (dropped from the
+  line behind the recording's cover window as designed, but still WRITTEN as if Staff heard it),
+  and when the answer came his generated goodbye beat the reader's re-knock — the recording never
+  rode, graded meter 33s red, pill FAILED. Fixed with two engine-known moments: the set question
+  was asked by OUR recording, so the next fresh Staff line after it IS the answer and the recorded
+  goodbye plays right there in staffSaid (guarded by `asksUsBack`, new in prompts.ts, and
+  `saidGoingToCheck`, so a question back at us or a walk-away is never answered with a goodbye);
+  and a line of his spoken while our recording covers the line is never written or relayed and its
+  whole turn is silenced (`covered_by_recording`). Rig: CHECK 404'S SHAPE + the guard scene,
+  delta-clip 387 · prompts 268 · tsc clean.
+- **CHECK 405 (scene 22, the finished build): THE PILL SAYS TEST PASSED — TASK TWO DONE.** The
+  whole ordered shape on one record: set question as a recording at 41.3s · Staff's answer "Pitch
+  black the booster boxes" ON the record at 47.7s · the recorded goodbye at 52.5s (goodbyeClip,
+  1625ms) · his own goodbye and both duplicate versions covered and stamped · signed off 54.8s ·
+  meter 45s real / 25s graded yellow · profit 56% real / 71% graded · 10.9¢. Harness reds: the
+  known word-for-word family + one scroll bounce (screen, pre-existing).
+
+## THREE, THE OWN BRAIN — BLOCKED BY THE PROVIDER, RE-PROVEN 08-19, WRITTEN UP FOR THE PM
+Nearly everything §7 orders ALREADY EXISTS: the Admin switch (`ourBrain` in ENV_FLAGS + the toggle
+in app.html ~6911), the endpoint (`src/calls/brain.ts` + `/pub/brain` in server.ts, guarded:
+shared key, shape, replay, ceiling), the ladder's rungs in `connectEleven` (rung one the retry in
+brain.ts; rung two `brainFellBack` → the hosted agent, invisible; rung three the silent hang-up),
+the brain stamp (`segmentBrain` → the record; runtime-spec suite), the after-he-spoke half (bridge
+~1278: answer in transcript → warm close, degraded; else the dropped call), and §8's status
+(`call_dropped` in bootstrap, "No charge", never `completed` so `findRecentCheck` never counts it;
+dropped-call suite 33). BRAIN_API_KEY + ANTHROPIC_API_KEY are set on staging.
+**THE ONE MISSING PIECE IS THE AGENT ITSELF, and the provider still refuses to create it**: tested
+today against the live account — custom LLM + Branson HD (an instant clone) answers
+`custom_llm_not_allowed_in_with_agent_with_ivc_voice`, "Custom LLM is not allowed when using
+agents with Instant Voice Clones", the same refusal as 07-31. `ELEVENLABS_OURBRAIN_AGENT_ID` stays
+unset because there is nothing to set it to. The two ways out are both the owner's: a PROFESSIONAL
+voice clone (30 minutes of his voice + the speaker verifying, then the same voice is allowed a
+custom brain) or a premade voice (breaks his ruled voice — not ours to choose). The order's finish
+line (the loud classic music's meter under 31 with the switch ON) is unreachable until one is
+ruled, and §8's "verified on a real dropped call" rides the same unblock (the dropped call IS the
+ladder's last rung). Per the order — a collision is written up, never chosen around — this stops
+here. When it unblocks: create the agent (clone the live agent's config + custom_llm at
+https://staging.checkitforme.com/pub/brain, model claude-sonnet-4-6, same voice), set
+`ELEVENLABS_OURBRAIN_AGENT_ID`, flip the Admin switch ON, then the ordered dials: the silent hold
+test first, then the loud classic music test.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
