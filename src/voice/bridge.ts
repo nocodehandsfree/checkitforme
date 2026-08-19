@@ -834,8 +834,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  Staff had spoken and he answered it, at 20-odd metered seconds a time. Now not one frame of
    *  the call reaches him while a hold is recognised. ECHO ALONE KEEPS HEARING — it is a separate
    *  listener on the pickup fork and nothing here touches it — so every word said while his ears
-   *  are shut is still written down, still on the record, and still handed to him the way a
-   *  comeback always has been.
+   *  are shut is still written down and still on the record. What is NOT handed to him is what the
+   *  store's own recording said: a line the wake rule refuses was the music talking, and handing it
+   *  over as words would be the very fault this exists to end, wearing a different coat.
    *
    *  0 = his ears are open. Otherwise the moment they were shut. */
   let earsShutAtMs = 0;
@@ -880,6 +881,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (earsShutAtMs === 0 || onHold) return;
     if (!personSoundAtMs || Date.now() - personSoundAtMs > WAKE_TOGETHER_MS) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
+    // THE WORDS THAT WOKE HIM ARE THE ONES HE ANSWERS. A line said while his ears were shut and
+    // REFUSED by this rule was the store's recording talking, and it is never handed to him: it
+    // stays on the record, where Echo wrote it and where the after-call reader names it, and that
+    // is the whole point of shutting his ears. Only the line that passes goes in the pocket, and
+    // opening his ears hands it straight over as their turn.
+    if (!alreadyHisToAnswer(line)) missedWhileClosed.push(line);
     openCharliesEars("the sound and the words both say a person");
   }
   const REJOIN_WORDLESS_MS = 4000;
@@ -2152,7 +2159,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard. `!ready` too: a line landing while his session is still
     // opening reached no ears either, and the pocket is what the ready hand-over reads.
-    if (fromEcho && fresh && (!eleven || onHold || !ready || earsShutAtMs > 0) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
+    if (fromEcho && fresh && (!eleven || onHold || !ready) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
     // A LINE SPOKEN INTO THE WAIT THAT FINISHED WRITING JUST AFTER HE RECONNECTED IS STILL HIS TO BE
     // HANDED (owner task 08-15, check 366). Staff's "I did not see any" was spoken while his session
     // was closed, and its writing landed a second after the new session opened — so the old rule

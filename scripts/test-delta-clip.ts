@@ -3260,6 +3260,60 @@ console.log("▶ …and with NO recording, a complete answer still closes the ol
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR IN WORDS (owner's order, 08-19)");
+{
+  // The fault, five checks running: the store's hold music had a recorded advert in it, an advert
+  // IS a voice so no listening rule could refuse it, and every frame of it went to Charlie's session
+  // as if Staff were talking to him. He answered it, at twenty-odd metered seconds a time.
+  //
+  // Now the moment we recognise the hold his ears shut. Echo keeps writing every word down, so the
+  // advert is still on the record and the after-call reader still names it, but it is never handed
+  // to him: a line the wake rule refuses was the store's recording talking. His ears come back only
+  // when the sound says somebody is talking into a line the music has left AND Echo has written a
+  // line that is not them stepping away.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-advert-ears";
+  echoListening(room, true);
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0 }, "reopen");
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  const step = (name: string) => evs().filter((e) => (e.detail as { step?: string } | null)?.step === name);
+  ok(evs().some((e) => e.kind === "charlie_join"), "his session is up");
+  // Staff step away. That is one of the two moments we recognise a hold, and it shuts his ears.
+  echoHeardStaff(room, "One moment. I'll go and have a look.");
+  await sleep(120);
+  ok(step("ears_shut").length === 1, "Staff stepping away shuts his ears", step("ears_shut").length);
+  // THE ADVERT, in sound and then in words. Not one frame, and not one word, may reach him.
+  const framesBefore = f.raw.filter((m) => m.includes("user_audio_chunk")).length;
+  for (let i = 0; i < 80; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
+  await sleep(60);
+  ok(f.raw.filter((m) => m.includes("user_audio_chunk")).length === framesBefore,
+    "not one frame of the store's audio reaches his session while his ears are shut");
+  const ADVERT = "Thanks for holding. Did you know we price match any local competitor?";
+  echoHeardStaff(room, ADVERT);
+  await sleep(150);
+  ok(!f.raw.some((m) => m.includes("user_message") && m.includes("price match")),
+    "…and the advert's words are never handed to him as a turn either");
+  ok(step("ears_back").length === 0, "…and it does not wake him: an advert is not a person talking to us");
+  ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Clerk" && /price match/.test(l.text)),
+    "…while Echo still wrote it down, so it is on the record and the reader can name it");
+  // STAFF REALLY COME BACK. The music stops first, which is what leaves the line clear, and then
+  // they talk into it: speech-shaped sound with real gaps in it, and their own words behind it.
+  // The gap is the rule doing its job — sound straight over the music's last note is refused, and
+  // on a real check Staff come back seconds after it stops (check 405: nine of them).
+  quiet(tw, 130);
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(60);
+  echoHeardStaff(room, "Yeah. We've got a few of those.");
+  await sleep(200);
+  ok(step("ears_back").length === 1, "the sound and their words together bring his ears back", step("ears_back").length);
+  ok(f.raw.some((m) => m.includes("user_message") && m.includes("got a few of those")),
+    "…and what they said is handed to him as their turn, so he answers it");
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ CHECK 399'S MOMENT: his private note never reaches the line (owner, 08-19)");
 {
   // 31 seconds into check 399 the store's advert had been handed to him as if Staff had spoken, and
