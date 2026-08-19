@@ -1081,12 +1081,7 @@ __BRAND_HEAD__
   html[data-skin="v2"] input:-webkit-autofill,html[data-skin="v2"] input:-webkit-autofill:hover,
   html[data-skin="v2"] input:-webkit-autofill:focus,html[data-skin="v2"] input:-webkit-autofill:active{
     -webkit-box-shadow:0 0 0 1000px #1B1B20 inset;box-shadow:0 0 0 1000px #1B1B20 inset}
-  /* A form's own error line: nothing at all until there is something to say, then a soft red card
-     under the field instead of raw red text on the sheet (owner 08-19). */
-  .fmerr:empty{display:none}
-  .fmerr{margin-top:10px;padding:11px 13px;border-radius:13px;background:rgba(239,68,68,.10);
-    border:1px solid rgba(239,68,68,.28);color:#FFB4B4;font-size:13px;font-weight:600;line-height:1.45;
-    text-align:center;text-wrap:balance}
+
   #sch_contact::placeholder{color:#6a6a78;font-style:italic;font-size:13px}
   #auth_phone::placeholder{color:#5e5e6c;font-style:italic;font-weight:400}
   #auth_phone:focus{outline:none;box-shadow:none;border:none}
@@ -2739,7 +2734,6 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <input id="sch_time" type="time" value="10:00" class="kin">
     <label class="klbl" data-i18n="sch.where">Add your cell or email</label>
     <input id="sch_contact" type="text" inputmode="email" autocomplete="email" data-i18n-ph="ph.schednum" placeholder="Enter number" class="kin">
-    <div id="sch_err" class="fmerr"></div>
     <button class="cta" id="sch_btn" onclick="submitSchedule()" style="margin-top:8px;width:100%" data-i18n="sch.cta">Turn on auto-check →</button>
     </div>
     <!-- The sheet does NOT close on save (owner 08-06): it flips in place to this screen, which shows
@@ -3437,8 +3431,8 @@ Object.assign(I18N.es, {
   'auto.saved.cta':'Ver mis auto-verificaciones',
   'up.keep':'Sigue verificando esta tienda','up.keep.sub':'Llamamos los días que elijas y te decimos qué dicen.',
   'up.keep.row':'Crea una auto-verificación','up.keep.rowsub':'Elige los días y llamamos a la tienda por ti.',
-  'sch.noproduct':'Elige la tienda y el producto primero, luego activa la auto-verificación.',
-  'sch.off':'Las auto-verificaciones están apagadas ahora mismo. Inténtalo más tarde.',
+  'sch.noproduct':'Elige una tienda y un producto primero','sch.off':'Las auto-verificaciones están apagadas',
+  'sch.badcontact':'Revisa ese correo',
 });
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
@@ -9860,7 +9854,6 @@ function openSchedule(){
   if(!SEL_STORE||!SEL_STORE.id){ toast(t('err.pickstore','Pick a store first')); return; }
   SCH_DAYS=new Set();
   { const fm=$('sch_form'), dn=$('sch_done'); if(fm)fm.style.display=''; if(dn)dn.style.display='none'; } // reset to the form, never a leftover saved screen
-  $('sch_err').textContent='';
   $('sch_store').textContent=findStoreName(); $('sch_cat').textContent=findProductLabel();
   const cw=$('sch_contact'); if(cw){ cw.value=''; cw.placeholder=smsAlertsOn()?t('ph.schednum','Enter number'):t('em.ph','you@email.com'); } // keep the contact OUT of the box (grey placeholder); we default to the account contact on submit
   { const wl=document.querySelector('#scheduleOverlay [data-i18n="sch.where"]'); if(wl) wl.textContent=smsAlertsOn()?t('sch.where','Add your cell or email'):t('sch.where.em','Add your email'); }
@@ -9873,7 +9866,7 @@ function closeSchedule(){ $('scheduleOverlay').classList.remove('on'); }
 async function submitSchedule(){
   let contact=($('sch_contact').value||'').trim();
   if(!contact){ try{ contact=(ACCOUNT&&ACCOUNT.email)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} } // empty box → default to their account contact
-  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact)&&smsAlertsOn(); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); $('sch_err').textContent=''; return; } }
+  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact)&&smsAlertsOn(); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); toast(t('sch.badcontact','Check that email'),'neutral'); return; } }
   // WHICH PRODUCT (owner 08-19: the save failed on him and the page only said "That didn't go
   // through"). A check opened from the history can reach this sheet with no product picked, and the
   // server refuses a schedule without one, so fall back to the product this check asked about and
@@ -9881,7 +9874,7 @@ async function submitSchedule(){
   const askedId=(((ASKED_CATS||[]).find(x=>x&&x.id)||{}).id)
     ||((CATS.find(c=>(ASKED_CATS||[]).some(a=>a&&a.label&&String(a.label).toLowerCase()===String(c.label).toLowerCase()))||{}).id);
   const catId=SEL_CAT||SEL_CATS[0]||askedId||(BRAND_CAT&&BRAND_CAT.id)||null;
-  if(!SEL_STORE||!SEL_STORE.id||!catId){ $('sch_err').textContent=t('sch.noproduct','Pick the store and the product first, then turn the auto-check on.'); return; }
+  if(!SEL_STORE||!SEL_STORE.id||!catId){ toast(t('sch.noproduct','Pick a store and a product first'),'neutral'); return; }
   const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
   const body={ retailerId:SEL_STORE.id, categoryId:catId, specificProduct:SEL_PRODUCT||undefined,
     daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined, lang:LANG };
@@ -9889,8 +9882,8 @@ async function submitSchedule(){
   btn.disabled=false; btn.textContent=t('sch.cta','Turn on auto-check →');
   if(r&&r.error==='members_only'){ closeSchedule(); openBuy('out'); return; }
   if(r&&r.error==='unauthorized'){ closeSchedule(); signIn(); return; }
-  if(r&&r.error==='scheduling_off'){ $('sch_err').textContent=t('sch.off','Auto-checks are switched off right now. Try again later.'); return; }
-  if(!r||r.error){ $('sch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
+  if(r&&r.error==='scheduling_off'){ toast(t('sch.off','Auto-checks are off right now'),'neutral'); return; }
+  if(!r||r.error){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
   track('schedule_set',{retailerId:SEL_STORE.id,days:[...SCH_DAYS].join(',')||'auto'});
   // No pill and no closing: the sheet stays open and flips to the saved screen (owner 08-06). The old
   // pill also pointed at "My Checks > Alerts", and auto-checks have their own row now.
