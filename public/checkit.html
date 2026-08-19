@@ -2731,7 +2731,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <label class="klbl" data-i18n="sch.days">Which days?</label>
     <div id="sch_days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px"></div>
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
-    <input id="sch_time" type="time" value="10:00" class="kin">
+    <input id="sch_time" type="time" value="10:00" class="kin" style="width:auto;min-width:132px;display:inline-block">
     <label class="klbl" data-i18n="sch.where">Add your cell or email</label>
     <input id="sch_contact" type="text" inputmode="email" autocomplete="email" data-i18n-ph="ph.schednum" placeholder="Enter number" class="kin">
     <button class="cta" id="sch_btn" onclick="submitSchedule()" style="margin-top:8px;width:100%" data-i18n="sch.cta">Turn on auto-check →</button>
@@ -3414,8 +3414,8 @@ Object.assign(I18N.es, {
   'auto.rowon':'Activa','auto.rowoff':'Apagada','auto.edit':'Editar','auto.delete':'Borrar',
   'auto.next':'Próxima verificación el {d}','auto.nexttoday':'Próxima verificación hoy',
   'auto.none':'No hay verificaciones automáticas. Para activar una, abre una verificación de tu historial',
-  'auto.onpill':'Activada. Seguimos verificando.','auto.offpill':'En pausa. No verificamos hasta que la actives.',
-  'auto.allpaused':'Todo en pausa. No verificaremos nada.','auto.allon':'Todo activo. Seguimos verificando.',
+  'auto.onpill':'La auto-verificación está activa','auto.offpill':'La auto-verificación está en pausa',
+  'auto.allpaused':'Tus auto-verificaciones están en pausa.','auto.allon':'Tus auto-verificaciones están activas.',
   'auto.del.q':'¿Borrar la auto-verificación de {s}?','auto.del.note':'Lo que ya encontró queda en tu historial.',
   'auto.del.yes':'Bórrala','auto.del.no':'Consérvala','auto.deleted':'Auto-verificación borrada',
   'auto.today':'hoy','auto.todaycap':'Hoy',
@@ -3432,6 +3432,7 @@ Object.assign(I18N.es, {
   'up.keep':'Sigue verificando esta tienda','up.keep.sub':'Llamamos los días que elijas y te decimos qué dicen.',
   'up.keep.row':'Crea una auto-verificación','up.keep.rowsub':'Elige los días y llamamos a la tienda por ti.',
   'sch.noproduct':'Elige una tienda y un producto primero','sch.off':'Las auto-verificaciones están apagadas',
+  'alerts.set2':'Tu alerta de {store} está lista','watch.already2':'Ya tienes una alerta para {s}',
   'sch.badcontact':'Revisa ese correo',
 });
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
@@ -8026,11 +8027,21 @@ function autoTake(r){ if(!r||r.error){ toast(t('err.generic',"That didn't go thr
   window.SCHEDS=Array.isArray(r.schedules)?r.schedules:(window.SCHEDS||[]); try{ autoRowSync(); }catch(_){ }
   if(window.__autoPaint) window.__autoPaint(window.SCHEDS); return true; }
 async function autoSetOn(id,on){
+  const was=(window.SCHEDS||[]).map(x=>({...x}));                 // what to put back if the server says no
+  window.SCHEDS=(window.SCHEDS||[]).map(x=>x.id===id?{...x,active:!!on}:x);
+  if(window.__autoPaint) window.__autoPaint(window.SCHEDS);       // the row flips under the finger
+  toast(on?t('auto.onpill','Auto-check is back on'):t('auto.offpill','Auto-check is paused'),'neutral');
   const r=await appApi('/app/schedules/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({active:!!on})});
-  if(autoTake(r)) toast(on?t('auto.onpill',"Back on. We'll keep checking."):t('auto.offpill','Paused. No checks until you turn it back on.'),'neutral'); }
+  if(!r||r.error){ window.SCHEDS=was; if(window.__autoPaint) window.__autoPaint(was); toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  autoTake(r); }
 async function autoPauseAll(paused){
+  const was=(window.SCHEDS||[]).map(x=>({...x}));
+  window.SCHEDS=(window.SCHEDS||[]).map(x=>({...x,paused:!!paused}));
+  if(window.__autoPaint) window.__autoPaint(window.SCHEDS);       // the switch slides at once
+  toast(paused?t('auto.allpaused','Your auto-checks have been paused.'):t('auto.allon','Your auto-checks have been unpaused.'),'neutral');
   const r=await appApi('/app/schedules/pause-all',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({paused:!!paused})});
-  if(autoTake(r)) toast(paused?t('auto.allpaused','All paused. Nothing will be checked.'):t('auto.allon',"All back on. We'll keep checking."),'neutral'); }
+  if(!r||r.error){ window.SCHEDS=was; if(window.__autoPaint) window.__autoPaint(was); toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  autoTake(r); }
 function autoDeleteAsk(id){ const s=autoById(id); const nm=(s&&s.store)||t('alerts.thatstore','that store');
   zPop(`<h3 style="margin:4px 0 16px;text-align:center">${tf('auto.del.q','Delete the auto-check for {s}?',{s:esc(nm)})}</h3>
   <div class="meta" style="text-align:center;margin:-8px 0 16px">${sentLines(t('auto.del.note','What it already found stays in Check history.'))}</div>
@@ -8064,7 +8075,7 @@ async function openAutoReport(id){
   const ov=sheetShell('autoRepOv');
   const keep=(AUTO_REPORT&&AUTO_REPORT.id===id)?AUTO_REPORT.data:null;
   AUTO_REPORT={id:id, woff:0, day:undefined, data:keep, loading:!keep};
-  renderAutoReport(); ov.classList.add('on'); sheetPush('autorep');
+  renderAutoReport(true); ov.classList.add('on'); sheetPush('autorep');
   const r=await appApi('/app/schedules/'+id+'/runs');
   if(AUTO_REPORT&&AUTO_REPORT.id===id){ AUTO_REPORT.loading=false;
     if(r&&!r.error) AUTO_REPORT.data=r;
@@ -8072,7 +8083,7 @@ async function openAutoReport(id){
 }
 function autoRepPick(i){ if(!AUTO_REPORT) return; AUTO_REPORT.day=(AUTO_REPORT.day===i?null:i); renderAutoReport(); }
 function autoRepWeek(d){ if(!AUTO_REPORT) return; AUTO_REPORT.woff=Math.max(0,AUTO_REPORT.woff+d); AUTO_REPORT.day=undefined; renderAutoReport(); }
-function renderAutoReport(){
+function renderAutoReport(rebuild){
   const ov=$('autoRepOv'); if(!ov||!AUTO_REPORT) return;
   const R=AUTO_REPORT, d=R.data, s=(d&&d.schedule)||autoById(R.id)||{};
   const so=autoStoreObj(s);
@@ -8089,17 +8100,20 @@ function renderAutoReport(){
   // clears it and the whole week shows.
   if(R.day===undefined||R.day===null){ let last=-1; perDay.forEach((a,i)=>{ if(a.length) last=i; }); R.day=(last>=0?last:null); }
   const sel=(R.day!=null)?R.day:-1;
+  // A DAY WITH NOTHING ON IT IS NOT A BUTTON (owner 08-19: "I can select other days even though
+  // there's been no auto checks"). Only a day that actually holds a run can be picked.
   const bars=perDay.map((a,i)=>{ const bh=a.length?Math.max(14,Math.round(a.length/mx*64)):6; const cur=i===sel;
     const anyIn=a.some(e=>e.kind==='check'&&railTone(e)==='in');
     const fill=cur?'linear-gradient(180deg,#5BEA93,#34C268);box-shadow:0 0 14px rgba(74,222,128,.4)':(a.length?(anyIn?'rgba(74,222,128,.45)':'rgba(255,255,255,.22)'):'rgba(255,255,255,.10)');
-    return `<div onclick="autoRepPick(${i})" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer">
+    return `<div ${a.length?`onclick="autoRepPick(${i})" style="cursor:pointer;`:'style="'}flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">
       <div style="width:100%;height:${bh}px;border-radius:4px 4px 0 0;align-self:flex-end;background:${fill}"></div>
-      <span style="font-size:9.5px;font-weight:700;color:${cur?'#4ADE80':'#7C7C88'}">${dws[i]}</span>
-      <span style="font-size:9px;font-weight:600;color:#66666F;margin-top:-3px">${new Date(dayTs[i]).getMonth()+1}/${new Date(dayTs[i]).getDate()}</span>
+      <span style="font-size:9.5px;font-weight:700;color:${cur?'#4ADE80':(a.length?'#7C7C88':'#55555E')}">${dws[i]}</span>
+      <span style="font-size:9px;font-weight:600;color:${a.length?'#66666F':'#4A4A52'};margin-top:-3px">${new Date(dayTs[i]).getMonth()+1}/${new Date(dayTs[i]).getDate()}</span>
     </div>`; }).join('');
   const wkLbl=(()=>{ const f=x=>new Date(x).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'});
     return LANG==='es'?`${f(dayTs[0])} al ${f(dayTs[6])}`:`${f(dayTs[0])} to ${f(dayTs[6])}`; })();
   const arrow=(dir,dis)=>`<button ${dis?'disabled':''} onclick="autoRepWeek(${dir})" style="flex:0 0 auto;width:26px;height:26px;border:0;border-radius:9px;background:${dis?'rgba(255,255,255,.04)':'linear-gradient(180deg,#31313A 0%,#26262C 100%)'};color:${dis?'#4A4A52':'#CDCDD8'};display:flex;align-items:center;justify-content:center;cursor:${dis?'default':'pointer'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${dir>0?'M15 18l-6-6 6-6':'M9 18l6-6-6-6'}"/></svg></button>`;
+  const navHtml=`${arrow(1,false)}<span style="font-size:13px;font-weight:800;color:#fff">${esc(wkLbl)}</span>${arrow(-1,R.woff<=0)}`;
   const scope=(sel>=0)?perDay[sel]:items.filter(e=>e.ts>=dayTs[0]&&e.ts<dayTs[6]+86400000);
   const dayHead=(sel>=0)?new Date(dayTs[sel]).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'long',month:'long',day:'numeric'}):(R.woff===0?t('auto.rep.week','This week'):wkLbl);
   const timeOf=e=>{ try{ return new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}); }catch(_){ return ''; } };
@@ -8114,21 +8128,25 @@ function renderAutoReport(){
         <span class="autochev" style="transition:transform .18s;display:inline-flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
       </button><div style="display:none"></div></div>`; }).join('')
     : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(items.length?t('auto.rep.noneweek','Nothing this week.'):(s.nextDow!=null?tf('auto.rep.first','Nothing yet. The first check runs {d}.',{d:s.nextToday?t('auto.today','today'):dowName(s.nextDow)}):t('auto.rep.nonext','Nothing yet.')))}</span></div>`;
+  const body=R.loading?`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`:rowsHtml;
+  // ONLY THE PARTS THAT CHANGED (owner 08-19: rebuilding the whole sheet on a day tap blanked it for
+  // a frame and the list sheet underneath flashed through, delete button and all).
+  if(!rebuild && $('autoRepRows')){
+    $('autoRepNav').innerHTML=navHtml; $('autoRepBars').innerHTML=bars;
+    $('autoRepDay').textContent=dayHead; $('autoRepRows').innerHTML=body;
+    return;
+  }
   const prod=esc(s.specificProduct||s.category||'');
   ov.innerHTML=`<div class="modal" style="text-align:left">
     <div style="display:flex;justify-content:center;margin-bottom:6px">${AUTO_ICO(AC1(),28)}</div>
     <h3 style="margin:2px 0 4px;text-align:center">${esc(so.name)}</h3>
     <div class="meta" style="margin-bottom:14px;text-align:center">${prod?prod+' · ':''}${esc(autoDaysWords(s))}</div>
     <div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-        ${arrow(1,false)}
-        <span style="font-size:13px;font-weight:800;color:#fff">${esc(wkLbl)}</span>
-        ${arrow(-1,R.woff<=0)}
-      </div>
-      <div style="margin-top:12px;display:flex;align-items:flex-end;gap:5px;height:92px">${bars}</div>
+      <div id="autoRepNav" style="display:flex;align-items:center;justify-content:space-between;gap:10px">${navHtml}</div>
+      <div id="autoRepBars" style="margin-top:12px;display:flex;align-items:flex-end;gap:5px;height:92px">${bars}</div>
     </div>
-    <div style="margin-top:18px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(dayHead)}</div>
-    <div id="autoRepRows">${R.loading?`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`:rowsHtml}</div>
+    <div id="autoRepDay" style="margin-top:18px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(dayHead)}</div>
+    <div id="autoRepRows">${body}</div>
     <button class="capsW" style="margin-top:18px" onclick="closeAutoReport();openAutoEdit(${R.id})"><span>${t('auto.rep.edit','Change days or time')}</span></button>
   </div>`;
 }
@@ -9378,7 +9396,8 @@ let PENDING_WATCH=null; // a store bounced at the cap — re-added the moment a 
 // "Auto Check"). Store shortened to the chain (before the dash) so the line stays tight.
 function alertSetToast(storeName, typeKey, typeEn){
   const store=String(storeName||'').split(/—|–| - /)[0].trim()||t('alerts.thatstore','that store');
-  toast(tf('alerts.set','Your {store} {type} is set. Manage in My Checks > Alerts.',{store,type:t(typeKey,typeEn)}),'neutral');
+  void typeKey; void typeEn; // the type used to ride the pill and made it too long to read (owner 08-19)
+  toast(tf('alerts.set2','Your {store} alert is set',{store}),'neutral');
 }
 async function openWatch(){ return watchStore(); }
 async function watchStore(opts){
@@ -9399,7 +9418,7 @@ async function watchStore(opts){
   // would leave a switched-off sender behind an on-looking alert = in-stock emails that never come.
   if(ACCOUNT&&ACCOUNT.email){ try{ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:st.id,categoryId,contact:ACCOUNT.email})}); }catch(_){ } }
   // Already set and live → say so and stop (owner 07-30). No second row, no fake "now watching".
-  if(r.already && r.status==='on'){ toast(t('watch.already',"You've already set an alert for this store"),'neutral'); return; }
+  if(r.already && r.status==='on'){ toast(tf('watch.already2','You already have an alert for {s}',{s:railBase(st.name)||t('alerts.thatstore','that store')}),'neutral'); return; }
   track('watch_set',{retailerId:st.id,channel:'email'});
   try{ alertsPrefetch(); }catch(_){ }
   if(r.status==='on'){ alertSetToast(st.name,'alerts.type.restock','Restock Alert'); return; } // confirmed email: instant

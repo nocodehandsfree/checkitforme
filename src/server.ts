@@ -6067,7 +6067,10 @@ app.post("/app/alerts/subscribe", async (c) => {
   // /app/email (one confirm). Pending email → tell them to check their inbox. The sub is live either way;
   // delivery is globally gated on emailVerifiedAt, so a pending watch turns on by itself once confirmed.
   const status = acct?.emailVerifiedAt ? "on" : acct?.email ? "pending" : "need_email";
-  return c.json({ ...r, status, hasEmail: !!acct?.email, emailVerified: !!acct?.emailVerifiedAt });
+  // ALREADY = this account already had a live alert on this store when the tap landed, whatever kind
+  // it was set from. The page says so instead of a fresh "your alert is set" (owner 08-19: he tapped
+  // a store he was already watching and the pill told him it was newly set).
+  return c.json({ ...r, already: !!(r.already || already), status, hasEmail: !!acct?.email, emailVerified: !!acct?.emailVerifiedAt });
 });
 // Master "Pause all alerts" — the switch on top of the Alerts list.
 app.post("/app/alerts/pause-all", async (c) => {
