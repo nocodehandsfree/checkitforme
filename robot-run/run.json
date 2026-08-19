@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-19T20:51:52.650Z",
+  "at": "2026-08-19T21:01:01.680Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -58,13 +58,13 @@
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
           "pass": true,
-          "detail": "3 lines, all exact"
+          "detail": "4 lines, all exact"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 57 looks · header held at 0px"
+          "detail": "0 bounce(s) over 87 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -82,19 +82,19 @@
           "n": 14,
           "name": "we never ask the same question twice",
           "pass": true,
-          "detail": "5 things said, none of them twice"
+          "detail": "4 things said, none of them twice"
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 60 seconds and the line closed at 60 — 0 seconds of nothing"
+          "detail": "the answer was in at 78 seconds and the line closed at 78 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Wed, Aug 19 · 8:50 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
+          "detail": " Result Wed, Aug 19 · 8:59 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 6.1¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 8.2¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787172598451,
-      "checkId": 410,
-      "cost": 0.060688,
-      "costReadable": "6.1¢",
+      "startedAt": 1787173133122,
+      "checkId": 411,
+      "cost": 0.082482,
+      "costReadable": "8.2¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"

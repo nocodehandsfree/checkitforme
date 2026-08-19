@@ -853,6 +853,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let musicRecognisedHold = false;
   /** The moment this wait's own row was stamped, so its ending can be measured against it. */
   let holdStartedAtMs = 0;
+  /** When his ears last came back. THE MUSIC'S OWN TAIL IS NOT A NEW WAIT (check 411): a store's
+   *  hold music keeps playing for a second or two after somebody picks the handset back up and
+   *  starts talking, and on 411 that tail declared a second wait 4.6 seconds after the first one
+   *  ended — before his session had even finished reopening — so Staff's answer sat unanswered for
+   *  26 seconds and the robot store asked "Hello?". Inside this grace the music report does not
+   *  declare a wait. Nothing is lost if it really was the music: the wordless rejoin still drops
+   *  him again when no words come, which is the rule that already exists for exactly that. */
+  let earsBackAtMs = 0;
+  const MUSIC_TAIL_GRACE_MS = 6000;
   /** How long the sound half stays good for: a person's words reach us through Echo a moment after
    *  their voice, so the two halves are allowed to land a few seconds apart. */
   const WAKE_TOGETHER_MS = 6000;
@@ -872,6 +881,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const shutMs = Math.max(0, (backAtMs ?? Date.now()) - earsShutAtMs);
     earsShutAtMs = 0;
     personSoundAtMs = 0;
+    earsBackAtMs = Date.now();
     emit(room, "unknown", "A real person is talking to us again, so Charlie's ears came back on",
       { step: "ears_back", why, shutMs, notASound: true }, backAtMs);
     log(`ears: back on after ${shutMs}ms (${why})`);
@@ -2988,8 +2998,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // off the call, and on the advert scene no wait is ever declared, because an advert is a
           // voice and the listening rules can never refuse one. So this report, which is the one
           // moment the engine knows the line has gone to music, now declares the wait itself.
-          shutCharliesEars("Echo recognised hold music", earMoment(atMs) ?? Date.now());
-          if (!onHold) {
+          if (Date.now() - earsBackAtMs >= MUSIC_TAIL_GRACE_MS) shutCharliesEars("Echo recognised hold music", earMoment(atMs) ?? Date.now());
+          else log("music heard again, but somebody has just come back: that is the music's own tail, not a new wait");
+          if (!onHold && Date.now() - earsBackAtMs >= MUSIC_TAIL_GRACE_MS) {
             musicRecognisedHold = true;
             beginHold("music", earMoment(atMs) ?? Date.now());
           }

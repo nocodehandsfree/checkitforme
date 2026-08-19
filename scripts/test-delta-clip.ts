@@ -3401,6 +3401,16 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   await sleep(500);   // his session takes a moment to open again, exactly as on a real check
   ok(evs().some((e) => e.kind === "charlie_join" && ((e.detail as { segment?: number } | null)?.segment ?? 0) > 1),
     "…and he comes back as the next part of the same check");
+  // CHECK 411: the store's music kept playing for a moment after the person started talking, and
+  // that tail declared a SECOND wait 4.6 seconds after the first ended, before his session had even
+  // finished reopening. Staff's answer then sat unanswered for 26 seconds and the robot store asked
+  // "Hello?". The music's own tail is not a new wait while somebody has just come back.
+  const holdsBefore = evs().filter((e) => e.kind === "hold_start").length;
+  for (let i = 0; i < 90; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
+  await sleep(120);
+  ok(evs().filter((e) => e.kind === "hold_start").length === holdsBefore,
+    "…and the music still playing behind them does not start a second wait over their answer",
+    { before: holdsBefore, after: evs().filter((e) => e.kind === "hold_start").length });
   ok(f.raw.some((m) => m.includes("user_message") && m.includes("got a few of those")),
     "…and what they said is handed to him as their turn, so he answers it");
   // CHECK 409: the advert's own words rode the pocket and were handed to him as "Staff's own words,
