@@ -318,6 +318,28 @@ Every one of the four fixes is on that check's own record, and the fault of 398 
   once-only "Sorry, that's all I know." (said into Charlie's goodbye, unwritable by design, the
   08-04 teach-the-matcher family) and 2 scroll bounces (the screen fault, also on 405).
 
+### THE OWNER RULED IT (08-19 evening) AND IT IS BUILT: CHECK 407, METER 16 SECONDS
+He read 406's 42 seconds and said "this is not passed. Failed!! why didn't you resolve it before
+you stopped?" So the music report now DECLARES the wait as well as shutting his ears: `beginHold`
+with reason "music" through the same door every other wait uses, so he is really dropped and the
+meter really stops. **Its ENDING is the wake rule, not the ear's ordinary comeback** — the ordinary
+one ends a wait on the sound of a voice, and an advert IS a voice, so it would have ended the wait
+the moment the advert started and put him back on the meter answering a recording. A wait declared
+off the music parks the comeback (`musicRecognisedHold` + the existing `pendingComeback`) and the
+wake rule releases it. Every other kind of wait ends exactly as it always has.
+- **CHECK 407: THE PILL SAYS TEST PASSED, and the meter is 16 SECONDS ON THE RECORD**, not a graded
+  number. Under his 23 second goal, half his 31 second line, where 406 ran 42. **5.5¢ against
+  10.3¢**, profit 78% real. Awake during hold fell from 25 seconds to 5.
+- The record reads straight through: music heard 10.6s · ears shut and the wait declared 11.8s ·
+  dropped 16.9s · the advert at 15.6s neither woke him nor ended the wait · Staff back, ears back
+  and the wait ended 37.6s · rejoined as part 2 at 38.0s and handed their words · a second short
+  music wait 44.1s to 46.6s, part 3 · goodbye 47.6s · ended 49.9s, in stock, charged.
+- **The one harness red**: the customer's result screen showed the left-on-hold wording while the
+  record says in stock. The stored record, the status and the charge are all right (checked by
+  hand: status in_stock, charged true). This is the known screen-versus-record family from 08-07
+  that shows up on hold checks (301, 366, 373). Worth one look before real customers meet it, and
+  it is not the meter.
+
 ### THE OPEN DECISION THIS DIAL PUTS IN FRONT OF THE OWNER (written up, NOT decided)
 `holdSeconds` on 406 is **0**: no wait was ever declared, so Charlie's meter ran the whole 42
 seconds even though his ears were shut for 25 of them. We now recognise the advert hold well enough

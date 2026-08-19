@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-19T18:43:35.106Z",
+  "at": "2026-08-19T19:09:40.057Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -22,7 +22,7 @@
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
           "pass": true,
-          "detail": "Calling → Getting through the menu → Talking to Staff → Getting results"
+          "detail": "Calling → Talking to Staff → Getting results"
         },
         {
           "n": 4,
@@ -57,20 +57,20 @@
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": false,
-          "detail": "\"Sorry, that's all I know.\" → missing"
+          "pass": true,
+          "detail": "3 lines, all exact"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
-          "pass": false,
-          "detail": "2 bounce(s) over 72 looks · header held at 0px"
+          "pass": true,
+          "detail": "0 bounce(s) over 51 looks · header held at 0px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 113px"
+          "detail": "19px → 90px"
         },
         {
           "n": 13,
@@ -88,19 +88,19 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 52 seconds and the line closed at 52 — 0 seconds of nothing"
+          "detail": "the answer was in at 50 seconds and the line closed at 50 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Wed, Aug 19 · 6:42 PM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
+          "detail": " Result Wed, Aug 19 · 7:08 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": true,
-          "detail": "the screen said in, the record says in (in_stock)"
+          "pass": false,
+          "detail": "the screen said unclear, the record says in (in_stock)"
         },
         {
           "n": 11,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 10.3¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 5.5¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787164897594,
-      "checkId": 406,
-      "cost": 0.102698,
-      "costReadable": "10.3¢",
+      "startedAt": 1787166476755,
+      "checkId": 407,
+      "cost": 0.054733,
+      "costReadable": "5.5¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"
