@@ -55,9 +55,9 @@ says("If they have given both the set name and the package type, ask nothing, th
   "10. both given, he asks nothing at all");
 says(`If they have described the package, like "it's black boxes", ask only for the set name: "oh nice, do you know the name of the set, like {{set_example}}?".`,
   "10. package given, he asks only the set name");
-says(`If they have given only the set name, ask only for the package type: "oh nice, is that packs or a box or a tin?".`,
+says(`If they have given only the set name, ask only for the package type: "oh nice, is it a pack or a box?".`,
   "10. set given, he asks only the package");
-says(`If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it packs or a box or a tin?".`,
+says(`If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it a pack or a box?".`,
   "10. neither given, both in ONE sentence");
 says(`When nothing is in stock, ask only one question, and ask it in one sentence: "got it, do you know what day and time you might get more in?".`,
   "11. the restock question, one sentence");
@@ -168,7 +168,7 @@ ok(mayNot === "If Staff cannot answer about Pokémon, never ask to be put throug
 ok(mayNot.length > 0 && mayAsk.length > 0, "section 5 is never empty: it is two texts, not insert-or-nothing");
 
 console.log("\n▶ the set name example comes from the site's catalog (builder note)");
-ok(RESTOCK_PROMPT.includes("like {{set_example}}, and is it packs or a box or a tin?"), "the example question carries the catalog's set name");
+ok(RESTOCK_PROMPT.includes("like {{set_example}}, and is it a pack or a box?"), "the example question carries the catalog's set name");
 ok(!RESTOCK_PROMPT.includes("Chaos Rising"), "the hand-written set name is gone from the words");
 ok(SET_EXAMPLE === "Chaos Rising", "…and the floor under an unreadable catalog is never a blank example");
 

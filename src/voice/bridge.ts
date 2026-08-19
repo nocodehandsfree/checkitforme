@@ -1730,7 +1730,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // dead line). The reader has already pulled what Staff gave out of the record itself, so the
     // pieces still missing are read from there, never guessed and never asked for twice.
     const missing = answer === "in stock"
-      ? [held?.set ? "" : "the set name", held?.productForm ? "" : "whether it is packs, a box or a tin"].filter(Boolean)
+      ? [held?.set ? "" : "the set name", held?.productForm ? "" : "whether it is a pack or a box"].filter(Boolean)
       : [held?.restockDay ? "" : "what day more are coming", held?.restockTime ? "" : "what time of day"].filter(Boolean);
     const followUp = missing.length === 0
       ? "and everything the check needs was already said, so he was told to wrap up"

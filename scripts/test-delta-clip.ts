@@ -2542,10 +2542,10 @@ console.log("\n▶ CHECK 376'S SHAPE: he never re-asks what he was told, and nev
   await sleep(120);
   const signoff = evs().find((e) => (e.detail as { step?: string } | null)?.step === "signoff");
   const stillMissing = ((signoff?.detail as { missing?: string[] } | null)?.missing) || [];
-  ok(JSON.stringify(stillMissing) === JSON.stringify(["whether it is packs, a box or a tin"]),
+  ok(JSON.stringify(stillMissing) === JSON.stringify(["whether it is a pack or a box"]),
     `the only thing left to ask for is the piece the memory does not hold (${JSON.stringify(stillMissing)})`);
   const note = f.raw.slice(noteBefore).find((m) => m.includes("contextual_update")) || "";
-  ok(note.includes("except whether it is packs, a box or a tin") && !note.includes("the set name"),
+  ok(note.includes("except whether it is a pack or a box") && !note.includes("the set name"),
     "…and he is told to ask for that one piece, never for the set name they just gave him");
   // …AND HE NEVER STANDS ON A DEAD LINE. Nobody says anything more, and five seconds later he is
   // told to say his goodbye rather than wait, which is 376's 13 silent seconds.

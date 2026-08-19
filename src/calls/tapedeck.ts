@@ -123,7 +123,7 @@ export const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
   set: ["Oh nice! Is it Chaos Rising? Or do you know the name of the set?", "Awesome, any idea which set it is? Like Chaos Rising, or a different one?", "Oh sweet, do you know the name of the set? Like Chaos Rising?"],
   // Context-neutral phrasing: this clip plays after a set ANSWER and after "I don't know the set",
   // so no variant may assume either (owner 07-15: "No worries" read like it presumed confusion).
-  type: ["Gotcha, do you know if it's booster packs or a tin?", "And is it booster packs, or more like a box or a tin?"],
+  type: ["Gotcha, and is it a pack or a box?", "And is it a pack or a box?"],
   no: ["Ah, no worries. Any idea what day you usually get card shipments in?", "Okay no problem, do you know when your next shipment usually lands?"],
   wrap: ["Awesome, thanks so much! Have a good one!", "Perfect, thank you so much, take care!"],
   clarify: ["Oh sorry, I was just asking if you have any {category} in stock right now?"],

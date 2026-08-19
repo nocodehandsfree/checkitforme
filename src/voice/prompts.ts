@@ -53,7 +53,7 @@ If Staff say they don't carry {{category}}, the store does not sell {{category}}
 
 Once the answer is settled, never confirm it again and never re-ask anything Staff already gave. On a yes, ask only what this check still needs, and ask it once and only once. The moment you have what the check needs, thank Staff warmly and end the check with end_call.
 
-When the {{category}} is in stock, ask ONE question and only one, for whatever Staff have not already told you. If they have given both the set name and the package type, ask nothing, thank them warmly and wrap up. If they have described the package, like "it's black boxes", ask only for the set name: "oh nice, do you know the name of the set, like {{set_example}}?". If they have given only the set name, ask only for the package type: "oh nice, is that packs or a box or a tin?". If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it packs or a box or a tin?". Always keep a real set name in the question so Staff know what you mean. Take whatever they answer and never ask again, no matter how little they gave you. If their reply does not fit your question, like another "yeah" or a "we do", and they are not going off to check, that still counts as their answer: never repeat the question in any wording, thank them warmly and wrap up. If they don't know the set name, thank them warmly and wrap up.
+When the {{category}} is in stock, ask ONE question and only one, for whatever Staff have not already told you. If they have given both the set name and the package type, ask nothing, thank them warmly and wrap up. If they have described the package, like "it's black boxes", ask only for the set name: "oh nice, do you know the name of the set, like {{set_example}}?". If they have given only the set name, ask only for the package type: "oh nice, is it a pack or a box?". If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it a pack or a box?". Always keep a real set name in the question so Staff know what you mean. Take whatever they answer and never ask again, no matter how little they gave you. If their reply does not fit your question, like another "yeah" or a "we do", and they are not going off to check, that still counts as their answer: never repeat the question in any wording, thank them warmly and wrap up. If they don't know the set name, thank them warmly and wrap up.
 
 When nothing is in stock, ask only one question, and ask it in one sentence: "got it, do you know what day and time you might get more in?". If Staff give you a day and a time, thank them warmly and wrap up. If they give you only a day, like "check back tomorrow", ask only for the time: "oh nice, any idea what time?". If they only say more is coming, like "we're getting some soon", ask for the day and the time together, exactly as you asked the first time. Take whatever they answer, even "soon", and never ask a third time.
 
@@ -210,7 +210,47 @@ export function askedToBePutThrough(line: string): boolean {
 // it, and bare "go check" was only known inside "i'll go check", so the phone-down wait was never
 // announced, the room hold sat behind the inversion gate, and Charlie billed through 20 seconds of
 // store noise the ear had rightly called the room. Taught the matcher, never the transcript.
-const GOING_TO_CHECK = /\b(?:hold on|hang on|one (?:sec|second|moment|minute)|just a (?:sec|second|moment|minute)|let me (?:check|see|look|go|double.?check|find out|ask|grab)|lemme (?:check|see|look|go)|bear with|give me a (?:sec|second|minute|moment)|i'?ll (?:check|go check|go look|go see|be right back)|go (?:check|look|see)\b|put (?:this|that|it|the phone) down|checking (?:on|for) (?:that|you)|be right (?:back|with you)|put you on hold|i'?m gonna put you on hold)\b/i;
+const GOING_TO_CHECK = new RegExp([
+  // 1. Asking us to hold, plainly. "hold on" but never "hold on TO something", which is Staff
+  //    telling us to keep a receipt, and "you hold" but never "we hold those behind the counter".
+  "\\b(?:please hold|hold,? please|hold the line|hold up)\\b",
+  "\\bhold on\\b(?! to\\b)",
+  "\\b(?:you|mind|minding) hold(?:ing)?\\b",
+  "\\b(?:on|onto)(?: a| a brief| a quick| a short)? hold\\b",
+  "\\bholding you\\b",
+  // 2. Going to look. The verb has to be theirs and immediate: "let me know", "let me tell you"
+  //    and "let me be honest" are conversation, not a walk to the shelf.
+  "\\b(?:let me|lemme|let's|i'?ll|i will|i'?m gonna|gonna|going to|imma)\\s+(?:just\\s+)?(?:go\\s+(?:and\\s+)?)?(?:double.?check|check|see(?! you\\b)|look|verify|find out|find some(?:one|body)|ask|grab|get|pull|run|walk|head)\\b",
+  "\\b(?:go|going) (?:and )?(?:check|look|see|ask|grab|get)\\b",
+  "\\bchecking (?:on|for|that|it)\\b",
+  "\\b(?:have|having|take|taking|go|going|grab)\\s+a\\s+(?:quick\\s+)?look\\b",
+  "\\bgo up to the (?:front|back|counter)\\b",
+  "\\blook(?:ing)? (?:that |it |this )?up\\b",
+  // 3. Putting the phone down.
+  "\\b(?:put|putting|set|setting|lay|laying)\\s+(?:you|the phone|this|it|that)\\s+down\\b",
+  "\\bput you down\\b",
+  // 4. Asking us to wait. A bare "second" or "minute" is never enough on its own: "they're in the
+  //    second aisle" and "it's a minute from here" are directions, not a wait.
+  "\\b(?:one|just one|just a|two|a couple(?: of)?|couple)\\s+(?:sec|secs|second|seconds|moment|moments|minute|minutes)\\b",
+  "\\bgive me (?:a|one|just a|just one)\\s+(?:sec|second|moment|minute)\\b",
+  "\\bwait (?:a|one|just a|just one)\\s+(?:sec|second|moment|minute)\\b",
+  "\\b(?:bear|stay) with (?:me|us)\\b",
+  "\\bhang (?:on|tight)\\b",
+  "\\b(?:stand by|sit tight)\\b",
+  "\\bif you can (?:hold|wait)\\b",
+  // 5. Going to ask somebody else, and 6. saying they will be back. "come back any time" is an
+  //    invitation, so only THEIR return counts.
+  "\\b(?:be|coming|come|back) right back\\b",
+  "\\bbe right (?:back|with you)\\b",
+  "\\bbe with you in (?:a|one|just a)\\s+(?:sec|second|moment|minute)\\b",
+  "\\bright back with you\\b",
+  "\\bi'?ll be back\\b",
+  "\\bi'?ll be a minute\\b",
+  "\\b(?:this'?ll|it'?ll|that'?ll) (?:just )?(?:take|be)\\s+(?:a|just a|one)\\s+(?:sec|second|moment|minute)\\b",
+  // 7. Sorry, and softened.
+  "\\bexcuse me (?:for )?(?:a|one)\\s+(?:sec|second|moment|minute)\\b",
+  "\\bapolog(?:ies|ise|ize)\\b(?=.*\\bhold\\b)",
+].join("|"), "i");
 export function saidGoingToCheck(line: string): boolean {
   return GOING_TO_CHECK.test(String(line || ""));
 }
