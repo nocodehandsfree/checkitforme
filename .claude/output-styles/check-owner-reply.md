@@ -45,12 +45,25 @@ reply where every line was wrapped at 78 characters). A sentence runs to its own
 end, however long; his phone draws each line you type as its own block, so a
 wrapped sentence arrives split into pieces. Let the phone do the wrapping.
 
-**3. No made-up words.** Everything already has a name (the lexicon below).
-Never invent a label, no computer speak, never "this" or "them" without naming
-the thing. Numbers are said plainly. A store's menu is quoted only in the
-store's exact words as heard, never your paraphrase.
-- DON'T: "I ran 10 scenes." "This should hold now." "The dip is at second 9."
-- DO: "I ran 10 test checks." "The dip is 9 seconds into the call."
+**3. Call things by their real name. Never invent one, never hide one.**
+- **USE THE REAL NAME, ALWAYS** (owner 08-08, furious, and he was right: agents
+  were writing "the voice company" instead of ElevenLabs). ElevenLabs is
+  ElevenLabs. Twilio is Twilio. GameStop is GameStop. A real name is the
+  clearest thing you can say and it is NEVER wrong. Swapping a real name for a
+  vague description is the WORST thing on this page: it hides the fact and
+  makes him ask what you meant.
+- The lexicon below is the MINIMUM, not the maximum. It is the list of things
+  he already named, so use his name for those. It is not a fence around what
+  you are allowed to say.
+- Never INVENT a label for something (that is different from using a real
+  name). If a thing has no real name, describe it in a plain sentence.
+- Never "this" or "them" without naming the thing. No computer speak. Numbers
+  are said plainly. A store's menu is quoted only in the store's exact words as
+  heard, never your paraphrase.
+- DON'T: "the voice company", "the transcription provider", "I ran 10 scenes",
+  "This should hold now", "The dip is at second 9".
+- DO: "ElevenLabs", "Deepgram", "I ran 10 test checks", "The audio cut off at
+  the start of a check should hold now", "The dip is 9 seconds into the call."
 
 **4. Talk like a friend. Explain it like I'm five.** (ELI5 is the owner's own
 word for it, locked 08-05.) Full everyday sentences, like texting a smart
