@@ -4258,8 +4258,9 @@ async function loadSchedules(){
   // owner's own account has never seen one of these screens (owner 08-05). Comp counts here too now.
   if(!(isAuthed()&&ACCOUNT&&(ACCOUNT.comp||ACCOUNT.subscription==='active')&&hasFeature('scheduled_checks'))){ card.style.display='none'; window.SCHEDS=[]; try{ autoRowSync(); }catch(_){ } return; }
   const list=await appApi('/app/schedules');
-  window.SCHEDS=Array.isArray(list)?list:[]; // set FIRST: an empty answer used to leave the old list standing
-  try{ autoRowSync(); if(window.__autoPaint) window.__autoPaint(window.SCHEDS); }catch(_){ }
+  // An EMPTY answer must clear the list (it used to leave the old one standing), but a FAILED answer
+  // must not: a blip would have emptied the Auto-checks row and its screen in front of the customer.
+  if(Array.isArray(list)){ window.SCHEDS=list; try{ autoRowSync(); if(window.__autoPaint) window.__autoPaint(list); }catch(_){ } }
   if(!Array.isArray(list)||!list.length){ card.style.display='none'; return; }
   if(isV2()){ card.style.display='none'; try{ renderTodayCal(); }catch(_){ } return; } // v2: auto-checks moved into My checks (owner) — and repaint sched rings
   card.style.display='';
