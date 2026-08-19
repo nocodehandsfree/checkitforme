@@ -370,6 +370,37 @@ console.log("\n▶ THE DRIFT ALARM: the joining Charlie gets the same words, plu
   ok(!/[—–]/.test(JOINING_RULE), "no dashes in what he is told (they read strangely through ElevenLabs)");
 }
 
+console.log("▶ a note he meant to keep to himself is never a thing to say out loud");
+{
+  // Checks 398 and 399: the store's advert was handed to him as if Staff had spoken, and he
+  // described it onto the line. His directions were changed to forbid it and he did it anyway, so
+  // the words are judged at the door now. The three caught here are the REAL lines off those checks.
+  const { isPrivateNote } = await import("../src/voice/prompts");
+  for (const note of [
+    "[System: Store announcement / advertisement playing, not a staff member speaking]",  // check 399
+    "[Automated in-store message playing while on hold]",                                  // check 398
+    "[Automated message/hold recording - waiting for staff to return]",                    // check 383
+    "System: an automated message is playing",
+    "Note: waiting for staff to return",
+    "An in-store announcement is playing right now.",
+    "That was a recorded message, not a staff member.",
+  ]) ok(isPrivateNote(note), `caught: "${note.slice(0, 52)}"`);
+  // …and every one of these is Charlie really talking to Staff. A wrong catch here would take a
+  // real reply off the line, which is the one thing this must never do.
+  for (const said of [
+    "oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?",
+    "No worries, take your time!",
+    "Perfect, thanks so much, have a good one!",
+    "Oh gotcha, no worries.",
+    "got it, do you know what day and time you might get more in?",
+    "Sorry, could you say that again?",
+    "Ah nice, is that the black boxes?",
+    "Oh okay, no worries, thanks for checking.",
+    "Do you know if the shipment message said a time?",
+    "Any idea what time they put them out?",
+  ]) ok(!isPrivateNote(said), `spoken, never caught: "${said.slice(0, 46)}"`);
+}
+
 console.log("▶ the set question the RECORDING asks is the same sentence his directions carry");
 {
   // The set question is a recording now (owner, 08-19), so two copies of one sentence exist: the

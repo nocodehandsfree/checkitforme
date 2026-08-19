@@ -19,7 +19,7 @@ import { toMediaFrames } from "../calls/clip-cache";
 // The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
-import { heardWrongDepartment, askedToBePutThrough, saysNobodyToTransfer, saidGoingToCheck, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
+import { heardWrongDepartment, isPrivateNote, askedToBePutThrough, saysNobodyToTransfer, saidGoingToCheck, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
 import { guessLanguage } from "../calls/mapgraph";
 // WHAT LANGUAGE THE PERSON WHO PICKED UP IS SPEAKING, off the words of their first line. A separate
 // judge from `guessLanguage` on purpose: that one reads a MENU and its markers are menu words, so it
@@ -979,6 +979,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let hisTurnOpen = false;
   /** Our recorded hold reply is covering the announce; his own generated version is dropped. */
   let ackPlayingUntil = 0;
+  /** HIS OWN NOTE IS NOT SPEECH (owner, 08-19, off checks 398 and 399). When the reply he is about
+   *  to say is a note to himself rather than words for Staff, this turn's audio never reaches the
+   *  line: silence plays and the turn counts as skipped. Set from his OWN words only, at every
+   *  `agent_response`, so an ordinary reply clears it again on the very next turn. Nothing Staff
+   *  say is ever judged here, so it can never take a real answer off the line. */
+  let noteTurnSilenced = false;
   let convEar: ConversationEar | null = null;   // attached the moment a real person is on the line
   /**
    * THE INVERSION (owner + PM, 08-08). Mid conversation, PLAIN QUIET NEVER DROPS CHARLIE. He is
@@ -2212,6 +2218,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // He is warming up behind the question, not talking over it. Nothing he produces before the
         // gate opens reaches the line.
         if (b64 && !charlieGateOpen) { log("delta: agent tried to speak during the clip, suppressed"); }
+        // HIS NOTE NEVER REACHES THE LINE (owner, 08-19). The words were judged the moment they
+        // arrived, one turn ago at most; the frames of that turn are simply not sent, so the store
+        // hears silence and his turn counts as skipped. His next turn clears it.
+        else if (b64 && noteTurnSilenced) { /* a note to himself: silence plays instead */ }
         // HIS REPLY TO THEIR HELLO NEVER REACHES THE LINE. The recording already answered it, and this
         // is the whole fault: it is a fresh greet-back plus the question again, and on a short clip it
         // used to escape and the store answered it (check 286). Dropped, not queued — a delay would
@@ -2479,6 +2489,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // heard. The echo drop above only catches his duplicate when he words it EXACTLY like the
         // recording; reworded, it was written down as a real line twice (checks 282 and 286).
         if (txt && (!charlieGateOpen || !charlieMaySpeak)) return;
+        // A NOTE TO HIMSELF IS NEVER A THING TO SAY OUT LOUD (owner, 08-19, off checks 398 and 399:
+        // the store's advert was handed to him as Staff and he described it onto the line). Judged
+        // on HIS words only, so a real answer from Staff can never be taken off the line by it. The
+        // decision is made here, before a single frame of that turn is sent, and the record carries
+        // what almost played so the sheet tells the truth about it.
+        noteTurnSilenced = !!txt && isPrivateNote(String(txt));
+        if (noteTurnSilenced) {
+          emit(room, "unknown", "Charlie started to say a note to himself, so it was silenced and never played",
+            { step: "note_silenced", text: String(txt).slice(0, 200) });
+          log(`note silenced: he began "${String(txt).slice(0, 60)}" and the store heard nothing`);
+          return;
+        }
         // HE HAS ASKED TO BE PUT THROUGH. From here the next wait that ends is a hand-over, whether or
         // not the next desk audibly rings — a silent hand-over is a quiet pause to the ear and nothing
         // else, and the ear must never be asked to judge this. It is also the ONE line of ours worth

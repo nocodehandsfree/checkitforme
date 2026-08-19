@@ -3016,5 +3016,57 @@ console.log("▶ …and when only ONE piece is missing, the recording stays sile
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 399'S MOMENT: his private note never reaches the line (owner, 08-19)");
+{
+  // 31 seconds into check 399 the store's advert had been handed to him as if Staff had spoken, and
+  // instead of waiting he described it onto the line, word for word:
+  //   "[System: Store announcement / advertisement playing, not a staff member speaking]"
+  // His directions were changed to forbid exactly that and I read them back off the voice service to
+  // be sure they had landed; he said it anyway. So it is judged at the door now. This scene is that
+  // moment: the same handed advert, the same note, and the store must hear NOTHING.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-399-note";
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, { agentId: "a", apiKey: "k", dynamicVars: {}, midCallAgentId: "mid" } as never);
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_399", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(400);
+  const ws = f.sockets[f.sockets.length - 1];
+  // Staff speak, so his mouth is open and this is a real turn of his: nothing else is suppressing him.
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Thanks for holding. Did you know we price match any local competitor?" } }));
+  await sleep(120);
+  const framesBefore = tw.sent.filter((m) => m.event === "media").length;
+  // …and THE NOTE, the real one off check 399.
+  const NOTE = "[System: Store announcement / advertisement playing, not a staff member speaking]";
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: NOTE } }));
+  await sleep(60);
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x30)) } }));
+  await sleep(200);
+  ok(tw.sent.filter((m) => m.event === "media").length === framesBefore,
+    "the store hears silence: not one frame of the note went down the line");
+  const lines = (getReceipt(room)?.transcript || []).filter((l) => l.who === "Agent");
+  ok(!lines.some((l) => /System|announcement|advertisement/i.test(l.text)),
+    `the note is never written down as something he said (${lines.length} line(s) of his)`);
+  const caught = (getReceipt(room)?.events || []).find((e) => (e.detail as { step?: string } | null)?.step === "note_silenced");
+  ok(!!caught, "the record says his note was caught and silenced");
+  ok(String((caught?.detail as { text?: string } | null)?.text || "").includes("Store announcement"),
+    "…in the note's own words, so the sheet tells the truth about what almost played");
+  // AND HIS NEXT REAL REPLY STILL GOES OUT. Silencing one note may never gag him for the call.
+  const beforeReal = tw.sent.filter((m) => m.event === "media").length;
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Oh nice, thanks so much!" } }));
+  await sleep(60);
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x30)) } }));
+  await sleep(200);
+  ok(tw.sent.filter((m) => m.event === "media").length > beforeReal,
+    "his very next real reply goes out as normal, so one note never gags the check");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);

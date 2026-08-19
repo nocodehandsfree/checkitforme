@@ -260,6 +260,43 @@ const GOING_TO_CHECK = new RegExp([
   "\\bexcuse me (?:for )?(?:a|one)\\s+(?:sec|second|moment|minute)\\b",
   "\\bapolog(?:ies|ise|ize)\\b(?=.*\\bhold\\b)",
 ].join("|"), "i");
+/**
+ * A NOTE HE MEANT TO KEEP TO HIMSELF, NEVER A THING TO SAY OUT LOUD (owner, 08-19).
+ *
+ * THE FAULT: on checks 398 and 399 the store's own advert was handed to Charlie as if Staff had
+ * spoken, and instead of waiting he described it onto the line: "[System: Store announcement /
+ * advertisement playing, not a staff member speaking]" went to the store as speech. His directions
+ * were changed to forbid it and I read them back off the voice service to be sure they had landed;
+ * he did it anyway. So the words are judged here instead, at the door, exactly as the 08-06 fault
+ * was: telling him never fixed that one either.
+ *
+ * IT JUDGES ONLY WHAT CHARLIE IS ABOUT TO SAY. Nothing Staff say ever reaches this function, so it
+ * can never block a real answer, only our own side's note.
+ *
+ * NARROW ON PURPOSE, two shapes and no more:
+ *  1. Anything in square brackets. Brackets are never speech: they are how the system hands him a
+ *     note, and all three real cases carried them.
+ *  2. A reply that describes the call instead of talking to Staff, by its own words. The list is
+ *     short and every phrase on it is a description of what is happening on the line, never
+ *     something a person says to a shop assistant.
+ */
+const TALKING_ABOUT_THE_CALL = new RegExp([
+  "^\\s*(?:system|note|status|internal)\\s*[:\\-]",
+  "\\b(?:automated|recorded|pre.?recorded) (?:message|greeting|announcement|voice)\\b",
+  "\\b(?:in.?store|store) (?:message|announcement|advert|advertisement)\\b",
+  "\\b(?:hold|holding) (?:recording|message|music) (?:is |still )?(?:playing|plays)\\b",
+  "\\b(?:advert|advertisement|commercial) (?:is )?playing\\b",
+  "\\bnot a (?:staff|real|live) (?:member|person)\\b",
+  "\\bno(?:body| one) (?:is )?(?:speaking|talking) to (?:me|us)\\b",
+  "\\bwaiting for (?:staff|someone|a person) to (?:return|come back)\\b",
+].join("|"), "i");
+export function isPrivateNote(line: string): boolean {
+  const t = String(line || "").trim();
+  if (!t) return false;
+  if (/\[[^\]]*\]/.test(t)) return true;          // anything in square brackets
+  return TALKING_ABOUT_THE_CALL.test(t);
+}
+
 export function saidGoingToCheck(line: string): boolean {
   return GOING_TO_CHECK.test(String(line || ""));
 }
