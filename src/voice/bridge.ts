@@ -844,6 +844,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  rule (`personSound`, listen-nav.ts — word-scale runs, real silence in the gaps, and the line
    *  clear of the music). The words half is a fresh Staff line that is not them stepping away. */
   let personSoundAtMs = 0;
+  /** THIS WAIT WAS DECLARED OFF THE MUSIC REPORT, so its ENDING needs the wake rule and not the
+   *  ear's ordinary comeback (owner, 08-19 evening). The ordinary comeback ends a wait on the sound
+   *  of a voice, and the whole trouble with this one is that the advert IS a voice: it would end
+   *  the wait the moment the advert started talking and put Charlie straight back on the meter,
+   *  answering a recording, which is the fault we just spent the day ending. */
+  let musicRecognisedHold = false;
   /** How long the sound half stays good for: a person's words reach us through Echo a moment after
    *  their voice, so the two halves are allowed to land a few seconds apart. */
   const WAKE_TOGETHER_MS = 6000;
@@ -878,9 +884,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  stepping away. Sound alone is what the advert defeats — it IS a voice — and words alone is
    *  what it defeats too, because it says real sentences. Neither one on its own opens his ears. */
   function maybeWakeCharlie(line: string): void {
-    if (earsShutAtMs === 0 || onHold) return;
+    if (earsShutAtMs === 0) return;
     if (!personSoundAtMs || Date.now() - personSoundAtMs > WAKE_TOGETHER_MS) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
+    // A WAIT WE DECLARED OFF THE MUSIC ENDS HERE, on the same proof (owner, 08-19 evening). His
+    // session is closed and his meter is off through the music; the wake rule is what brings both
+    // back, so a recording talking at us can never do it. Every other kind of wait ends exactly as
+    // it always has, on the ear's own comeback.
+    if (onHold) {
+      if (!musicRecognisedHold) return;
+      const pc = pendingComeback; pendingComeback = null;
+      log("the music wait ends: the sound and the words both say a person is back");
+      endHold(pc?.gapMs ?? Math.max(0, Date.now() - (earsShutAtMs || Date.now())), pc?.newPerson ?? false, pc?.backAtMs);
+      return;
+    }
     // THE WORDS THAT WOKE HIM ARE THE ONES HE ANSWERS. A line said while his ears were shut and
     // REFUSED by this rule was the store's recording talking, and it is never handed to him: it
     // stays on the record, where Echo wrote it and where the after-call reader names it, and that
@@ -912,6 +929,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  written word releases it through `heardTheWords`. Every other hold ends exactly as it always
    *  has, on the sound of the voice. */
   function endHoldOnEvidence(gapMs: number, maybeNewPerson: boolean, backAtMs?: number): void {
+    // THE ADVERT IS A VOICE, so the sound of a voice cannot be what ends this one (owner, 08-19
+    // evening). The comeback is kept, its latest moment held, and the wake rule releases it: the
+    // sound has to say somebody is talking into a line the music has left AND Echo has to have
+    // written a line that is not Staff stepping away.
+    if (onHold && musicRecognisedHold) {
+      pendingComeback = { gapMs, newPerson: maybeNewPerson, backAtMs };
+      log("the ear hears a comeback inside the music wait: waiting for the wake rule to agree");
+      return;
+    }
     if (onHold && holdProvedWordless) {
       pendingComeback = { gapMs, newPerson: maybeNewPerson, backAtMs };
       log("the ear hears a comeback, but this hold proved wordless: waiting for written words");
@@ -1534,6 +1560,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
+    musicRecognisedHold = false;
     openCharliesEars("the wait ended and somebody came back");
     holdProvedWordless = false; pendingComeback = null;
     // THE ANNOUNCEMENT IS SPENT (check 369). "Let me check, I'll put you on hold" announces ONE
@@ -2869,10 +2896,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // when Charlie's meter stops rides on this line being here.
         musicHeard: (afterMs, atMs) => {
           emit(room, "unknown", "Echo recognised hold music", { step: "music_heard", afterMs, atMs }, earMoment(atMs));
-          // THE MOMENT WE RECOGNISE THE HOLD, HIS EARS SHUT (owner's order, 08-19). On the advert
-          // scene no wait is ever declared — an advert is a voice, so no listening rule can refuse
-          // it — and this report is the only moment the engine knows the line has gone to music.
+          // THE MOMENT WE RECOGNISE THE HOLD, HIS EARS SHUT AND HIS METER STOPS (owner, 08-19
+          // evening: check 406 shut his ears and still ran 42 seconds, "this is not passed").
+          // Shutting his ears only stops him HEARING the advert; the meter runs until he is dropped
+          // off the call, and on the advert scene no wait is ever declared, because an advert is a
+          // voice and the listening rules can never refuse one. So this report, which is the one
+          // moment the engine knows the line has gone to music, now declares the wait itself.
           shutCharliesEars("Echo recognised hold music");
+          if (!onHold) {
+            musicRecognisedHold = true;
+            beginHold("music", atMs);
+          }
         },
         // …and the sound half of the wake rule. It is a REPORT, exactly like the music one: what
         // opens his ears again is this AND Echo's words together (`maybeWakeCharlie`).

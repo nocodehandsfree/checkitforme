@@ -3285,20 +3285,35 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   echoHeardStaff(room, "One moment. I'll go and have a look.");
   await sleep(120);
   ok(step("ears_shut").length === 1, "Staff stepping away shuts his ears", step("ears_shut").length);
+  ok(evs().filter((e) => e.kind === "hold_start").length === 0,
+    "…and on its own that is not yet a wait: today's drop rules still own the announce");
   // THE ADVERT, in sound and then in words. Not one frame, and not one word, may reach him.
   const framesBefore = f.raw.filter((m) => m.includes("user_audio_chunk")).length;
   for (let i = 0; i < 80; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
   await sleep(60);
   ok(f.raw.filter((m) => m.includes("user_audio_chunk")).length === framesBefore,
     "not one frame of the store's audio reaches his session while his ears are shut");
+  // THE MUSIC ITSELF DECLARES THE WAIT AND STOPS HIS METER (owner, 08-19 evening, off check 406:
+  // ears shut and still 42 seconds on the meter). Unbroken sound past the music bar is the report,
+  // and the report is now the moment the wait starts and he is dropped.
+  const holds = () => evs().filter((e) => e.kind === "hold_start");
+  ok(holds().length === 1 && (holds()[0].detail as { reason?: string } | null)?.reason === "music",
+    "the music itself declared the wait, so his meter stops", holds().map((h) => (h.detail as { reason?: string } | null)?.reason));
+  // He is dropped as soon as the engine is free to drop him. On this scene Staff's announce left him
+  // owed a word (the rule that stops him being cut off mid thought), so the drop lands a beat later;
+  // on a real check his recorded hold reply has already played by then and it is immediate.
+  ok(true, "…and the drop follows, checked once the owed-word window is out (below)");
   const ADVERT = "Thanks for holding. Did you know we price match any local competitor?";
   echoHeardStaff(room, ADVERT);
   await sleep(150);
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("price match")),
     "…and the advert's words are never handed to him as a turn either");
   ok(step("ears_back").length === 0, "…and it does not wake him: an advert is not a person talking to us");
+  ok(!evs().some((e) => e.kind === "hold_end"), "…and it does not end the wait either, so his meter stays off");
   ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Clerk" && /price match/.test(l.text)),
     "…while Echo still wrote it down, so it is on the record and the reader can name it");
+  await sleep(6200);   // past the owed-word window, which is the only thing holding the drop
+  ok(evs().some((e) => e.kind === "charlie_leave"), "…and he really is dropped off the call, which is what stops the meter");
   // STAFF REALLY COME BACK. The music stops first, which is what leaves the line clear, and then
   // they talk into it: speech-shaped sound with real gaps in it, and their own words behind it.
   // The gap is the rule doing its job — sound straight over the music's last note is refused, and
@@ -3309,6 +3324,9 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   echoHeardStaff(room, "Yeah. We've got a few of those.");
   await sleep(200);
   ok(step("ears_back").length === 1, "the sound and their words together bring his ears back", step("ears_back").length);
+  ok(evs().some((e) => e.kind === "hold_end"), "…the wait ends on the same proof, so his meter starts again with a person on the line");
+  ok(evs().some((e) => e.kind === "charlie_join" && ((e.detail as { segment?: number } | null)?.segment ?? 0) > 1),
+    "…and he comes back as the next part of the same check");
   ok(f.raw.some((m) => m.includes("user_message") && m.includes("got a few of those")),
     "…and what they said is handed to him as their turn, so he answers it");
   restore(); tw.close(); f.close();
