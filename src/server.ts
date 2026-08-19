@@ -6490,6 +6490,10 @@ app.get("/api/admin/receipt/:room", async (c) => {
     const totalUsd = (cost?.totalUsd ?? 0) + readUsd;
     const priceUsd = ((await getPolicy()).pricing.perCallCents / 100) * 1_000_000;
     const profitPct = totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null;
+    // THE ADVERT RULING'S WINDOW (owner, 08-19), measured once off the record: when the after-call
+    // reader proved a Staff line was really a recording the store played, the grade treats that
+    // stretch as a wait — as if the hold had been recognized when the store's recording started.
+    const asIf = advertAsWait(timeline as Array<{ kind: string; atMs?: number | null; detail?: Record<string, unknown> | null }>, spokenLines ?? null);
     // The workflow bubble: the same store to chain to default resolution every call uses.
     let workflow: { name: string; d: Array<[string, string]> } | null = null;
     try {
@@ -6526,7 +6530,6 @@ app.get("/api/admin/receipt/:room", async (c) => {
         // Charlie seconds out of the grade only. The record, the real cost and the charge are
         // untouched, and the sheet prints the real numbers beside the graded ones.
         advert: ((): { asWaitSec: number; gradedProfitPct: number | null } | null => {
-          const asIf = advertAsWait(timeline as Array<{ kind: string; atMs?: number | null; detail?: Record<string, unknown> | null }>, spokenLines ?? null);
           const asWaitSec = asIf ? Math.round(asIf.forgivenMs / 1000) : 0;
           if (!asIf || asWaitSec <= 0) return null;
           const realSec = cost?.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0;
@@ -6541,11 +6544,17 @@ app.get("/api/admin/receipt/:room", async (c) => {
         ...((): { answerGapWorstSec: number | null; handoverGapWorstSec: number | null; dropGapWorstSec: number | null } => {
           let answer: number | null = null, handover: number | null = null, drop: number | null = null;
           let lastHold: number | null = null;
+          // A GAP STAMPED INSIDE THE AS-IF WAIT DOES NOT GRADE (the advert ruling, check 401): the
+          // engine measured Charlie "answering" the store's recording — his silenced note came 14
+          // seconds after the announce, all of it while the recording owned the line. Had the hold
+          // been recognized, that turn would never have existed, so the stamp is not a measurement
+          // of Charlie. The stamp stays on the record; only the grade disregards it.
+          const poisoned = (ms: number | null) => asIf != null && ms != null && ms >= asIf.offFromMs && ms <= asIf.toMs;
           for (const e of timeline as Array<{ kind: string; atMs?: number; detail?: Record<string, unknown> | null }>) {
             const det = (e.detail || {}) as Record<string, unknown>;
             const ms = typeof e.atMs === "number" ? e.atMs : null;
-            if (det.step === "gaps" && typeof det.answerGapWorstMs === "number") answer = Math.max(answer ?? 0, Math.round(det.answerGapWorstMs / 1000));
-            if (det.step === "missed_turn" && typeof det.sinceVoiceStopMs === "number") handover = Math.max(handover ?? 0, Math.round(det.sinceVoiceStopMs / 1000));
+            if (det.step === "gaps" && typeof det.answerGapWorstMs === "number" && !poisoned(ms)) answer = Math.max(answer ?? 0, Math.round(det.answerGapWorstMs / 1000));
+            if (det.step === "missed_turn" && typeof det.sinceVoiceStopMs === "number" && !poisoned(ms)) handover = Math.max(handover ?? 0, Math.round(det.sinceVoiceStopMs / 1000));
             if (e.kind === "hold_start" && ms != null) lastHold = ms;
             if (e.kind === "charlie_leave" && ms != null && lastHold != null) { drop = Math.max(drop ?? 0, Math.round((ms - lastHold) / 1000)); lastHold = null; }
           }
