@@ -1,60 +1,60 @@
 # SITE — checkpoint (current state)
 
-> System: the consumer web app `public/checkit.html` + consumer routes in `src/server.ts`,
-> design implementation, and ALL copy. Charter + standing rules: `handoff.md` (same folder).
-> Volatile — REPLACE stale lines, newest on top, ≤60 lines. History lives in git.
+> The consumer web app `public/checkit.html` + consumer routes in `src/server.ts`, design and ALL copy.
+> Charter: `handoff.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines. History is in git.
 
-## 08-06 — CHECK STATUS: ONE settle per check, so the screen never changes its answer (ON STAGING)
-- **Three things end a check** (the bridge's `ended`, the socket closing, the POLL seeing `live:false`)
-  and each called `finalizeLive` on its own clock, so two runs = two paints and the owner saw "Check
-  cancelled" for a second, then "Couldn't tell". The first caller OWNS the settle; the rest paint nothing.
-- **Stop and hang up is the only thing that may take the seat** (a cancel is never a verdict, 07-24): a
-  settle in flight paints nothing and asks the server for NOTHING, which is money, because one read of
-  `/pub/result` on a cancelled check flipped it to `completed`/`in_stock` (check 300, 08-06).
-- **Echo turned "Stop and hang up" on for EVERY account 08-06** (it was comp-only). It hides once Staff
-  pick up; a cancel before then is never charged and has NO conversation, so the settle stands down at the
-  id hunt too (it painted "Nobody answered" over the cancel screen) and the press marks the cancel ASKED
-  before the server is asked. A refusal clears flag + seat and re-settles.
-## 08-06 — ACTIVITY (shipped and driven; the story is in `docs/STATE.md`)
-- A bar tap ALWAYS picks that day (only a week arrow clears `ACT_DAY`), the list under the counts follows
-  it, and a tile built outside a `.store` row needs `.stile` or nothing sizes it.
+## 08-19 — AUTO-CHECKS ARE BUILT (branch `claude/webbie-site-checkpoint-p7ziw5`, NOT merged: his order
+was build locally, he says when it goes to staging). Every screen driven on a local rig; nothing pushed
+to staging while Echo tests.
+- **The list** `openAutoChecks` copies the Alerts sheet piece for piece (`alrow`/`alsw`/`alpause`) plus
+  an edit pen; the row opens that store's report. **The My Checks row** sits between Check history and
+  Alerts (`AUTO_ICO`); `#acctScheds` + `renderAcctScheds` are DELETED into the sheet. **Manage Zones →
+  Zones** (`acct.row.zones`; every new string ships its ES twin).
+- **The saved screen** does not close: `sch_form`/`sch_done` copy the `sr_body`/`sr_done` flip,
+  `showScheduleSaved` awaits `loadSchedules()` so the card prints the real Next check, its button goes
+  to the list, and the "Manage in My Checks > Alerts" pill is gone. **The report** `openAutoReport` =
+  the Activity week bars + that day's rows, landing on the newest day with a run; `autoExpand` is
+  zoneExpand's twin (deriveVerdict + combinedTimelineHTML).
+- **Every run is a record (owner 08-19).** Checks already carried `customerScheduleId`; the days that
+  could NOT run were silent, so `customer_schedule_skips` (one per schedule per store-local day, cleared
+  if the check later runs) carries store_off + no_checks, and `GET /app/schedules/:id/runs` serves checks
+  in /app/history's exact shape plus those skips. New: PATCH `/app/schedules/:id` (active · days · time,
+  week-ordered) + POST `/app/schedules/pause-all` (`accounts.auto_checks_paused_at`), both answering
+  with the whole list.
+- **The ping is IN STOCK ONLY** (owner 08-19) in `notifyAutoCheckResult`; everything else still lands on
+  the record. **The In stock screen now offers the auto-check** (`up.keep`), which `canNotify` hid.
+- **Two faults found on the rig:** `loadSchedules` demanded `subscription==='active'`, so a comp account
+  could save an auto-check and never see it; and the tick read `isComp(email)` where the save endpoint
+  reads `isCompAccount`, so a phone-first comp account had every day written off as "out of checks".
+  `test-schedules.ts` covers edit, pause-all, skips (16 pass). LEFT: verify-live + snapshot-truth at merge.
 
-## Verify recipe that works (07-26, refined 08-06)
-Pull the staging env from Railway, then `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx src/server.ts`
-(it will NOT boot without the env). CONSUMER = `/r`; ADMIN needs the admin HOST (`--host-resolver-rules=MAP
-admin.checkitforme.com 127.0.0.1`; a Host header breaks navigation). Chromium cannot reach staging directly,
-so relay through a local TLS pipe that carries the `wss://` socket too, TEXT KEPT AS TEXT (a plain http pipe
-kills it: no lines, no audio, no `ended`), and mint Admin's `.checkitforme.com` cookie for the pipe's host.
+## Verify recipe (07-26, refined 08-19)
+A local rig needs NO Railway secrets: `STAGING=1 COMP_PHONES=<e164> ELEVENLABS_API_KEY=x
+ELEVENLABS_AGENT_ID=x ELEVENLABS_PHONE_NUMBER_ID=x DATABASE_URL=file:<scratch>/local.db PORT=88xx npx
+tsx src/server.ts`; log in via `/auth/phone/start` + `/auth/phone/check` code `000000`, token into
+`localStorage.cifm_token`, drive `/opt/pw-browsers/chromium` via `node_modules/playwright-core`. A
+background process needs repo-root `.unlock-bg`, killed and deleted before the turn ends. Against
+STAGING: its env from Railway, CONSUMER = `/r`, a local TLS pipe carrying `wss://` AS TEXT.
 
 ## Lessons that stay true
-- LOGOS (08-01): `logoPct` on every store row is the whole idea, the tile is square so the width as a
-  PERCENT falls out of the artwork at 46px AND 190px; both browser-side copies are DELETED, the repair
-  sweep is REPORT ONLY until `logo_repair_apply`="1", and `chainLogoInfo` is DB-first (07-31).
-- CHECK STATUS (07-30): the pending render is its OWN screen (`showResult` drops `lview`), `renderLiveMsg`
-  follows the NEWEST LINE, **never pad the page to force a scroll** (`qa-tint-lock` 14b refuses it), and a
-  comp that leaves the homepage showing is a LIE — the real view hides `#builder` and adds `lview`.
-- `sheet-recipe-audit.mjs` prints 1 before a new sheet ships; real touch is `page.touchscreen.tap`, never
-  `el.click()`; sheet focus uses `preventScroll:true`. Chromium CANNOT catch iOS paint, his phone is the
-  rig. Copy a pattern WHOLE, and a bug that SURVIVES closing a sheet is leftover STATE: diff the page.
-- 'in_stock' substring-matches 'not_in_stock': match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head. **What the site SERVES beats what the repo holds** — fetch the live URL and diff the bytes.
+- ONE settle per check (08-06): the FIRST thing to end a check owns the settle, a cancel is never a
+  verdict, and a settle in flight asks the server for NOTHING (it flipped a cancelled check to in_stock,
+  check 300). A bar tap in Activity always picks that day and the list follows the same scope.
+- LOGOS (08-01): `logoPct` per store row is the whole idea (square tile, width as a PERCENT of the art
+  at 46px AND 190px); `chainLogoInfo` is DB-first, a tile outside a `.store` row needs `.stile`, and
+  `sheet-recipe-audit.mjs` prints 1 before a new sheet ships.
+- Real touch is `page.touchscreen.tap`; Chromium CANNOT catch iOS paint, his phone is the rig. Copy a
+  pattern WHOLE; a bug SURVIVING a sheet close is leftover STATE; never pad to force a scroll.
+- 'in_stock' substring-matches 'not_in_stock': match negatives first/exact. **What the site SERVES beats what the repo holds** — fetch the live URL and diff the bytes.
 
-## THE OPEN LIST, 08-06 evening (nothing below is built)
-- **NEXT: `docs/tasks/site-auto-checks.md`** — four screens, the Manage Zones row renamed to Zones, the
-  comp-account bug hiding the list from his own account. Pictures + his words: `docs/specs/auto-checks/`.
-  **RULED 08-06, do not re-ask:** the saved screen is built and the sheet does NOT close, it flips in
-  place with a button into the list (today `submitSchedule` closes it) · tapping a row opens that store's
-  report · the report is a week of day bars, tap a day, tap a check, it unfolds with the conversation.
-  Still HIS: "Delete or Pause them below." (capital P), and "Auto-check" vs the live Alerts "auto check".
-- **`docs/specs/location-follow/README.md`** (spec 08-06, HIS pick pending, AFTER auto-checks). The
-  drive-follow and the slider's re-check both return unless the browser answers `granted`, which a phone
-  rarely does, so the 7-day saved spot wins: he sat 300 miles from home seeing home stores.
-- `docs/tasks/site-history-day-list.md` — a day tap in Check history opens the newest check and he waits
-  for it; he wants the day list the calendar icon already shows. Also open: the alerts row switch wraps
-  onto a second line on a long store name (found 08-05, no task file).
-- `docs/tasks/go-live-site-audit.md`: prod has never sent one email (confirm-your-email) · prod misses
-  `ELEVENLABS_MIDCALL_AGENT_ID` + four settings · two engine switches differ prod vs staging · no real
-  auto-check watched end to end · copy-doc reconcile · Restock SMS waits on A2P.
+## THE OPEN LIST, 08-19 (auto-checks moved OFF it; nothing below is built)
+- **NEXT: `docs/specs/location-follow/README.md`** (HIS pick of three pending): he sat 300 miles from
+  home seeing home stores; the follow and the slider's re-check both need `granted`.
+- `site-history-day-list.md` — a day tap opens the newest check, not that day's list. Also: the alerts
+  row switch wraps to a second line on a long store name (08-05, no task file).
+- **The customer result screen said In stock against a not_in_stock record** — a red on every test day
+  since 08-07 (voice-calls checkpoint, checks 301 and 366), never on this list until now.
+- `go-live-site-audit.md`: prod has never sent one email · prod misses five settings · two engine
+  switches differ prod vs staging · copy-doc reconcile. And the loud retry state + its 90-second counter.
 - **PM: promote wanted — the logo system's code half is staging-only.** (Admin IS shipped and safe.)
-- PRICING is the owner's own job in Admin > God View > Plans (08-06): the site reads what he saves and
-  staging copies prod within a minute. Annual does NOT follow Monthly, the card price only moves on
-  PUBLISH TO STRIPE, and the customer guide on branch `v1.0` still prints the OLD ladder.
+- PRICING is his own job in Admin > God View > Plans: Annual does NOT follow Monthly, the card price only moves on PUBLISH TO STRIPE, and the `v1.0` guide still prints the OLD ladder.

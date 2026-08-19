@@ -62,7 +62,7 @@ import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSe
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
-import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
+import { createSchedule, listSchedulesDetailed, deleteSchedule, updateSchedule, pauseAllSchedules, listScheduleSkips, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
@@ -4247,10 +4247,25 @@ app.post("/app/zones/run/:runId/stop-one", async (c) => {
 });
 
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
+// The Auto-checks list paints each row as the site's own store row, so every schedule carries the
+// chain's real logo the same way the homepage and the Alerts list get theirs.
+async function schedulesWithLogos(userId: string) {
+  const list = await listSchedulesDetailed(userId);
+  if (!list.length) return list;
+  const stores = await retailerMap();
+  const chainRows = await cachedChains();
+  const schedChains = new Map(chainRows.map((x) => [x.id, x.name]));
+  const schedTypes = new Map(chainRows.map((x) => [x.id, x.type]));
+  return list.map((s) => {
+    const st = stores.get(s.retailerId);
+    const l = chainLogoInfo((st?.chainId && schedChains.get(st.chainId)) || storeChainName(st?.name || s.storeFull));
+    return { ...s, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect, storeType: (st?.chainId && schedTypes.get(st.chainId)) || "Other" };
+  });
+}
 app.get("/app/schedules", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  return c.json(await listSchedulesDetailed(u.id));
+  return c.json(await schedulesWithLogos(u.id));
 });
 app.post("/app/schedule", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
@@ -4270,7 +4285,58 @@ app.post("/app/schedule", async (c) => {
 app.delete("/app/schedules/:id", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  return c.json(await deleteSchedule(u.id, Number(c.req.param("id"))));
+  await deleteSchedule(u.id, Number(c.req.param("id")));
+  return c.json({ ok: true, schedules: await schedulesWithLogos(u.id) });
+});
+// Turn one auto-check off or on, or move it to different days or a different time. Answers with the
+// whole list so the Auto-checks screen repaints from one round trip (the Alerts list works this way).
+app.patch("/app/schedules/:id", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const b = await c.req.json().catch(() => ({}));
+  await updateSchedule(u.id, Number(c.req.param("id")), { active: b.active, daysOfWeek: b.daysOfWeek, timeLocal: b.timeLocal });
+  return c.json({ ok: true, schedules: await schedulesWithLogos(u.id) });
+});
+// The master "Pause all" switch on the Auto-checks list.
+app.post("/app/schedules/pause-all", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const b = await c.req.json().catch(() => ({}));
+  await pauseAllSchedules(u.id, !!b.paused);
+  return c.json({ ok: true, schedules: await schedulesWithLogos(u.id) });
+});
+// EVERY RUN OF ONE AUTO-CHECK (owner 2026-08-19: each one is its own record and somebody has to be
+// able to see what happened). Checks come back in the same shape as /app/history so the report paints
+// with the page's own row, verdict and conversation pieces; a day it could not run rides along as a
+// skip row so the record has no silent gaps.
+app.get("/app/schedules/:id/runs", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const id = Number(c.req.param("id"));
+  const mine = (await listSchedulesDetailed(u.id)).find((x) => x.id === id);
+  if (!mine) return c.json({ error: "not_found" }, 404);
+  const stores = await retailerMap();
+  const cats = await categoryLabelMap();
+  const runChains = new Map((await cachedChains()).map((x) => [x.id, x.name]));
+  const rows = (await db.select().from(callResults).where(eq(callResults.customerScheduleId, id)).orderBy(desc(callResults.startedAt)).limit(120))
+    .filter((r) => r.providerCallId);
+  const checks = rows.map((r) => {
+    const st = stores.get(r.retailerId);
+    const sName = st?.name || "A store";
+    const l = chainLogoInfo((st?.chainId && runChains.get(st.chainId)) || storeChainName(sName));
+    return {
+      cid: r.providerCallId, storeId: r.retailerId, storeName: sName, location: st?.location || "",
+      categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
+      ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
+      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard,
+      shipmentTime: r.shipmentTimeHeard ?? null, charged: !!r.chargedAt,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect,
+    };
+  });
+  const skips = (await listScheduleSkips(u.id, id)).map((k) => ({
+    skip: true, day: k.day, reason: k.reason, detail: k.detail || null, ts: (k.createdAt || 0) * 1000,
+  }));
+  return c.json({ schedule: mine, checks, skips });
 });
 
 // ---- Referrals: give free checks, get free checks ----
