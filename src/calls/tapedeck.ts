@@ -1078,7 +1078,7 @@ export const ROBOT_SCENES: RobotScene[] = [
   // that is not Staff. Charlie must stay dropped through the whole advertisement, must never answer
   // it, and not one word of it may reach the record as something Staff said to us. The voice is
   // already mixed under the music in the committed file, so this plays it whole and mixes nothing.
-  { n: 22, card: "hold_music", name: "Hold with an advert in the music, then an answer", expect: "in_stock", acts: [
+  { n: 22, card: "hold_music_advert", name: "Hold with an advert in the music, then an answer", expect: "in_stock", acts: [
     { listen: true }, { say: "One moment, I'll go and have a look." },
     { clip: "musicWithAd" },
     { say: "Yeah, we've got a few of those." },

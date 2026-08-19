@@ -657,6 +657,19 @@ const VOICE_GAP_MS = 300;
  *  outgrows this unbroken is struck: it is the music, however it started. The rejoin still
  *  backdates to their first banked word, so the wait's length never pays for the proof. */
 const MAX_SPEECH_RUN_MS = 1200;
+/** HOW QUIET THE GAPS BETWEEN WORDS MUST GET before word-scale sound counts as somebody talking to
+ *  us (the owner's wake rule, 08-19). Measured on his own committed recordings, never guessed: the
+ *  middle gap frame inside `08-hold-music-with-ad.mp3` reads 188 and inside `05-hold-music-waltz.mp3`
+ *  211, because the music plays on underneath every pause; inside `07-ad-voice-male.mp3`, a bare
+ *  voice with nothing under it, the middle gap frame reads 37. The bar sits between them with room
+ *  on both sides. Pinned both ways in scripts/test-hold-wake.ts, which runs on every build. */
+const MUSIC_GAP_FLOOR = 120;
+/** …and how long the line must have been clear of a run that outgrew a word before the same sound
+ *  counts (the wake rule's second half, owner 08-19). Measured the same way: on his advert
+ *  recording the sound never stays clear of a music-length run for this long until the music has
+ *  genuinely finished. A person coming back never sets this clock, because their own runs break at
+ *  word scale, so it only ever delays somebody talking over the music's last note. */
+const MUSIC_CLEAR_MS = 2500;
 /** Nobody has made a sound for a very long time. Different from "they walked away to go and look":
  *  at this point the line is probably not a conversation any more — the handset was put down and
  *  forgotten, or the far end went away without hanging up. The runtime decides what to do about it;
@@ -744,6 +757,15 @@ export class ConversationEar {
    *  lately" is a count and not an unbroken run. Holding the times, not just a tally, is what lets a
    *  hold be backdated to the moment they STARTED talking rather than the moment we were sure. */
   private backSpeech: number[] = [];
+  /** Word-scale runs banked for the `personSound` report only, so the comeback rule above keeps its
+   *  own evidence untouched. Wiped by any run that outgrows a word, which is the music. */
+  private wakeSpeech: number[] = [];
+  /** When a run last outgrew a word — the last moment the line was certainly music. */
+  private lastMusicRunAt = -1e9;
+  /** The energy of the line's own QUIET frames, lately: how quiet the gaps between words really
+   *  get. A person leaves real silence between words; music never stops, so its "gaps" are the
+   *  music still playing underneath (see MUSIC_GAP_FLOOR). */
+  private quietRecent: Array<{ at: number; e: number }> = [];
   /** The run of sound currently in progress, held apart from the banked evidence while we are on a
    *  hold: it only banks when it BREAKS at word scale, because until it breaks it cannot be told
    *  from the hold music resuming (check 377 — see MAX_SPEECH_RUN_MS). */
@@ -775,6 +797,15 @@ export class ConversationEar {
      *  (MAX_SPEECH_RUN_MS). It is a REPORT, never a decision: the wait itself still declares on the
      *  one drop number above, so nothing about when Charlie's meter stops rides on this. */
     musicHeard?: (afterMs: number, atMs: number) => void;
+    /** A REAL PERSON IS TALKING TO US, judged by the SAME sound rule the music report and the
+     *  comeback already use, and reported whether or not a wait was ever declared (owner, 08-19).
+     *  Sound that runs on past `MAX_SPEECH_RUN_MS` without a gap is music and wipes the evidence;
+     *  runs that BREAK at word scale bank, and a word's worth of them inside the window is somebody
+     *  speaking. That last part matters for the advert inside hold music: the advert's voice plays
+     *  over the music, so the mix never breaks and never banks, while a person who really came back
+     *  is talking into a line the music has left. A REPORT, never a decision: what it is for is
+     *  deciding when Charlie's EARS come back on, and nothing about the meter rides on it. */
+    personSound?: (spokeMs: number, atMs: number) => void;
   }, t?: EarTuning) {
     this.deadAirMs = t?.deadAirMs ?? DEAD_AIR_MS;
     this.quietMax = t?.holdQuietMs ?? HOLD_QUIET_MS;
@@ -892,8 +923,17 @@ export class ConversationEar {
       // store's own recordings was 980ms (checks 384, 382, 387, 391), and the only run past this
       // bar was check 383's advert, which is a recording. Reported once per walk-away, and the
       // report changes nothing about the wait itself — that is still the one drop number.
+      // THE LINE IS CERTAINLY MUSIC AT THIS INSTANT, run finished or not: sound has been going this
+      // long with no gap in it, which no voice does. Stamped every frame it stays true, so the wake
+      // rule below measures from the music's real end and not from the last time a run happened to
+      // break (08-19: an eleven second run of the advert's own music set nothing at all).
+      if (this.soundMs >= MAX_SPEECH_RUN_MS) { this.lastMusicRunAt = this.elapsed; this.wakeSpeech = []; }
       if (this.soundMs >= MAX_SPEECH_RUN_MS && this.musicSaidAtMs < 0) {
         this.musicSaidAtMs = this.elapsed;
+        // The speech we heard BEFORE the music started is not evidence that somebody is talking to
+        // us now — the same reason a wait clears it (see `enter`). Without this, the greeting still
+        // sitting in the window fired a person report at the music's first break (08-19).
+        this.wakeSpeech = [];
         this.on.musicHeard?.(this.soundMs, this.elapsed - this.soundMs);
       }
       const full = this.voiced.length * FRAME_MS >= this.windowMs
@@ -933,6 +973,15 @@ export class ConversationEar {
         }
         this.runSpeech = []; this.runIsMusic = false;
       }
+      // HOW QUIET THE GAPS REALLY GET, kept for the person report below. Room frames are loud and
+      // are not silence, so they never count as a gap.
+      if (!loud) {
+        this.quietRecent.push({ at: this.elapsed, e: energy });
+        while (this.quietRecent.length && this.quietRecent[0].at < this.elapsed - BACK_WINDOW_MS) this.quietRecent.shift();
+      }
+      // …AND THE SAME BREAK IS WHERE THE PERSON REPORT IS DECIDED, wait or no wait (owner, 08-19).
+      // Only non-room sound ever reaches `soundMs`, so a handset on a counter can never bank here.
+      if (this.soundMs > 0) this.bankWakeRun(this.soundMs);
       this.soundMs = 0; this.quietMs += FRAME_MS;
       if (room) this.roomMs += FRAME_MS;
       // A pause long enough to break a word breaks the run of speech with it.
@@ -953,6 +1002,39 @@ export class ConversationEar {
     }
   }
 
+  /** One run of sound just ended. Music wipes the evidence; word-scale runs bank, and a word's
+   *  worth of them inside the window says somebody is talking to us (owner, 08-19). Reported once
+   *  per stretch, so one person coming back is one report and not one per word. */
+  private bankWakeRun(runMs: number): void {
+    if (runMs > MAX_SPEECH_RUN_MS) { this.wakeSpeech = []; this.lastMusicRunAt = this.elapsed; return; }
+    for (let t = this.elapsed - runMs; t < this.elapsed; t += FRAME_MS) this.wakeSpeech.push(t);
+    while (this.wakeSpeech.length && this.wakeSpeech[0] < this.elapsed - BACK_WINDOW_MS) this.wakeSpeech.shift();
+    if (this.wakeSpeech.length * FRAME_MS < this.backVoiceMs) return;
+    // …AND THE GAPS BETWEEN THE WORDS HAVE TO BE REAL SILENCE (measured on the owner's own
+    // recordings, 08-19). This is the half that refuses the advert, and it is physical, not a
+    // guess: every hold recording has quiet passages where the sound breaks at word scale exactly
+    // like speech — the waltz swells and falls, and the advert's own voice pauses for breath — but
+    // THE MUSIC NEVER STOPS UNDERNEATH, so those gaps are the music playing on. Measured across his
+    // own committed files: the middle gap frame inside the advert reads 188 and inside the waltz
+    // 211, while inside a bare recorded voice it reads 37, because a person talking into a phone
+    // leaves the line really quiet between words. Nothing is lost when this refuses a real person
+    // on a noisy line: Echo writes every word either way, and the words reach Charlie the way a
+    // comeback always has.
+    const gaps = this.quietRecent.map((q) => q.e).sort((a, b) => a - b);
+    if (!gaps.length || gaps[Math.floor(gaps.length / 2)] > MUSIC_GAP_FLOOR) return;
+    // …AND THE LINE HAS TO HAVE BEEN CLEAR OF THE MUSIC FOR A MOMENT (the second measured half).
+    // A stretch of music that runs on and then dips can leave real silence in the window straight
+    // after it — that is the music breathing, not somebody speaking into a line it has left. Free
+    // for a real comeback: their own runs never outgrow a word, so nothing about a person coming
+    // back sets this clock. What it costs is a person who talks straight over the music's last
+    // note, and they are not lost either: Echo writes their words and hands them over as always.
+    if (this.elapsed - this.lastMusicRunAt < MUSIC_CLEAR_MS) return;
+    const from = this.wakeSpeech[0];
+    const spoke = this.wakeSpeech.length * FRAME_MS;
+    this.wakeSpeech = [];
+    this.on.personSound?.(spoke, from);
+  }
+
   private enter(reason: HoldReason): void {
     if (this.reason) return;                       // already away; do not re-announce
     if (!this.heardVoiceMs) return;                // never had anybody, so nobody left
@@ -969,6 +1051,7 @@ export class ConversationEar {
     // they were still here, so it can never be part of the proof that somebody has come back.
     this.soundRecent = [];
     this.backSpeech = [];
+    this.wakeSpeech = [];
     this.runSpeech = []; this.runIsMusic = false;
     const already = reason === "quiet" || reason === "room" ? this.quietMs : reason === "music" ? this.soundMs : this.toneRunMs;
     this.holdStartedAt = Math.max(0, this.elapsed - already);
@@ -1368,4 +1451,4 @@ export function listenNavOpeningTwiml(fork: string, bridgeUrl: string, room: str
 
 export const _test = { LEAD_SEC, GRACE_SEC, MIN_SPEECH_MS, END_SILENCE_MS, VOICE_THRESH, FRAME_MS,
   HOLD_QUIET_MS, HOLD_MUSIC_MS, NEW_PERSON_AFTER_MS, PERSON_GREETING_MAX_MS, PERSON_WAIT_MS,
-  TRANSFER_TONE_MS, BACK_VOICE_MS, VOICE_GAP_MS };
+  TRANSFER_TONE_MS, BACK_VOICE_MS, VOICE_GAP_MS, MAX_SPEECH_RUN_MS, MUSIC_GAP_FLOOR, MUSIC_CLEAR_MS };

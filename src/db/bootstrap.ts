@@ -256,7 +256,7 @@ export async function bootstrap() {
     "charlie_connected_seconds INTEGER", "charlie_talking_seconds INTEGER",
     "charlie_speaking_seconds INTEGER",
     "charlie_listening_seconds INTEGER", "charlie_silent_seconds INTEGER",
-    "ring_seconds INTEGER", "hold_seconds INTEGER", "billed_minutes INTEGER",
+    "ring_seconds INTEGER", "hold_seconds INTEGER", "awake_on_hold_seconds INTEGER", "billed_minutes INTEGER",
     "map_version TEXT", "attempt_of INTEGER", "engine_version TEXT",
     // Which brain answered, what the walk to a person achieved, and how many times the agent's
     // session had to be opened. All three self-heal on boot the same way every column above does.

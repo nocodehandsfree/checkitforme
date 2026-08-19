@@ -125,6 +125,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       charlieSilentSeconds: sums.charlieSilentSeconds,
       ringSeconds: sums.ringSeconds,
       holdSeconds: sums.holdSeconds,
+      awakeOnHoldSeconds: sums.awakeOnHoldSeconds,
       billedMinutes: sums.billedMinutes,
       menuSeconds: sums.menuSeconds,
       // Which build served this call, so a regression is findable without guessing.

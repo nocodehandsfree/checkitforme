@@ -71,6 +71,10 @@ export interface MeterInput {
   answerGapWorstSec?: number | null;
   handoverGapWorstSec?: number | null;
   dropGapWorstSec?: number | null;
+  /** THE SECONDS CHARLIE WAS AWAKE WHILE THE STORE HAD US ON HOLD (owner's order, 08-19). Measured
+   *  on the call itself: his session open and billing while a wait was recognised — waiting, music,
+   *  or an advert playing at us. Null on a check that never measured it. */
+  awakeOnHoldSec?: number | null;
   /** THE ADVERT RULING (owner, 08-19): when the after-call reader proved a Staff line was really a
    *  recording the store played (`played_at_us` on the record), the GRADE treats that stretch as a
    *  wait — as if the hold had been recognized when the store's recording started. Grading only:
@@ -244,6 +248,17 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     // seconds of 08-16. Shown whenever it was measured; its own bound is the owner's open
     // decision (spec decision 2), so it is not graded alone yet. It already drags the two graded
     // numbers: waited seconds sit inside the meter cap and cost money against the floor.
+    // THE WASTE THAT USED TO HIDE BEHIND A PASSING CHECK (owner's order, 08-19, fix 4). Its own
+    // number on every sheet: the seconds his session was open and billing while the store had us on
+    // hold. On the advert scene that is the whole fault in one number — he sat awake through a
+    // recorded voice — and it is printed whether the check passed or failed. Shown, not graded: what
+    // a hold is allowed to cost is the owner's own number to rule, and until he rules one, printing
+    // an invented bar in red would be us deciding it for him.
+    if (m.awakeOnHoldSec != null && m.awakeOnHoldSec > 0) {
+      rows.push({ label: "Awake while the store had us on hold", value: `${m.awakeOnHoldSec}s`, pass: null,
+        say: { pre: "Charlie stayed awake ", num: secWord(m.awakeOnHoldSec), post: " while the store had us waiting." },
+        open: "The store was playing music, an advert, or nothing at all, and Charlie's meter was running through it. Every one of these seconds is money spent on hearing a store's hold music. When the system recognises the wait, he is dropped and this number is small; when it cannot, this is what it costs." });
+    }
     if (waited != null) {
       rows.push({ label: "Of that, waiting on a quiet line", value: `${waited}s`, pass: null,
         say: { pre: "", num: secWord(waited), post: " of that was waiting." },

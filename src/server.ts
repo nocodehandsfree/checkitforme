@@ -4873,6 +4873,26 @@ app.get("/api/admin/test-calls", async (c) => {
     .filter((r) => r.partOfCheck == null)
     .filter((r) => config.staging.on || ownerOnly.has(r.retailerId) || r.finderUserId === master)
     .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+  // WHICH TEST EACH CHECK RAN, ON THE ROW ITSELF (owner's order, 08-19, fix 1). Every check we dial
+  // at the robot store already stamps its test on its own record (`named_test`, bridge-place.ts), and
+  // until now only the sheet inside read it: the log said what the store answered and never what was
+  // being tested. Read by the card's KEY and looked up in TEST_CARDS, never off the old note's text,
+  // so a test that is renamed reads its new name on every check that ever ran it, and the row and the
+  // sheet's own heading can never disagree. One query for the whole page.
+  const testNameByRoom = new Map<string, string>();
+  {
+    const rooms = all.map((r) => r.room).filter((x): x is string => !!x);
+    if (rooms.length) {
+      const named = await db.select({ room: callEvents.room, detail: callEvents.detail, note: callEvents.note })
+        .from(callEvents).where(and(inArray(callEvents.room, rooms), like(callEvents.note, "Test: %")));
+      for (const n of named) {
+        if (!n.room || testNameByRoom.has(n.room)) continue;
+        let key = ""; try { key = String((JSON.parse(n.detail || "{}") as { step?: string; card?: string }).card || ""); } catch { /* the note stands in */ }
+        const name = (key && TEST_CARDS[key]?.name) || String(n.note || "").replace(/^Test:\s*/, "");
+        if (name) testNameByRoom.set(n.room, name);
+      }
+    }
+  }
   const rows = all.map((r) => {
     const wf = wfFor(r.retailerId);
     const cat = cats.get(r.categoryId) || "";
@@ -4892,6 +4912,9 @@ app.get("/api/admin/test-calls", async (c) => {
       summary: r.summary || null,
       // The join key back to the receipt, so a row opens the SAME sheet the Calls page opens.
       room: r.room || null,
+      // The name of the test this check ran, off its own record. Null on a check that ran no named
+      // test, which is every real customer check.
+      test: (r.room && testNameByRoom.get(r.room)) || null,
       // The route that really ran, and what the check really cost. A row with no stamped total was
       // written before this engine priced anything, so it says nothing rather than "free".
       lane: r.lane || null,
@@ -6520,6 +6543,9 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // check is finished, same as the verdict — an unfinished test has not failed either.
       meter: graded ? meterVerdict(card, { meterSec: sums?.charlieConnectedSeconds ?? null,
         speakingSec: sums?.speakingSecs ?? null, listeningSec: sums?.listeningSecs ?? null,
+        // THE WASTE, ITS OWN NUMBER ON THE SHEET (owner's order, 08-19, fix 4): the seconds his
+        // session was awake and billing while the store had us on hold, measured on the call.
+        awakeOnHoldSec: sums?.awakeOnHoldSeconds ?? null,
         // THE SET-ASIDE IS GONE (owner, 08-17 evening: "we already have a system, I didn't ask to
         // change shit"). A hold test is priced and graded exactly like every other check: the real
         // profit the check made, against the 67% floor, and no second number of any kind.

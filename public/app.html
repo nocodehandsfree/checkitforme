@@ -7293,7 +7293,11 @@ async function loadTesting(){
     const time=r.started?new Date(r.started*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
     // A check with no stamped total was placed before the engine priced anything. Say that, never "free".
     const cash=r.cost||'not priced';
-    const words=vv.t?vv.t.charAt(0).toLowerCase()+vv.t.slice(1):'';
+    // WHICH TEST THIS CHECK RAN, ON THE ROW ITSELF (owner's order, 08-19). It sits where the stock
+    // answer used to: the answer is still on the row, worn by the status icon on the right and its
+    // label, while the thing the log could never tell him was WHICH test each line was. A check that
+    // ran no named test still reads its answer here, which is every real customer check.
+    const words=r.test?r.test:(vv.t?vv.t.charAt(0).toLowerCase()+vv.t.slice(1):'');
     const head=`<span class="pk-logo">${logTile({...r,name:r.store})}</span>
       <span class="pk-main">
         <span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.store||'')}</span>

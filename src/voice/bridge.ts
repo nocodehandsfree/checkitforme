@@ -828,6 +828,60 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  written piece ran 3.16s behind the sound; 4s covers it. A long unbroken opening sentence that
    *  beats the window anyway is caught by the release below: the first written word ends the hold
    *  backdated, so the comeback is never lost, only heard through Echo. */
+  /** HIS EARS ARE SHUT FROM THE MOMENT WE RECOGNISE A HOLD (owner's order, 08-19, off checks 398
+   *  to 405). Until now a recognised hold only stopped him TALKING: every frame of the store's
+   *  audio still went to his session, so the advert inside the hold music was handed to him as if
+   *  Staff had spoken and he answered it, at 20-odd metered seconds a time. Now not one frame of
+   *  the call reaches him while a hold is recognised. ECHO ALONE KEEPS HEARING — it is a separate
+   *  listener on the pickup fork and nothing here touches it — so every word said while his ears
+   *  are shut is still written down, still on the record, and still handed to him the way a
+   *  comeback always has been.
+   *
+   *  0 = his ears are open. Otherwise the moment they were shut. */
+  let earsShutAtMs = 0;
+  /** The last moment the EAR said the sound was somebody talking to us: the sound half of the wake
+   *  rule (`personSound`, listen-nav.ts — word-scale runs, real silence in the gaps, and the line
+   *  clear of the music). The words half is a fresh Staff line that is not them stepping away. */
+  let personSoundAtMs = 0;
+  /** How long the sound half stays good for: a person's words reach us through Echo a moment after
+   *  their voice, so the two halves are allowed to land a few seconds apart. */
+  const WAKE_TOGETHER_MS = 6000;
+  function shutCharliesEars(why: string): void {
+    if (earsShutAtMs > 0) return;
+    earsShutAtMs = Date.now();
+    personSoundAtMs = 0;
+    emit(room, "unknown", "Charlie's ears were shut for the wait, so none of the call reached him",
+      { step: "ears_shut", why });
+    log(`ears: shut (${why}) — Echo keeps listening, Charlie hears nothing`);
+  }
+  function openCharliesEars(why: string): void {
+    if (earsShutAtMs === 0) return;
+    const shutMs = Date.now() - earsShutAtMs;
+    earsShutAtMs = 0;
+    personSoundAtMs = 0;
+    emit(room, "unknown", "A real person is talking to us again, so Charlie's ears came back on",
+      { step: "ears_back", why, shutMs });
+    log(`ears: back on after ${shutMs}ms (${why})`);
+    heldWords = [];   // whatever was on the line while they were shut was the music, never his to hear
+    // EVERYTHING SAID WHILE THEY WERE SHUT, HANDED OVER AS THEIR TURN — the same pocket and the
+    // same one door a comeback has always used, so nothing said to us is ever lost to the shutting.
+    // ONLY WHEN HIS SESSION IS REALLY UP. When his ears were shut for a declared wait he is also
+    // CLOSED, and the reopen has its own hand-over a moment later: draining the pocket here would
+    // empty it into a session that does not exist yet and the words would reach nobody (the rig's
+    // check 360 scene caught exactly that). Ears shut with his session still open is the advert's
+    // own case, and that is where this hands over.
+    if (eleven && ready && echoRooms.has(room) && missedWhileClosed.length) tellCharlieWhatHeMissed();
+  }
+  /** THE WAKE RULE, BOTH HALVES TOGETHER (owner's order, 08-19). The sound has to say somebody is
+   *  talking into a line the music has left, AND Echo has to have written words that are not Staff
+   *  stepping away. Sound alone is what the advert defeats — it IS a voice — and words alone is
+   *  what it defeats too, because it says real sentences. Neither one on its own opens his ears. */
+  function maybeWakeCharlie(line: string): void {
+    if (earsShutAtMs === 0 || onHold) return;
+    if (!personSoundAtMs || Date.now() - personSoundAtMs > WAKE_TOGETHER_MS) return;
+    if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
+    openCharliesEars("the sound and the words both say a person");
+  }
   const REJOIN_WORDLESS_MS = 4000;
   let wordlessRejoinTimer: NodeJS.Timeout | null = null;
   let heardWordsSinceEarsBack = false;
@@ -1395,6 +1449,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // A new wait starts, so the reconnect feed's turn is over, however it ended (owner task 08-15).
     reconnectFeed = null;
     onHold = true; holdReason = reason; heldWords = [];
+    shutCharliesEars(`the wait was declared (${reason})`);
     // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write ONLY its own line, and then
     // the wait it caused ended with a "back off hold" that had no "put on hold" anywhere above it —
     // a receipt you cannot read straight through (owner 07-28). Being handed on and being made to
@@ -1472,6 +1527,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
+    openCharliesEars("the wait ended and somebody came back");
     holdProvedWordless = false; pendingComeback = null;
     // THE ANNOUNCEMENT IS SPENT (check 369). "Let me check, I'll put you on hold" announces ONE
     // wait, and this is that wait ending. It used to stay armed until Staff's next WRITTEN line
@@ -2037,6 +2093,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // language, so no list of phrases decides money any more.
       if (announcedNow && !waitAnnounced) playHoldAck();
       else if (!announcedNow) ackPlayingUntil = 0;
+      // THE OTHER MOMENT WE RECOGNISE A HOLD is Staff saying they are stepping away, which is the
+      // same phrase family the drop has always read (owner's order, 08-19). From here not one frame
+      // of the call reaches Charlie until the wake rule says a real person is talking to us again.
+      if (announcedNow) shutCharliesEars("Staff said they were stepping away");
       waitAnnounced = announcedNow;
       if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
       // THE ANSWER TO THE RECORDING'S QUESTION CLOSES THE CHECK (owner's order 08-19, off check
@@ -2092,7 +2152,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard. `!ready` too: a line landing while his session is still
     // opening reached no ears either, and the pocket is what the ready hand-over reads.
-    if (fromEcho && fresh && (!eleven || onHold || !ready) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
+    if (fromEcho && fresh && (!eleven || onHold || !ready || earsShutAtMs > 0) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
     // A LINE SPOKEN INTO THE WAIT THAT FINISHED WRITING JUST AFTER HE RECONNECTED IS STILL HIS TO BE
     // HANDED (owner task 08-15, check 366). Staff's "I did not see any" was spoken while his session
     // was closed, and its writing landed a second after the new session opened — so the old rule
@@ -2129,6 +2189,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     } else if (fresh) {
       try { relayLine?.(room, "Clerk", txt); } catch { /* relay best-effort */ }
     }
+    // THE WAKE RULE'S WORDS HALF, tried LAST so the line is already in the pocket: if this is the
+    // one that opens his ears, opening them hands him these very words as their turn (owner's
+    // order, 08-19). The advert's own words never get here, because the sound half refuses them.
+    if (fresh && fromEcho) maybeWakeCharlie(txt);
     return fresh;
   }
 
@@ -2796,8 +2860,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // about a second in, and dated to the music's own first note. It is a REPORT and nothing
         // else: the wait it belongs to is still declared on the one drop number, so nothing about
         // when Charlie's meter stops rides on this line being here.
-        musicHeard: (afterMs, atMs) => emit(room, "unknown", "Echo recognised hold music",
-          { step: "music_heard", afterMs, atMs }, earMoment(atMs)),
+        musicHeard: (afterMs, atMs) => {
+          emit(room, "unknown", "Echo recognised hold music", { step: "music_heard", afterMs, atMs }, earMoment(atMs));
+          // THE MOMENT WE RECOGNISE THE HOLD, HIS EARS SHUT (owner's order, 08-19). On the advert
+          // scene no wait is ever declared — an advert is a voice, so no listening rule can refuse
+          // it — and this report is the only moment the engine knows the line has gone to music.
+          shutCharliesEars("Echo recognised hold music");
+        },
+        // …and the sound half of the wake rule. It is a REPORT, exactly like the music one: what
+        // opens his ears again is this AND Echo's words together (`maybeWakeCharlie`).
+        personSound: (spokeMs, atMs) => {
+          personSoundAtMs = Date.now();
+          if (earsShutAtMs > 0) log(`ears: the sound says somebody is talking (${spokeMs}ms of speech, from ${atMs}ms)`);
+        },
         // THE LINE IS GONE. A dropped leg stops sending audio entirely, which is an absence no
         // silence detector can see — so it is reported by whoever owns the socket, not heard.
         // THE LINE IS GONE. If we were mid hand-over when it went, that is its own thing and the
@@ -3276,8 +3351,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // …and the same rule for the words on the way back from a wait: contiguous once a voice
       // starts, because keeping only the loud frames squeezes the sentence and it comes back as
       // different words. A rolling window, so the newest speech is always the part we keep.
-      else if (onHold) {
+      // A RECOGNISED HOLD TAKES HIS EARS, NOT JUST HIS MOUTH (owner's order, 08-19). `onHold` is a
+      // wait the runtime declared; `earsShutAtMs` is the moment we RECOGNISED one — the ear's music
+      // report or Staff's stepping-away words — which on the advert scene is the only moment there
+      // is, because an advert is a voice and no wait is ever declared. Either way not one frame of
+      // the call goes to his session from here. Echo is a separate listener on the pickup fork and
+      // is untouched: every word is still written down, and the pocket hands them to him as their
+      // turn when his ears come back.
+      else if (onHold || earsShutAtMs > 0) {
         if (heldWords.length || frameEnergy(b64) > VOICE_THRESH) { heldWords.push(b64); if (heldWords.length > 250) heldWords.shift(); }
+        // THE WASTE, COUNTED WHILE IT HAPPENS (owner's order, 08-19, fix 4). His session is open and
+        // billing while the store plays music at us; this is the number that makes that visible on
+        // every check's sheet instead of hiding inside a passing meter.
+        if (eleven && ready) addMs(room, "awakeOnHoldMs", 20);
       }
       // HIS EARS ARE NOT HIS MOUTH. This used to require the question to have finished before a
       // single frame reached him, which is what forced everything said during it into a buffer and

@@ -571,6 +571,9 @@ export const callResults = sqliteTable(
     charlieSilentSeconds: integer("charlie_silent_seconds"),
     ringSeconds: integer("ring_seconds"),   // a desk ringing while the session was open and billing
     holdSeconds: integer("hold_seconds"),   // clerk away / hold music while billing. NULL = not measured yet
+    // OF THAT HOLD, THE SECONDS CHARLIE WAS AWAKE AND BILLING (owner's order, 08-19). The waste that
+    // used to hide inside a passing check: every sheet prints it now. NULL = never measured.
+    awakeOnHoldSeconds: integer("awake_on_hold_seconds"),
     billedMinutes: integer("billed_minutes"),
     // Provenance, so a bad number can be traced instead of argued about.
     mapVersion: text("map_version"),        // which saved menu version ran (null until Mapper ships)
