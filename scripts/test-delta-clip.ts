@@ -3106,6 +3106,47 @@ console.log("▶ …and the RE-KNOCK closes it too: the follow-up's answer compl
   restore(); tw.close(); f.close();
 }
 
+console.log("▶ CHECK 403'S SHAPE: the goodbye waits for REAL quiet, so the set question's answer is never cut off");
+{
+  // On check 403 the warm wrap-up's five seconds were counted from when the timer was ARMED — the
+  // moment the set question's clip started — so it fired 219ms after the clip ended and the instant
+  // recorded goodbye closed the check before Staff could answer. The five seconds count from the
+  // last sound on the line now, so a follow-up just asked always gets its answer window.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-goodbye-quiet";
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "a", apiKey: "k", dynamicVars: {}, midCallAgentId: "mid",
+    setAskClip: { audio: Buffer.alloc(320, 0x40), ms: 3000, text: "oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?" },
+    goodbyeClip: { audio: Buffer.alloc(320, 0x40), ms: 400, text: "Thanks so much, have a good one!" },
+  } as never);
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_bye4", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  // The knock with both pieces missing: the set question's clip (3s long) plays and the warm
+  // wrap-up is armed, exactly check 403's moment.
+  nudgeSignoff(room, "in stock", { set: null, productForm: null });
+  await sleep(5300);   // the old engine's timer fires here, 219ms-style after the clip's end
+  ok(evs().some((e) => (e.detail as { step?: string } | null)?.step === "set_ask_clip"), "the set question's clip played");
+  ok(!evs().some((e) => (e.detail as { step?: string } | null)?.step === "wrap_up"),
+    "five seconds after the KNOCK the goodbye has NOT played: the clip's own sound was the quiet the old engine counted");
+  ok(weEndedCheck(room) == null, "…and the check is still up, so Staff can answer the question they were just asked");
+  // Staff answer it; the reader re-knocks with everything held, and THAT closes the check.
+  nudgeSignoff(room, "in stock", { set: "Pitch Black", productForm: "booster box" });
+  await sleep(250);
+  const wrap = evs().find((e) => (e.detail as { step?: string } | null)?.step === "wrap_up");
+  ok(!!wrap && (wrap?.detail as { goodbyeClip?: boolean } | null)?.goodbyeClip === true,
+    "the answer's own knock plays the recorded goodbye");
+  restore(); tw.close(); f.close();
+}
+
 console.log("▶ …and with NO recording, a complete answer still closes the old way: his own goodbye, nothing regressed");
 {
   _reset();

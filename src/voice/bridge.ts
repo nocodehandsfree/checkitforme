@@ -896,6 +896,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       warmWrapTimer = null;
       if (ended || warmWrapSaid || wrapRecorded || !eleven || !ready) return;
       if (Date.now() < agentPlayingUntil) { armTheWarmWrapUp(); return; }   // he is still speaking
+      // THE QUIET MUST BE REAL, MEASURED AGAINST THE SOUND (check 403). This timer was armed as the
+      // set question's clip STARTED and fired 219 milliseconds after the clip ended, and because the
+      // recorded goodbye plays instantly — unlike a generated one, whose thinking seconds used to
+      // win Staff the race by accident — it closed the check before Staff could answer, and "Pitch
+      // Black, the booster boxes" never made the record. The five seconds count from the LAST sound
+      // on the line, ours or theirs: their voice still on, or any sound ending inside the window,
+      // re-arms rather than closes. Nobody is ever cut off mid answer by a goodbye again.
+      const lastSoundMs = Math.max(agentPlayingUntil, lastTheirVoiceStopAtMs, lastHandAtMs);
+      if (theirVoiceOn || Date.now() < lastSoundMs + WARM_WRAP_UP_MS) { armTheWarmWrapUp(); return; }
       warmWrapSaid = true;
       // THE GOODBYE IS THE ENGINE'S TO SAY (owner's order, 08-19): the line has gone quiet with the
       // answer in hand, which is a moment the engine knows, so the recorded goodbye plays instead
