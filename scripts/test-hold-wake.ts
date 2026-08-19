@@ -189,6 +189,65 @@ console.log("\n▶ FIX 3 ON HIS OWN RECORDINGS: the reconnect starts on the retu
   ok(wakes.length > 0, "…and the person coming back would, on their very first word's worth of sound", wakes.length);
 }
 
+console.log("\n▶ THE COMEBACK OVERLAPS ITSELF: the wake check reads a PIECE, not only a finished sentence");
+{
+  // Echo writes a turn in pieces and joins them a beat later, and the join is what goes on the
+  // record. The wake check reads the record's newest Staff line — so on the owner's 08-19 night
+  // order the piece is handed in AS that newest line, which is the only way it can be proved while
+  // Charlie is already working out his reply to it. What is proven here is that the reader answers
+  // about the piece it was given and never about the sentence before it.
+  const realFetch = globalThis.fetch;
+  // The stub answers each line on its own merits, the way the real reader does.
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const body = String((init as { body?: unknown } | undefined)?.body ?? "");
+    let asked: string[] = [];
+    try {
+      const sent = JSON.parse(body) as { messages?: Array<{ role?: string; content?: string }> };
+      const user = (sent.messages || []).filter((m) => m.role === "user").map((m) => String(m.content || "")).join("\n");
+      asked = user.split("\n").map((l) => l.replace(/^\s*\d+\.\s*/, "").trim()).filter(Boolean);
+    } catch { asked = []; }
+    if (!asked.length) asked = [""];
+    const lines = asked.map((text, i) => {
+      const played = /price match|thanks for holding|rewards program/i.test(text);
+      return { n: i + 1, voice: played ? "recording" : "person", announcesWait: false, confidence: 0.9,
+        why: played ? "advertising the store" : "answers our question" };
+    });
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ lines }) } }] }),
+      { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
+  const { isSomebodyTalkingToUs } = await import("../src/voice/verdict");
+  // THE FIRST PIECE OF THE ADVERT, which is all Echo has written when Charlie's session is already
+  // opening on its voice. It must be refused on that alone, or his reply to an advert plays.
+  const advertPiece = "Thanks for holding.";
+  const onAdvert = await isSomebodyTalkingToUs([
+    { who: "Agent", text: "do you have any Pokemon cards in stock right now?" },
+    { who: "Clerk", text: advertPiece },
+  ]);
+  ok(onAdvert !== null && onAdvert.person === false,
+    "the advert's first written piece is refused on that piece alone, before the sentence is finished", onAdvert);
+  // …AND THE FIRST PIECE OF A REAL ANSWER IS ACCEPTED ON THE SAME EVIDENCE.
+  const staffPiece = "Yeah.";
+  const onStaff = await isSomebodyTalkingToUs([
+    { who: "Agent", text: "do you have any Pokemon cards in stock right now?" },
+    { who: "Clerk", text: staffPiece },
+  ]);
+  ok(onStaff !== null && onStaff.person === true,
+    "…and a real person's first written piece is accepted on that piece alone", onStaff);
+  // THE ANSWER IS ABOUT THE PIECE, NEVER THE SENTENCE BEFORE IT. The advert is the line already on
+  // the record; the piece is what just landed. Reading the record alone would answer "recording"
+  // about a person who is standing there talking to us.
+  const mixed = await isSomebodyTalkingToUs([
+    { who: "Agent", text: "do you have any Pokemon cards in stock right now?" },
+    { who: "Clerk", text: ADVERT_LINE },
+    { who: "Clerk", text: staffPiece },
+  ]);
+  ok(mixed !== null && mixed.person === true,
+    "the wake check answers about the piece just handed in, not the advert above it on the record", mixed);
+  ok(mixed !== null && mixed.played.some((l) => /price match/.test(l)),
+    "…and the advert on the record is still named a recording, so it never reaches Charlie either", mixed?.played);
+  globalThis.fetch = realFetch;
+}
+
 console.log(`\n════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 console.log(`════════════════════════════════`);

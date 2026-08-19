@@ -871,6 +871,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  reconnect, the reader never answered, and he sat up for 22 graded seconds). */
   function dropTheEarlySession(why: string): void {
     if (earlyReconnectTimer) { clearTimeout(earlyReconnectTimer); earlyReconnectTimer = null; }
+    binTheEarlyTurn(why);
     if (!reconnectingEarly) return;
     reconnectingEarly = false;
     if (ended || !onHold || !eleven) return;
@@ -881,6 +882,21 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     eleven = null; ready = false; connecting = false;
     log(`reconnect: ${why} — his session goes back down`);
   }
+  /** THE COMEBACK OVERLAPS ITSELF (owner's order, 08-19 night). Until now the return ran in a line:
+   *  Echo wrote the person's whole sentence, the wake check proved a person off it, and only then
+   *  did Charlie start working out his reply — three waits end to end, 7.8 seconds on check 415.
+   *  Now the three run together. Every piece Echo writes is handed to his session the moment it
+   *  exists, so he is thinking from their first written word; the wake check keeps proving in
+   *  parallel; and HIS SOUND IS HELD HERE, not sent, until the wake check says a person. It says
+   *  recording instead and the whole thing is thrown away with his session: nothing he thought
+   *  while the store's own recording talked can ever reach the line.
+   *  `fed` is every piece already handed to him, `heldAudio` is the reply he is building, and
+   *  `heldText` is his words, which are only written down if the sound they belong to really plays
+   *  (a line the store never heard is not a line — checks 282 and 286). */
+  let earlyTurn: { fed: string[]; heldAudio: string[]; heldText: string[] } | null = null;
+  /** A ceiling on what may be held, so a session that generates for ever cannot grow without end.
+   *  400 chunks is far past any reply he makes (about 20 seconds of speech). */
+  const MOST_HELD_CHUNKS = 400;
   /** How long the sound half stays good for: a person's words reach us through Echo a moment after
    *  their voice, so the two halves are allowed to land a few seconds apart. */
   const WAKE_TOGETHER_MS = 6000;
@@ -933,12 +949,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  IF THE READER CANNOT ANSWER (no key, too slow, refused), the sound rule stands in: word-scale
    *  speech with real silence in its gaps, on a line clear of the music. Never nothing, because a
    *  real person left unheard costs the whole check. */
-  async function maybeWakeCharlie(line: string): Promise<void> {
+  async function maybeWakeCharlie(line: string, fromAPiece = false): Promise<void> {
     if (earsShutAtMs === 0 || ended) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
-    const read = await isSomebodyTalkingToUs(
-      (getReceipt(room)?.transcript ?? []).slice(-4).map((l) => ({ who: l.who === "Agent" ? "Agent" : "Clerk", text: l.text })),
-    ).catch(() => null);
+    // A PIECE IS NOT ON THE RECORD YET (owner, 08-19 night). Echo writes the record when the whole
+    // sentence is joined, and the wake check reads the record's newest Staff line — so a piece has
+    // to be handed in as that newest line, or the reader would be asked about the sentence BEFORE
+    // this one and answer about the wrong words entirely.
+    const window = (getReceipt(room)?.transcript ?? []).slice(-4)
+      .map((l) => ({ who: l.who === "Agent" ? "Agent" : "Clerk", text: l.text }));
+    if (fromAPiece) window.push({ who: "Clerk", text: line });
+    const read = await isSomebodyTalkingToUs(window).catch(() => null);
     if (earsShutAtMs === 0 || ended) return;   // it ended while the reader was thinking
     if (read) {
       // WHATEVER THE READER CALLED A RECORDING IN THAT WINDOW IS STRUCK, not only the newest line
@@ -1135,7 +1156,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     wordsOnlyReopen = true;         // from here, words are the only way a hold-window line reaches him
     hisEarsBackAtMs = Date.now();   // …and audio from this exact moment on is buffered for his new session
     if (echoRooms.has(room) && !handedOn) {
-      reconnectFeed = { handed: [], voiceStopped: !theirVoiceOn };
+      // WHAT HE WAS ALREADY FED WHILE THE WAKE CHECK PROVED THEM STAYS FED (owner, 08-19 night).
+      // Starting a blank feed here would forget it, and the joined line would reach him a second
+      // time as a fresh turn.
+      reconnectFeed = reconnectFeed?.handed.length
+        ? { handed: reconnectFeed.handed, voiceStopped: true }
+        : { handed: [], voiceStopped: !theirVoiceOn };
       charlieMaySpeak = false;
       // The wordless-rejoin window opens with his ears: written words spend it, and a rejoin that
       // reaches the far side with nothing written was the music (owner 08-18, check 380).
@@ -1579,6 +1605,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
     // A new wait starts, so the reconnect feed's turn is over, however it ended (owner task 08-15).
     reconnectFeed = null;
+    // …and a reply he was building for a comeback that turned back into a wait is never spoken.
+    binTheEarlyTurn("the line went back to being a wait");
     onHold = true; holdReason = reason; heldWords = [];
     // THE SENTENCE AND THE ROW ARE ONE NUMBER (owner, 08-19 night). A backdated stamp is never let
     // above the row before it, so the second this row DRAWS at is what its own wait must be
@@ -1669,6 +1697,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
     musicRecognisedHold = false;
+    // HIS SESSION IS ALREADY UP BECAUSE IT STARTED ON THE SOUND (fix 3). Everything a comeback does
+    // still has to run — the note about the gap, the reconnect feed, the wordless-rejoin guard —
+    // and the test for it used to be "is he closed", which he no longer is.
+    const cameBackEarly = reconnectingEarly;
     reconnectingEarly = false;
     if (earlyReconnectTimer) { clearTimeout(earlyReconnectTimer); earlyReconnectTimer = null; }
     // HIS EARS COME BACK ON BELOW, AFTER THIS WAIT'S OWN ROW IS WRITTEN (owner, 08-19 night). Opening
@@ -1718,6 +1750,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // him what he missed, which writes its own row, so doing it first pushed the wait's ending BELOW
     // the hand-over on check 413's sheet: rows out of order, and the sentence measured off the wrong
     // one. The row is written, so the sentence and the rows now read the same second.
+    // …AND WHATEVER HE HAD READY GOES OUT FIRST (owner, 08-19 night). He was handed their words as
+    // Echo wrote them and has been building his reply with his mouth shut; the wake check has just
+    // said a person, so it plays now, before the pocket can hand him anything else and have two
+    // replies on the line at once.
+    releaseTheEarlyTurn();
     openCharliesEars("the wait ended and somebody came back", backAtMs);
     // DELTA PLAYS THE RECORDING AGAIN AFTER A TRANSFER (owner 08-04: "Echo absolutely needs to
     // build this"). Whoever picks up the next department never heard the question, and Charlie
@@ -1739,8 +1776,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // (family 2). This used to run only for "reopen"; a hold that began around the opening question
     // could leave the gate strategy here with no session at all and nothing left to open one, and a
     // refused open during the hold (the one-door rule above) must always be made good right here.
-    if (!eleven) {
-      log(`hold over after ${secs}s: opening the agent for whoever is back (next segment of this call)`);
+    if (!eleven || cameBackEarly) {
+      log(`hold over after ${secs}s: ${eleven ? "his session is already up, finishing the comeback around it" : "opening the agent for whoever is back (next segment of this call)"}`);
       // HE WAS CLOSED, SO HE CANNOT BE TOLD YET, AND HE STILL HAS TO BE TOLD. The note is held and
       // sent the instant his new session reports ready. Skipping it is how a reopened agent greets a
       // brand new person as though they had been on the line the whole time.
@@ -1812,7 +1849,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  it" is recorded — at the handover itself, never worked out from clocks (owner task 08-15).
    *  Called with the pocket at a reopen, and with a single late line whose writing landed after he
    *  reconnected (check 366's shape). */
-  function handTheirTurn(lines: string[], why: string): void {
+  function handTheirTurn(lines: string[], why: string, mouthStaysShut = false): void {
     const said = lines.map((s) => s.trim()).filter(Boolean).filter((s) => !alreadyHisToAnswer(s));
     if (!said.length || !eleven || !ready) return;
     for (const s of said) markAsHis(s);
@@ -1838,7 +1875,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // AND THE QUIET AFTER IT IS HIM THINKING, NEVER A DROP, until he has answered this turn (the
       // PM's item 3). It is the same rule as his first words on a session, and being handed a turn
       // is exactly that moment: he owes them a word from here.
-      charlieMaySpeak = true;
+      // UNLESS THE WAKE CHECK IS STILL PROVING THEM (owner, 08-19 night). He is handed their words
+      // early so he can be thinking, and his mouth stays shut until a person is proved.
+      if (!mouthStaysShut) charlieMaySpeak = true;
       answeredAtMs = Date.now();
       spokeThisSession = false;
     } catch { /* best effort — never break a check over a turn */ }
@@ -1852,6 +1891,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // A written piece is real words on the line — see the wordless-rejoin note (owner 08-18).
     heardTheWords();
     openTurnPieces.push(t);
+    // THE COMEBACK OVERLAPS ITSELF (owner, 08-19 night): while the store still has us waiting and
+    // his session is already opening on the sound, this piece goes to him at once and to the wake
+    // check at once, instead of both waiting for Echo to finish the sentence.
+    if (earlyTurn && onHold) { feedTheEarlyTurn(t); return; }
     // Pieces landing after the voice stopped wait one beat for a trailing piece, so late writing
     // hands as ONE turn (check 371: two pieces 0.12s apart reached him as two separate turns).
     if (reconnectFeed?.voiceStopped) armTheHand("the pieces landed after their voice had stopped");
@@ -1883,6 +1926,102 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // its absorb, rode the pocket, and the same no reached him twice). Marked AFTER the hand, or
     // a single-piece turn would be filtered out as already his.
     markAsHis(reconnectFeed.handed.join(" "));
+  }
+
+  /** ONE PIECE OF THEIR SENTENCE, HANDED THE MOMENT ECHO WRITES IT (owner's order, 08-19 night).
+   *  Only while the store still has us waiting and his session is already opening on the sound of
+   *  a voice: he starts working out his reply on their first written word, with his mouth shut, and
+   *  the wake check runs beside it on the same words. A later piece supersedes what he was part-way
+   *  through saying, so only his newest reply is ever held. */
+  function feedTheEarlyTurn(said: string): void {
+    if (!earlyTurn || !onHold || ended) return;
+    if (eleven && ready && !alreadyHisToAnswer(said)) {
+      earlyTurn.fed.push(said);
+      earlyTurn.heldAudio = [];   // he was answering less than they have now said: that reply is stale
+      earlyTurn.heldText = [];
+      handTheirTurn([said], "their words as Echo writes them, while the wake check proves them", true);
+      charlieMaySpeak = false;    // …and it stays shut: handTheirTurn's own door is the one being held
+      // EVERY PIECE HE HAS BEEN GIVEN IS KEPT WHERE THE JOINED-LINE RULES ALREADY LOOK (the
+      // reconnect feed, owner task 08-15). Echo joins the sentence a beat later, and that join has
+      // to be recognised as exactly what he already has — or the same words reach him twice and he
+      // answers them twice on the line (check 369). A join with MORE in it than he was given hands
+      // only the tail, which is the same door and the same rule.
+      if (!reconnectFeed) reconnectFeed = { handed: [], voiceStopped: true };
+      reconnectFeed.handed.push(said);
+      markAsHis(reconnectFeed.handed.join(" "));
+      if (earlyTurn.fed.length === 1)
+        emit(room, "unknown", "Charlie started working out his reply on their first written word, with his voice held back",
+          { step: "early_turn", text: said.slice(0, 160), notASound: true });
+      log(`early turn: handed "${said.slice(0, 60)}" with his mouth shut, the wake check is still proving it`);
+    }
+    // THE WAKE CHECK, ON THE SAME PIECE, AT THE SAME TIME. It used to wait for Echo's joined line,
+    // which is the end-of-turn quiet plus the writing: 3.6 seconds of check 415's 7.8.
+    void maybeWakeCharlie(said, true);
+  }
+  /** THE WAKE CHECK SAID PERSON. Everything he thought while it was proving goes out now, in order,
+   *  and his words are written down because the store really hears them. */
+  function releaseTheEarlyTurn(): void {
+    const held = earlyTurn;
+    earlyTurn = null;
+    if (!held || ended || !held.fed.length) return;
+    // HIS MOUTH OPENS HERE, whether or not he has anything ready yet. He was handed their words as a
+    // turn while the wake check proved them, so he owes them an answer from this moment — and if he
+    // is still thinking, his sound simply goes out live the moment it comes.
+    letHimAnswer("the wake check proved a person and he was already answering them");
+    if (!held.heldAudio.length || twilio.readyState !== 1) return;
+    // HIS TURN STARTS HERE, because this is the first sound of it Staff ever hear, and the answer
+    // gap counts from the end of their voice to exactly this moment (the same anchor as always).
+    if (!hisTurnOpen) {
+      hisTurnOpen = true;
+      hisTurnAudioStartMs = Date.now();
+      hisTurnLineWritten = false;
+      hisTurnStartSpent = false;
+      hisEndWaitingForWords = 0;
+      const theirEnd = lastLineEndEpoch(room, "Clerk");
+      const anchor = theirEnd != null && theirEnd > lastHoldEndAtMs ? theirEnd : lastTheirVoiceStopAtMs;
+      const gapMs = anchor > 0 ? Date.now() - anchor : 0;
+      if (gapMs > 0 && gapMs < 60_000 && gapMs > worstAnswerGapMs) {
+        worstAnswerGapMs = gapMs;
+        try { emit(room, "unknown", "Charlie's slowest reply so far", { step: "gaps", answerGapWorstMs: worstAnswerGapMs }); } catch { /* best-effort */ }
+      }
+    }
+    let ms = 0;
+    for (const b64 of held.heldAudio) {
+      twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
+      fanout(room, b64, "agent");
+      ms += Math.ceil((b64.length * 3) / 4 / 8);
+    }
+    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
+    hisVoiceOutAtMs = Date.now();
+    addMs(room, "speakingMs", ms);
+    charlieSpoke = true; spokeThisSession = true; charlieSpokenMs += ms;
+    charlieMaySpeak = true;
+    answeredAtMs = Date.now();
+    // HIS WORDS GO ON THE RECORD NOW, and not one moment before: until this send they belonged to a
+    // reply that might never have been spoken at all.
+    for (const txt of held.heldText) {
+      if (recordLine(room, "Agent", txt, hisTurnAudioStartMs || undefined)) {
+        hisTurnLineWritten = true;
+        try { relayLine?.(room, "Agent", txt); } catch { /* the screen is best-effort */ }
+      }
+    }
+    if (hisTurnLineWritten) stampLineEnd(room, "Agent", agentPlayingUntil);
+    else hisEndWaitingForWords = agentPlayingUntil;
+    if (!wrapUpNudged && charlieSpokenMs >= WRAP_UP_MS) nudgeToWrapUp();
+    emit(room, "unknown", "The wake check proved a person, so the reply Charlie had ready went straight out",
+      { step: "early_turn_released", chunks: held.heldAudio.length, playedMs: ms });
+    log(`early turn: released ${held.heldAudio.length} chunk(s), ${ms}ms of his reply, with no thinking left to wait for`);
+  }
+  /** THE WAKE CHECK SAID RECORDING. Nothing he thought ever plays and nothing is written down. */
+  function binTheEarlyTurn(why: string): void {
+    if (!earlyTurn) return;
+    const n = earlyTurn.heldAudio.length;
+    earlyTurn = null;
+    if (n) {
+      emit(room, "unknown", "The reply Charlie had ready was thrown away: the voice was the store's own recording",
+        { step: "early_turn_binned", chunks: n, why, notASound: true });
+      log(`early turn: binned ${n} chunk(s) — ${why}`);
+    }
   }
 
   /** THE HOLD REPLY AS A RECORDING (owner box 08-16 late, off check 371). Staff announce a hold
@@ -2466,6 +2605,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // past it, and only then did we ask him for a second answer. His own reply is let out when
         // his session has been listening long enough to have heard them finish, and the written
         // words are then his, never a fresh turn.
+        // HIS REPLY IS BUILT AND HELD, NEVER DROPPED (owner's order, 08-19 night). He was handed
+        // their words the moment Echo wrote them so he could be thinking; his sound waits right here
+        // until the wake check says a person, and then goes out whole. If it says the store played
+        // that at us, every one of these chunks is thrown away and the store hears nothing.
+        else if (b64 && !charlieMaySpeak && earlyTurn && earlyTurn.fed.length) {
+          if (earlyTurn.heldAudio.length < MOST_HELD_CHUNKS) earlyTurn.heldAudio.push(b64);
+        }
         else if (b64 && !charlieMaySpeak && reconnectFeed && hisEarsBackAtMs > 0
                  && Date.now() - hisEarsBackAtMs >= HEARD_ENOUGH_MS) {
           emit(room, "unknown", "Charlie answered what he heard himself, without waiting for the words to be written down",
@@ -2576,7 +2722,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // before its model answers it, so a Staff line can never arrive after the reply it caused.
         // That ordering is what makes this a gate and not a race. Junk ("...", ringback) is not words.
         if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !charlieMaySpeak) {
-          if (helloAlreadyAnswered) { helloAlreadyAnswered = false; log("delta: that was their hello, the recording has it, still holding him"); }
+          // …UNLESS THE WAKE CHECK IS STILL PROVING THEM (owner, 08-19 night). Their words were
+          // handed to his session on purpose while the store may still be playing a recording at
+          // us, and the ONE thing that opens his mouth in that window is the wake check saying a
+          // person. His session reporting those same words back must never do it.
+          if (earlyTurn && earlyTurn.fed.length) { /* his mouth stays shut until the wake check speaks */ }
+          else if (helloAlreadyAnswered) { helloAlreadyAnswered = false; log("delta: that was their hello, the recording has it, still holding him"); }
           else letHimAnswer("Staff answered the question");
         }
         // THEIR NAME, IF THEY GAVE ONE (round 1, item 1.3). Staff name themselves in the greeting far
@@ -2718,6 +2869,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // page, on the owner's transcript and in front of the reader that nobody on the phone ever
         // heard. The echo drop above only catches his duplicate when he words it EXACTLY like the
         // recording; reworded, it was written down as a real line twice (checks 282 and 286).
+        // …UNLESS HIS SOUND IS ONLY BEING HELD (owner, 08-19 night). A reply built while the wake
+        // check proves a person really is spoken, a moment later, so its words are kept here and
+        // written down at the moment the sound goes out — and thrown away with it if it never does.
+        if (txt && !charlieMaySpeak && earlyTurn && earlyTurn.fed.length) {
+          earlyTurn.heldText = [String(txt)];
+          earlyTurn.heldAudio = [];   // a fresh reply supersedes the one he was part-way through
+          return;
+        }
         if (txt && (!charlieGateOpen || !charlieMaySpeak)) return;
         // A NOTE TO HIMSELF IS NEVER A THING TO SAY OUT LOUD (owner, 08-19, off checks 398 and 399:
         // the store's advert was handed to him as Staff and he described it onto the line). Judged
@@ -2809,6 +2968,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         if (ws === eleven && ws.readyState === 1) ws.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
         else log("ping from a session already replaced or closed — ignored");
       } else if (m.type === "interruption") {
+        // His own session cut the reply it was building, so what is held is a half sentence.
+        if (earlyTurn) { earlyTurn.heldAudio = []; earlyTurn.heldText = []; }
         if (twilio.readyState === 1) twilio.send(JSON.stringify({ event: "clear", streamSid }));
         agentPlayingUntil = 0; // Twilio's playout buffer was cleared — nothing of ours is on the line now
       }
@@ -2939,6 +3100,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // real silence in its gaps on a line the music has left, which is never other noise.
           if (onHold && musicRecognisedHold && !eleven && !reconnectingEarly && !ended) {
             reconnectingEarly = true;
+            // …AND FROM HERE HE IS FED THEIR WORDS AS ECHO WRITES THEM, with his mouth held shut
+            // until the wake check proves a person (owner, 08-19 night).
+            earlyTurn = { fed: [], heldAudio: [], heldText: [] };
             emit(room, "unknown", "A voice came back, so Charlie's session started opening while we read the words",
               { step: "reconnect_early", spokeMs, notASound: true });
             log("reconnect: starting his session on the sound, his turn waits for the words");

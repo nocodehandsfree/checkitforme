@@ -3080,6 +3080,9 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
       return { n: i + 1, voice: played ? "recording" : "person", announcesWait: false, confidence: 0.9,
         why: played ? "advertising the store" : "answers our question" };
     });
+    // A READER TAKES A MOMENT, and this scene needs that moment to exist: it is the window in which
+    // Charlie is already building his reply with his mouth shut. An instant stub would close it.
+    await new Promise((r) => setTimeout(r, 250));
     return new Response(JSON.stringify({
       choices: [{ message: { content: JSON.stringify({ lines }) } }],
     }), { status: 200, headers: { "content-type": "application/json" } });
@@ -3127,8 +3130,48 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   // reader answers about a person really talking to us. Its accuracy is proven on the owner's saved
   // recordings by the workbench (scripts/hold-voice-bench.ts) and its wiring by scripts/test-hold-wake.ts;
   // what this scene proves is that the answer moves the engine.
-  echoHeardStaff(room, "Yeah. We've got a few of those.");
+  // THE COMEBACK OVERLAPS ITSELF (owner's order, 08-19 night). Echo writes their sentence in
+  // pieces; the FIRST piece goes to Charlie at once so he is already working out his reply, and to
+  // the wake check at once so it is already proving them. His sound is held until it says person.
+  await sleep(250);   // his session finishes opening on the sound, exactly as on a real check
+  const beforeHisReply = tw.outMedia().length;
+  echoHeardPiece(room, "Yeah.");
+  ok(step("early_turn").length === 1,
+    "their first written piece is handed to Charlie at once, so he starts working out his reply", step("early_turn").length);
+  // HE BUILDS IT WITH HIS MOUTH SHUT, while the wake check is still reading. The store hears
+  // nothing of this until the wake check speaks.
+  {
+    const ws = f.sockets[f.sockets.length - 1];
+    ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Oh nice, do you know the name of the set?" } }));
+    for (let i = 0; i < 4; i++) ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+    await sleep(60);
+  }
+  ok(tw.outMedia().length === beforeHisReply,
+    "…and not one frame of the reply he is building reaches the store while the wake check is still proving them",
+    { before: beforeHisReply, now: tw.outMedia().length });
+  ok(!(getReceipt(room)?.transcript || []).some((l) => l.who === "Agent" && /name of the set/.test(l.text)),
+    "…and words the store has not heard are not written down as a line of his either");
+  // THE WAKE CHECK SAYS PERSON, on the piece alone, so the wait ends without waiting for Echo to
+  // finish the sentence — and everything he had ready goes out whole.
   await sleep(700);
+  ok(step("early_turn_released").length === 1, "the wake check proves a person and his ready reply goes straight out", step("early_turn_released").length);
+  ok(tw.outMedia().length > beforeHisReply, "…so the store really hears it", { before: beforeHisReply, now: tw.outMedia().length });
+  ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Agent" && /name of the set/.test(l.text)),
+    "…and now that they heard it, it is written down as a line of his");
+  // THE REST OF THEIR SENTENCE lands as its own piece and reaches him as the tail of the same turn,
+  // so nothing they said is lost to the early start.
+  echoHeardPiece(room, "We've got a few of those.");
+  await sleep(400);
+  ok(f.raw.some((m) => m.includes("user_message") && m.includes("got a few of those")),
+    "the rest of their sentence reaches him too, so the early start never loses their words");
+  // ECHO FINISHES THE SENTENCE A BEAT LATER, and the joined line is the same words he already has.
+  // Handing it again would put the same words to him twice and have him answer them twice.
+  const handsBefore = f.raw.filter((m) => m.includes("user_message")).length;
+  echoHeardStaff(room, "Yeah. We've got a few of those.");
+  await sleep(400);
+  ok(f.raw.filter((m) => m.includes("user_message")).length === handsBefore,
+    "…and the joined sentence those pieces became is never handed to him a second time",
+    { before: handsBefore, now: f.raw.filter((m) => m.includes("user_message")).length });
   // FIX 3: HIS SESSION STARTS OPENING ON THE FIRST SOUND OF THE VOICE COMING BACK, before the words
   // have said who it was, because the voice provider takes about four and a half seconds to open one
   // and that sat between Staff's answer and his reply on every check since he started being dropped.
