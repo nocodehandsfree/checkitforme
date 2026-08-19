@@ -81,6 +81,37 @@ window across real speech — the decision the live ear actually makes — it wo
   answered the advert. The reader NAMES it; nothing acts on it, because his box said report only,
   never stop a live call. **What the engine should DO with that line is the owner's open ruling.**
 
+## ADDED 08-19, THE TWO OWNER BUILDS AND CHECK 399
+- **His two direction rulings are in section 12 of `src/voice/prompts.ts`, word for word**, and
+  asserted word for word in `scripts/test-prompts.ts` (236 green): a recording, an advert or an
+  in-store announcement is waiting and never Staff talking to him, when unsure a real person spoke
+  he uses skip_turn and waits, he never says a note out loud or speaks words inside brackets; and
+  his replies shorten (confirm in two or three words, thank once, sign off soft and short). A full
+  stop was added after "every time" so the next sentence still reads as its own; no word changed.
+- **THE SET QUESTION IS A RECORDING** (`setAskClip`): recorded before the dial beside the opening
+  question and the hold reply, one per voice and per category's set example (`phoneClip` keys on
+  the exact words, so each category gets its own and every later check reuses it). Played by
+  `playSetAsk` in bridge.ts at the one moment the engine already knows: the reader settles in stock
+  AND both pieces missing, which IS the recorded sentence. One piece missing is still Charlie's to
+  ask, or the recording would ask for what Staff just gave (check 376's fault). His own version is
+  dropped behind `ackPlayingUntil`, the hold reply's own door, so a store can never hear it twice,
+  and the note tells him the recording already asked. ONE SOURCE for the sentence, `SET_ASK_LINE`,
+  asserted both ways so his directions and the recording can never drift. Bank 355 with two new
+  scenes (it plays and is dropped once; it stays silent when one piece is missing).
+- **CHECK 399 (scene 22, the advert): one half proved, one half did NOT.**
+  PROVED: "The set question played as a recording" at 42s, 4783ms, and the line on the record is
+  his exact sentence, "oh nice, do you know the name of the set, like Chaos Rising, and is it a
+  pack or a box?". First live proof.
+  NOT PROVED: Charlie STILL narrated the advert, at 31s, in brackets:
+  "[System: Store announcement / advertisement playing — not a staff member speaking]". I checked
+  the live agents rather than assuming: BOTH the main agent and the joining agent carry all three
+  new lines (read straight off ElevenLabs), so the words reached him and he broke them anyway.
+  **This is the 08-06 pattern exactly: "Words could never fix this" — the joining rule said do NOT
+  ask the question again and he did it 5 times out of 5, and only an engine gate fixed it.** The
+  honest fix is the same shape: drop his audio when what he is answering was judged not a person.
+  I did NOT build that tonight: it is not in the box, it can swallow a real answer if it misfires,
+  and what the engine should DO about an advert is the owner's open ruling. Written up, not built.
+
 ## WHAT IS LEFT
 1. **Scene 22, the advert in the music, has not been re-dialed.** The judge is proven on its saved
    record but has never run on a fresh dial of it. That is the next dial. Expect the sound rules
