@@ -348,6 +348,32 @@ spend down with the graded one. **It is not mine to build**: the standing law is
 his ear switches on/off until the post-twenty-tests rebuild" (checkpoint, 08-18, owner's ruling),
 and dropping him at `music_heard` is exactly that change. It needs the owner's word.
 
+## THE THREE FIXES OF 08-19 EVENING (his order, off check 407)
+- **FIX 1, ONE CLOCK ON EVERY ROW.** Two clocks were in play: the ear speaks in its own seconds and
+  two callers passed a plain `Date.now()` into the same parameter, which is why 407's second wait
+  began near 41s and its rows printed 44, with "Staff back after 6s" between rows saying 44 and 47.
+  `beginHold`'s moment is the call's own wall clock everywhere now, converted once at the ear's
+  door; the quiet wait backdates to Staff's last sound and the wordless rejoin to `hisEarsBackAtMs`
+  (that was the offending caller). The ears shutting and coming back are stamped at the moment the
+  wait was recognised. **The silent switches are marked `notASound`** (his ears, the drop, the
+  rejoin, the wordless re-drop) and the sheet draws them in the quiet grey. NOTE: `silent` already
+  means "hide this row from the page" in app.html, which is why the flag has its own word.
+- **FIX 2, THE WAKE READS THE WORDS.** `isSomebodyTalkingToUs` (verdict.ts) asks the SAME reader
+  that judges a finished check, about the line that just landed: is somebody talking to us, or is
+  the store playing this at us? It reads meaning, so it holds on a store we have never rung and in
+  any language, and it knows nothing about our own advert's words. A line judged a recording never
+  wakes him and lands on the record as `not_a_person`; bare sound never wakes him at all. If the
+  reader cannot answer inside 1.5s the measured sound rule stands in, so a real person is never
+  left unheard. **AND THE FIVE AWAKE SECONDS**: a wait declared because of music drops him at once
+  (nobody is there to be owed a word), where 407 waited 5.1s on the owed-word rule.
+- **FIX 3, SPEED**, falls out of fix 2: the wake is the written line plus one reader, not the sound
+  rule's 2.5 seconds clear of the music, which is what put 3.7s between Staff's words and his ears.
+- **PROVEN BEFORE THE DIAL**: test-hold-wake 16 (the sound rule on his committed recordings, plus
+  the reader's answer being obeyed both ways and a reader that never answers neither hanging the
+  call nor waking him) and the rig's CHECKS 398 TO 405 scene, which now pins the row stamps: the
+  wait's row sits at the music's own second, his ears shut at that same second, the wait says it
+  lasted what its own two rows say, and he is dropped at once. delta-clip 408.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
