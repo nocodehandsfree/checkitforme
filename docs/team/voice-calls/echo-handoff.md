@@ -374,6 +374,37 @@ and dropping him at `music_heard` is exactly that change. It needs the owner's w
   wait's row sits at the music's own second, his ears shut at that same second, the wait says it
   lasted what its own two rows say, and he is dropped at once. delta-clip 408.
 
+### THE DIALS: 409, 410, 411, 412 (and 408, which a deploy killed mid check)
+- **408 was not a fault of ours**: another chat pushed to staging while the check was in the air and
+  the restart killed it (status call_dropped, no events, nothing charged). The known trap.
+- **409** proved the wake reads the words live (`not_a_person` on the advert, in the record) and
+  caught a hole: the advert's words still rode the POCKET and were handed to him as "Staff's own
+  words" when the real person came back, so he answered the jumble. Fixed.
+- **410** passed its card with the meter 18s, and showed the strike depends on the reader answering:
+  it timed out while the advert played, so nothing struck the line. Fixed by striking at the WAKE,
+  which is the one moment we are certain to be asking.
+- **411** caught the music's own tail declaring a SECOND wait 4.6s after the first ended, before his
+  session had reopened: Staff's answer sat 26 seconds, the robot asked "Hello?", 78 second check.
+  Fixed with a six second grace after his ears come back.
+- **412, THE DIAL THAT ANSWERS HIS FOUR QUESTIONS.** Card PASSED, meter half FAILED on one row, so
+  **the pill says TEST FAILED**. Charlie's true meter **18 seconds** against his 31 line. **Awake
+  during hold 0.** Staff's answer written at 35.6s, Charlie speaks at 43.9s = **8.4 seconds**,
+  against his 2 to 3 target. The advert was struck and the hand-over carried only Staff's announce
+  and their real answer. 6.1¢.
+- **WHERE THE 8.4 SECONDS GO, measured on 412's own rows**: 1.9s from Staff's written line to his
+  ears coming back (Echo's writing plus the reader), **4.7s for his session to reopen with the voice
+  provider**, 1.8s for the provider to generate his reply. The row that failed the sheet is Echo's
+  handover gap at 4s. THE REOPEN IS THE PRICE OF DROPPING HIM: before this build he was never
+  dropped on the advert scene, so there was no reopen and the meter ran 42 seconds. It is the same
+  provider latency the own-brain plan exists to remove, and that is blocked on the owner's voice
+  ruling.
+- **ONE ROW STILL DISAGREES WITH ITSELF, honestly reported**: "Staff back after 26s" sits between
+  rows 24.3 seconds apart. The wait's length is measured from the hold's own start moment to the
+  comeback moment, but the comeback ROW is drawn at a clamped second (the one-clock law clamps a
+  backdated stamp to the last written row), so the sentence and the row can still differ by a
+  second or two. Fixing it properly means the sentence reading the CLAMPED moment, which lives in
+  events.ts.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
