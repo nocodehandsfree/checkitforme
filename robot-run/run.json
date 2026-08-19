@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-19T19:09:40.057Z",
+  "at": "2026-08-19T20:26:56.971Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -22,7 +22,7 @@
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
           "pass": true,
-          "detail": "Calling → Talking to Staff → Getting results"
+          "detail": "Calling → Getting through the menu → Talking to Staff → Getting results"
         },
         {
           "n": 4,
@@ -64,13 +64,13 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 51 looks · header held at 0px"
+          "detail": "0 bounce(s) over 57 looks · header held at 0px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 90px"
+          "detail": "19px → 113px"
         },
         {
           "n": 13,
@@ -82,19 +82,19 @@
           "n": 14,
           "name": "we never ask the same question twice",
           "pass": true,
-          "detail": "4 things said, none of them twice"
+          "detail": "5 things said, none of them twice"
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 50 seconds and the line closed at 50 — 0 seconds of nothing"
+          "detail": "the answer was in at 63 seconds and the line closed at 63 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Wed, Aug 19 · 7:08 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
+          "detail": " Result Wed, Aug 19 · 8:25 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 5.5¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 7.4¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787166476755,
-      "checkId": 407,
-      "cost": 0.054733,
-      "costReadable": "5.5¢",
+      "startedAt": 1787171109706,
+      "checkId": 409,
+      "cost": 0.073551,
+      "costReadable": "7.4¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"

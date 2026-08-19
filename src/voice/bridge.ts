@@ -851,6 +851,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  the wait the moment the advert started talking and put Charlie straight back on the meter,
    *  answering a recording, which is the fault we just spent the day ending. */
   let musicRecognisedHold = false;
+  /** The moment this wait's own row was stamped, so its ending can be measured against it. */
+  let holdStartedAtMs = 0;
   /** How long the sound half stays good for: a person's words reach us through Echo a moment after
    *  their voice, so the two halves are allowed to land a few seconds apart. */
   const WAKE_TOGETHER_MS = 6000;
@@ -911,9 +913,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (earsShutAtMs === 0 || ended) return;   // it ended while the reader was thinking
     if (read) {
       if (!read.person) {
+        // …AND IT IS NEVER HIS TO ANSWER, EITHER (owner's order, 08-19 evening; caught on check 409,
+        // where the advert's own words were handed to him as "Staff's own words, answer them now"
+        // when the real person came back, and he answered the jumble). A line the store played at
+        // us is struck out of the pocket that feeds him what he missed. It stays on the record.
+        playedAtUs.add(keyOf(line));
+        missedWhileClosed = missedWhileClosed.filter((m) => keyOf(m) !== keyOf(line));
         emit(room, "unknown", "The store played that at us rather than saying it to us, so Charlie stayed off",
           { step: "not_a_person", text: String(line).slice(0, 160), why: read.why, notASound: true });
-        log(`wake: the reader says that line was played at us (${read.why}) — he stays off`);
+        log(`wake: the reader says that line was played at us (${read.why}) — he stays off and never hears it`);
         return;
       }
       if (read.announcesWait) return;   // a person, telling us they are stepping away again
@@ -1528,7 +1536,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
     // A new wait starts, so the reconnect feed's turn is over, however it ended (owner task 08-15).
     reconnectFeed = null;
-    onHold = true; holdReason = reason; heldWords = [];
+    onHold = true; holdReason = reason; heldWords = []; holdStartedAtMs = atMs;
     shutCharliesEars(`the wait was declared (${reason})`, atMs);
     // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write ONLY its own line, and then
     // the wait it caused ended with a "back off hold" that had no "put on hold" anywhere above it —
@@ -1614,6 +1622,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     onHold = false; holdReason = null; everCameBack = true;
     musicRecognisedHold = false;
     openCharliesEars("the wait ended and somebody came back", backAtMs);
+    holdStartedAtMs = 0;
     holdProvedWordless = false; pendingComeback = null;
     // THE ANNOUNCEMENT IS SPENT (check 369). "Let me check, I'll put you on hold" announces ONE
     // wait, and this is that wait ending. It used to stay armed until Staff's next WRITTEN line
@@ -1625,7 +1634,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (closeWhenReady) { clearTimeout(closeWhenReady); closeWhenReady = null; }
     // Somebody came back, so the wait had an ending of its own and the cap has nothing to end.
     if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; }
-    const secs = Math.round(gapMs / 1000);
+    // THE WAIT'S LENGTH IS THE DISTANCE BETWEEN ITS OWN TWO ROWS (owner, 08-19 evening). The ear
+    // measures the gap on its own clock, which starts a beat before ours, so a row could read
+    // "Staff back after 26s" between rows a second and a half apart from that. Read off the rows.
+    const secs = holdStartedAtMs > 0
+      ? Math.max(0, Math.round(((backAtMs ?? Date.now()) - holdStartedAtMs) / 1000))
+      : Math.round(gapMs / 1000);
     // A HAND-OVER IS ALWAYS A NEW PERSON. The twenty-second bar is right for somebody stepping away
     // to look at a shelf and coming back: same person, same conversation. Being handed to another desk
     // is the opposite fact — whoever picks up never heard the question, however fast the hand-over
@@ -1728,7 +1742,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // (owner 08-05), so whatever race put it in the pocket, it may not reach him as a turn: handed
     // as one at 10.7s on 370, he answered it with the set question before Staff had said a word.
     const said = missedWhileClosed.splice(0, missedWhileClosed.length)
-      .filter((s) => !theirFirstLine || keyOf(s) !== keyOf(theirFirstLine));
+      .filter((s) => !theirFirstLine || keyOf(s) !== keyOf(theirFirstLine))
+      // WHAT THE STORE PLAYED AT US IS NOT WHAT STAFF SAID (check 409). The reader's answer during
+      // the wait decides it, and a line it judged a recording never rides this door.
+      .filter((s) => !playedAtUs.has(keyOf(s)));
     handTheirTurn(said, "said while he was off");
     return said.length > 0;
   }
@@ -1928,6 +1945,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
 
   /** Every Staff line already given to Charlie, by either pipe, so nothing is ever answered twice. */
   const hisAlready = new Set<string>();
+  /** Lines the reader judged the store PLAYED at us rather than said to us. They stay on the record,
+   *  where the sheet shows them and the after-call reader names them, and they are never fed to
+   *  Charlie: not as audio, not as a turn, and not in the pocket of what he missed. */
+  const playedAtUs = new Set<string>();
   const keyOf = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const alreadyHisToAnswer = (s: string) => { const k = keyOf(s); return !!k && hisAlready.has(k); };
   const markAsHis = (s: string) => { const k = keyOf(s); if (k) hisAlready.add(k); };
@@ -2238,7 +2259,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard. `!ready` too: a line landing while his session is still
     // opening reached no ears either, and the pocket is what the ready hand-over reads.
-    if (fromEcho && fresh && (!eleven || onHold || !ready) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
+    if (fromEcho && fresh && (!eleven || onHold || !ready) && !alreadyHisToAnswer(txt) && !playedAtUs.has(keyOf(txt))) missedWhileClosed.push(txt);
     // A LINE SPOKEN INTO THE WAIT THAT FINISHED WRITING JUST AFTER HE RECONNECTED IS STILL HIS TO BE
     // HANDED (owner task 08-15, check 366). Staff's "I did not see any" was spoken while his session
     // was closed, and its writing landed a second after the new session opened — so the old rule

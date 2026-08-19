@@ -3315,11 +3315,40 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   // on a real check his recorded hold reply has already played by then and it is immediate.
   ok(true, "…and the drop follows, checked once the owed-word window is out (below)");
   const ADVERT = "Thanks for holding. Did you know we price match any local competitor?";
+  // THE READER, STUBBED FOR THE WHOLE SCENE, answering about the line it is actually asked about,
+  // the way it answered on checks 409's and 383's own records: the advert is played at us, and
+  // Staff's answer is a person. Its accuracy on real lines is the workbench's job
+  // (scripts/hold-voice-bench.ts, 23 of 23); what this scene proves is that the answer moves the
+  // engine. Everything that is not the reader keeps going where it was going.
+  const beforeStub = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    if (!/chat\/completions|\/v1\/messages/.test(url)) return (beforeStub as typeof globalThis.fetch)(input, init);
+    // It is asked about a numbered list of Staff lines and answers about EVERY one of them, the
+    // way the real reader does, so the newest line always has an answer of its own.
+    const body = String((init as { body?: unknown } | undefined)?.body ?? "");
+    let asked: string[] = [];
+    try {
+      const sent = JSON.parse(body) as { messages?: Array<{ role?: string; content?: string }> };
+      const user = (sent.messages || []).filter((m) => m.role === "user").map((m) => String(m.content || "")).join("\n");
+      asked = user.split("\n").map((l) => l.replace(/^\s*\d+\.\s*/, "").trim()).filter(Boolean);
+    } catch { asked = []; }
+    if (!asked.length) asked = [""];
+    const lines = asked.map((text, i) => {
+      const played = /price match|thanks for holding/i.test(text);
+      return { n: i + 1, voice: played ? "recording" : "person", announcesWait: false, confidence: 0.9,
+        why: played ? "advertising the store" : "answers our question" };
+    });
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({ lines }) } }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
   echoHeardStaff(room, ADVERT);
-  await sleep(150);
+  await sleep(700);
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("price match")),
     "…and the advert's words are never handed to him as a turn either");
   ok(step("ears_back").length === 0, "…and it does not wake him: an advert is not a person talking to us");
+  ok(step("not_a_person").length === 1, "…the record says the store played it at us rather than said it", step("not_a_person").length);
   ok(!evs().some((e) => e.kind === "hold_end"), "…and it does not end the wait either, so his meter stays off");
   ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Clerk" && /price match/.test(l.text)),
     "…while Echo still wrote it down, so it is on the record and the reader can name it");
@@ -3346,19 +3375,8 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   // reader answers about a person really talking to us. Its accuracy is proven on the owner's saved
   // recordings by the workbench (scripts/hold-voice-bench.ts) and its wiring by scripts/test-hold-wake.ts;
   // what this scene proves is that the answer moves the engine.
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
-    // Everything that is not the reader keeps going where it was going: the signed URL the agent's
-    // own session opens on is stubbed by this file already and must not be swallowed here.
-    if (!/chat\/completions|\/v1\/messages/.test(url)) return (realFetch as typeof globalThis.fetch)(input, init);
-    return new Response(JSON.stringify({
-      choices: [{ message: { content: JSON.stringify({ lines: [{ n: 1, voice: "person", announcesWait: false, confidence: 0.9, why: "answers our question" }] }) } }],
-    }), { status: 200, headers: { "content-type": "application/json" } });
-  }) as typeof globalThis.fetch;
   echoHeardStaff(room, "Yeah. We've got a few of those.");
   await sleep(700);
-  globalThis.fetch = realFetch;
   ok(step("ears_back").length === 1, "the sound and their words together bring his ears back", step("ears_back").length);
   ok(evs().some((e) => e.kind === "hold_end"), "…the wait ends on the same proof, so his meter starts again with a person on the line");
   // AND THE WAIT'S OWN LENGTH IS THE DISTANCE BETWEEN ITS OWN TWO ROWS. On 407 a row reading
@@ -3375,6 +3393,12 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
     "…and he comes back as the next part of the same check");
   ok(f.raw.some((m) => m.includes("user_message") && m.includes("got a few of those")),
     "…and what they said is handed to him as their turn, so he answers it");
+  // CHECK 409: the advert's own words rode the pocket and were handed to him as "Staff's own words,
+  // answer them now" the moment the real person came back, and he answered the jumble. A line the
+  // reader judged the store PLAYED at us is struck out of that pocket.
+  ok(!f.raw.some((m) => m.includes("user_message") && m.includes("price match")),
+    "…and the advert's words never ride that hand-over either");
+  globalThis.fetch = beforeStub;
   restore(); tw.close(); f.close();
 }
 
