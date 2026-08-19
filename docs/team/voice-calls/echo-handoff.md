@@ -258,6 +258,48 @@ https://staging.checkitforme.com/pub/brain, model claude-sonnet-4-6, same voice)
 `ELEVENLABS_OURBRAIN_AGENT_ID`, flip the Admin switch ON, then the ordered dials: the silent hold
 test first, then the loud classic music test.
 
+## THE FOUR-FIX ORDER (owner, 08-19 late) — BUILT, PROVEN ON HIS RECORDINGS, DIALLED
+- **FIX 3, THE ONE THAT COSTS MONEY: a recognised hold now takes Charlie's EARS, not just his
+  mouth.** Until now every frame of the store's audio still went to his session during a hold, so
+  the advert inside the hold music was handed to him as if Staff had spoken (checks 398 to 405).
+  `earsShutAtMs` in bridge.ts shuts at the two moments we recognise a hold: the ear's `music_heard`
+  report, and Staff's stepping-away words (`saidGoingToCheck`). The audio door (`else if (onHold ||
+  earsShutAtMs > 0)`) sends nothing to him from there. **Echo is untouched** and keeps writing every
+  word. **The advert's WORDS are refused too**: only a line the wake rule accepts goes in the pocket,
+  so a line the rule refuses stays on the record and is never handed to him as a turn.
+- **THE WAKE RULE, both halves together** (`maybeWakeCharlie`): the SOUND says somebody is talking
+  into a line the music has left (`personSound`, new report in listen-nav.ts) AND Echo wrote a line
+  that is not them stepping away. Sound alone is what an advert defeats (it IS a voice); words alone
+  the same (it says real sentences).
+- **THE SOUND HALF IS MEASURED ON HIS OWN COMMITTED RECORDINGS, never guessed.** Word-scale runs
+  bank; a run that outgrows a word is music and wipes them (`MAX_SPEECH_RUN_MS`, the existing bar);
+  the gaps between words must be REAL SILENCE (`MUSIC_GAP_FLOOR` 120: the middle gap frame reads 188
+  inside the advert and 211 inside the waltz because the music plays on underneath, against 37
+  inside a bare voice); and the line must have been clear of music for `MUSIC_CLEAR_MS` (2500).
+  **`scripts/test-hold-wake.ts` is pinned into test-all.sh** and re-runs forever on the same
+  recordings with no ffmpeg, no network and no model: their frame energies are committed in
+  `scripts/hold-wake-frames.json`, measured exactly the way the ear measures a live line.
+  **PROVED: zero wakes from the music being recognised to the end of the advert · a wake the moment
+  the person comes back, on a word's worth of speech · zero wakes on plain hold music.**
+- **THE RULE'S OWN LIMIT, said plainly rather than tuned away**: an advert's last seconds, once the
+  music under it thins, are speech with real gaps, and sound alone cannot refuse them. The words
+  half is what closes that: the advert's own words are written long before, and it takes a FRESH
+  non-stepping-away line to wake him.
+- **FIX 4**: `awakeOnHoldMs` is measured on the call (a frame at a time, only while his session is
+  open and billing), stamped on the row (`awake_on_hold_seconds`) and printed on every sheet as its
+  own row, "Awake while the store had us on hold". Shown, not graded: what a hold is allowed to cost
+  is the owner's number to rule, and inventing a red bar would be deciding it for him. **PM: his
+  ruling wanted on that bar.**
+- **FIX 2**: scene 22's card is `hold_music_advert`, named "Hold: music with advert". NAME ONLY: its
+  rows, status and floor are spread from `HOLD_MUSIC_GRADING`, the same object the plain music card
+  uses, so the two can never drift. Scenes 20 and 21 keep "Hold: music" — renaming the shared card
+  would have renamed their tests too. **Checks 398 to 405 keep reading "Hold: music" because their
+  own records carry the card they ran; only checks dialled from here read the new name.**
+- **FIX 1**: every row of the Testing log carries the name of the test it ran, read by the card's
+  KEY off the check's own record (so a renamed test reads its new name everywhere) and shown where
+  the stock answer used to sit; the answer is still on the row as the status icon and its label. The
+  slide-up panel's title already read the test name (`v2.test.name`, checkV2From) and still does.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
