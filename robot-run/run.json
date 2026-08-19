@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-19T20:26:56.971Z",
+  "at": "2026-08-19T20:51:52.650Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -22,7 +22,7 @@
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
           "pass": true,
-          "detail": "Calling → Getting through the menu → Talking to Staff → Getting results"
+          "detail": "Calling → Talking to Staff → Getting results"
         },
         {
           "n": 4,
@@ -70,7 +70,7 @@
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 113px"
+          "detail": "19px → 90px"
         },
         {
           "n": 13,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 63 seconds and the line closed at 63 — 0 seconds of nothing"
+          "detail": "the answer was in at 60 seconds and the line closed at 60 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Wed, Aug 19 · 8:25 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
+          "detail": " Result Wed, Aug 19 · 8:50 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 7.4¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 6.1¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787171109706,
-      "checkId": 409,
-      "cost": 0.073551,
-      "costReadable": "7.4¢",
+      "startedAt": 1787172598451,
+      "checkId": 410,
+      "cost": 0.060688,
+      "costReadable": "6.1¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"

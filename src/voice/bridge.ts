@@ -912,6 +912,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     ).catch(() => null);
     if (earsShutAtMs === 0 || ended) return;   // it ended while the reader was thinking
     if (read) {
+      // WHATEVER THE READER CALLED A RECORDING IN THAT WINDOW IS STRUCK, not only the newest line
+      // (check 410: the reader could not answer about the advert as it played, so nothing struck
+      // it, and when the real person came back the advert rode the pocket to him as Staff's own
+      // words). The wake is the one moment we are certain to be asking, so it is where this lands.
+      for (const p of read.played) {
+        if (!playedAtUs.has(keyOf(p))) {
+          playedAtUs.add(keyOf(p));
+          missedWhileClosed = missedWhileClosed.filter((m) => keyOf(m) !== keyOf(p));
+        }
+      }
       if (!read.person) {
         // …AND IT IS NEVER HIS TO ANSWER, EITHER (owner's order, 08-19 evening; caught on check 409,
         // where the advert's own words were handed to him as "Staff's own words, answer them now"

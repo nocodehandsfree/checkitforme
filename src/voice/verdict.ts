@@ -211,7 +211,7 @@ export async function judgeHoldVoice(
 export async function isSomebodyTalkingToUs(
   lines: Array<{ who: string; text: string }>,
   timeoutMs = 1500,
-): Promise<{ person: boolean; announcesWait: boolean; confidence: number; why: string } | null> {
+): Promise<{ person: boolean; announcesWait: boolean; confidence: number; why: string; played: string[] } | null> {
   const clerk = lines.filter((l) => l.who === "Clerk" && String(l.text || "").trim().length > 2);
   if (!clerk.length) return null;
   const newest = clerk[clerk.length - 1];
@@ -221,7 +221,11 @@ export async function isSomebodyTalkingToUs(
   if (!out || !out.length) return null;
   const mine = out.find((r) => r.line === newest.text) ?? out[out.length - 1];
   if (!mine) return null;
-  return { person: mine.voice === "person", announcesWait: mine.announcesWait, confidence: mine.confidence, why: mine.why };
+  // …AND EVERY OTHER LINE IN THE WINDOW IT CALLED A RECORDING, because the one moment we are sure
+  // to be asking is when somebody really comes back, and that is exactly when what the store played
+  // at us would otherwise be handed to Charlie as Staff's own words (check 410).
+  const played = out.filter((r) => r.voice === "recording").map((r) => r.line);
+  return { person: mine.voice === "person", announcesWait: mine.announcesWait, confidence: mine.confidence, why: mine.why, played };
 }
 
 /** A clean one-line label for the verdict card, e.g. "3-pack blister · Surging Sparks". */

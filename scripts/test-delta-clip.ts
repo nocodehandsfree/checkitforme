@@ -3343,12 +3343,22 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
       choices: [{ message: { content: JSON.stringify({ lines }) } }],
     }), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof globalThis.fetch;
+  // ON CHECK 410 THE READER COULD NOT ANSWER while the advert was playing, so nothing struck it
+  // there; the strike has to land at the wake instead, which is the one moment we are certain to be
+  // asking. The reader is switched off for this line on purpose.
+  const stubbed = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    if (!/chat\/completions|\/v1\/messages/.test(url)) return (stubbed as typeof globalThis.fetch)(input, init);
+    return new Response("upstream is down", { status: 503 });
+  }) as typeof globalThis.fetch;
   echoHeardStaff(room, ADVERT);
   await sleep(700);
+  globalThis.fetch = stubbed;
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("price match")),
     "…and the advert's words are never handed to him as a turn either");
   ok(step("ears_back").length === 0, "…and it does not wake him: an advert is not a person talking to us");
-  ok(step("not_a_person").length === 1, "…the record says the store played it at us rather than said it", step("not_a_person").length);
+  ok(step("not_a_person").length === 0, "…and with the reader down nothing is claimed about it either way", step("not_a_person").length);
   ok(!evs().some((e) => e.kind === "hold_end"), "…and it does not end the wait either, so his meter stays off");
   ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Clerk" && /price match/.test(l.text)),
     "…while Echo still wrote it down, so it is on the record and the reader can name it");
