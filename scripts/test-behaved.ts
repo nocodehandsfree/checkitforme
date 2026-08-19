@@ -187,6 +187,15 @@ head("METER STOPPED ON HOLD");
     ev("hold_end", 38, { gapSec: 28 }), ev("hangup", 40),
   ];
   ok("…but a false start that was dropped again, with nobody ever back, still fails", at(falseStartOnly).pass === false, at(falseStartOnly).why);
+  // CHECK 415 AGAIN, a different row: "Reacted to a new person" said nobody ever came back on a
+  // check whose own rows show the wait ending and the same person answering.
+  {
+    const r2 = row(behaved({ timeline: earlyBack, rollup: { charlieSegments: 2 }, agentLines: [OPENER] }), "asked_the_new_person");
+    ok("a wait somebody came back from never says nobody came back", r2.pass === null && /the same person came back/.test(r2.why), r2.why);
+    const neverBack2 = earlyBack.filter((e) => e.kind !== "hold_end");
+    const r3 = row(behaved({ timeline: neverBack2, rollup: null, agentLines: [OPENER] }), "asked_the_new_person");
+    ok("…and a wait nobody came back from still says so", r3.pass === null && /nobody ever came back/.test(r3.why), r3.why);
+  }
 }
 
 head("THE WORDS OFF A FINISHED ROW");

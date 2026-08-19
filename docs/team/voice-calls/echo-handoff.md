@@ -429,7 +429,12 @@ own goodbye ("Perfect, thank you so much, have a good one!"): both live, no clip
 - **A FALSE RED FOUND AND FIXED (commit d5b8cce1)**: "Meter stopped" said "never reconnected when
   Staff returned at 39s" on a check he answered. The row only looked for a reconnect BELOW the wait's
   ending row, and FIX 3 draws it above. He now counts as back if he is on the line when the wait
-  ends; a false start dropped again with nobody ever back still fails. behaved 107.
+  ends; a false start dropped again with nobody ever back still fails. Re-read on the fix, 415's own
+  sheet now says "the meter successfully stopped, reconnected as part 3" and the card's five rows are
+  all green — the mark still says TEST FAILED, on the meter half alone. behaved 109.
+- **A SECOND FALSE SENTENCE, same family, fixed with it**: "Reacted to a new person" said "nobody
+  ever came back" on 415, a check whose own rows show the wait ending and the same person answering.
+  It reads the ending row now. It is a grey row either way and failed nothing.
 - The one harness red is the 08-07 screen fault, pre-existing, not the card's.
 
 ## WHAT IS LEFT

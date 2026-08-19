@@ -660,6 +660,10 @@ function askedTheNewPerson(turns: AgentTurn[], handedOver: BehavedEvent[], maybe
     // A WAIT NOBODY CAME BACK FROM is still a wait, and saying "no wait on this check" about one is
     // the card being wrong about the very thing the owner is reading it for.
     const away = tl.find((e) => e.kind === "hold_start");
+    // CHECK 415: they DID come back, judged the same person, and this row said "nobody ever came
+    // back" on a check whose own rows show the wait ending. Say which of the two really happened.
+    const backAgain = tl.find((e) => e.kind === "hold_end");
+    if (away && backAgain) return row(null, `Judged after a wait: Staff stepped away${away.atSec != null ? ` at ${Number(away.atSec)}s` : ""} and the same person came back, so nothing was expected of him.`);
     if (away) return row(null, `Judged after a wait: Staff stepped away${away.atSec != null ? ` at ${Number(away.atSec)}s` : ""} and nobody ever came back, so nobody new picked up.`);
     return row(null, "No transfer and no wait on this check.");
   }
