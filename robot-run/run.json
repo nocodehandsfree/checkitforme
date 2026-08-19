@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-19T07:25:35.641Z",
+  "at": "2026-08-19T18:43:35.106Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -22,7 +22,7 @@
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
           "pass": true,
-          "detail": "Calling → Talking to Staff → Getting results"
+          "detail": "Calling → Getting through the menu → Talking to Staff → Getting results"
         },
         {
           "n": 4,
@@ -64,13 +64,13 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": false,
-          "detail": "1 bounce(s) over 75 looks · header held at 0px"
+          "detail": "2 bounce(s) over 72 looks · header held at 0px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 90px"
+          "detail": "19px → 113px"
         },
         {
           "n": 13,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 55 seconds and the line closed at 55 — 0 seconds of nothing"
+          "detail": "the answer was in at 52 seconds and the line closed at 52 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Wed, Aug 19 · 7:24 AM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
+          "detail": " Result Wed, Aug 19 · 6:42 PM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 10.9¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 10.3¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787124228695,
-      "checkId": 405,
-      "cost": 0.108869,
-      "costReadable": "10.9¢",
+      "startedAt": 1787164897594,
+      "checkId": 406,
+      "cost": 0.102698,
+      "costReadable": "10.3¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"

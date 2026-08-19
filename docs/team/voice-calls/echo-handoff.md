@@ -300,6 +300,32 @@ test first, then the loud classic music test.
   the stock answer used to sit; the answer is still on the row as the status icon and its label. The
   slide-up panel's title already read the test name (`v2.test.name`, checkV2From) and still does.
 
+### THE DIAL: CHECK 406, "Hold: music with advert" — THE PILL SAYS TEST PASSED
+Every one of the four fixes is on that check's own record, and the fault of 398 to 405 is gone.
+- **His ears shut at 14.3s** (`ears_shut`, why "Echo recognised hold music", 1.2s after the music
+  report) and **stayed shut 25.6 seconds, straight through the advert at 17.9s**. Not one Charlie
+  line between 15.8s and 41.2s: he never answered it, and it was never handed to him.
+- **`ears_back` at 39.9s**, why "the sound and the words both say a person", and Staff's real line
+  ("Yeah. We've got a few of those.") was handed to him as their turn in the same second
+  (`missed_turn`, 1 line). Echo's handover gap graded 1s green.
+- **Graded meter 22 seconds GREEN against his 23 second goal** (42 on the record, the advert
+  grading fix forgiving 20). Well under his 31 line. Profit 59% real, 73% graded. 10.3¢, the
+  cheapest advert dial yet (405 was 10.9¢, 404 13.7¢).
+- **"Awake while the store had us on hold: 25s"** is on the sheet, its own row (fix 4). It is the
+  number that says what is still being spent, and it is deliberately larger than the 20 seconds the
+  grade forgives: the grade asks what the check should be judged on, this asks what it really cost.
+- Harness reds, both known and neither the card's: the word-for-word row flags the robot's
+  once-only "Sorry, that's all I know." (said into Charlie's goodbye, unwritable by design, the
+  08-04 teach-the-matcher family) and 2 scroll bounces (the screen fault, also on 405).
+
+### THE OPEN DECISION THIS DIAL PUTS IN FRONT OF THE OWNER (written up, NOT decided)
+`holdSeconds` on 406 is **0**: no wait was ever declared, so Charlie's meter ran the whole 42
+seconds even though his ears were shut for 25 of them. We now recognise the advert hold well enough
+to deafen him, and the same moment could DROP him and stop the meter — which would take the real
+spend down with the graded one. **It is not mine to build**: the standing law is "no change to WHEN
+his ear switches on/off until the post-twenty-tests rebuild" (checkpoint, 08-18, owner's ruling),
+and dropping him at `music_heard` is exactly that change. It needs the owner's word.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
