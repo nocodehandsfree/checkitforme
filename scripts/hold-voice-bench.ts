@@ -12,6 +12,17 @@
 //
 // It is a BENCH, not a suite: it costs a model read, so it is never in test-all.sh (same rule as
 // scripts/deepgram-bench.ts).
+//
+// ITS OTHER HALF IS THE WAKE RULE, AND THAT ONE RUNS ON EVERY BUILD (owner's order, 08-19).
+// The judge above reads WORDS after the call. What decides live whether the advert ever reaches
+// Charlie at all is SOUND, and it is benched the same way, on the owner's own committed recordings
+// (`public/robot-clips/08-hold-music-with-ad.mp3` and its neighbours, their frame energies measured
+// into `scripts/hold-wake-frames.json`): zero wakes from the music being recognised to the end of
+// the advert, a wake the moment the person comes back, zero on plain hold music. That half costs no
+// model read, so unlike this one it is pinned into test-all.sh:
+//
+//   ./node_modules/.bin/tsx scripts/test-hold-wake.ts
+//
 import { judgeHoldVoice } from "../src/voice/verdict";
 
 interface Saved { check: number; what: string; lines: Array<{ who: string; text: string }>; expect: Array<"person" | "recording">; }
