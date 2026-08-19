@@ -3299,6 +3299,17 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   const holds = () => evs().filter((e) => e.kind === "hold_start");
   ok(holds().length === 1 && (holds()[0].detail as { reason?: string } | null)?.reason === "music",
     "the music itself declared the wait, so his meter stops", holds().map((h) => (h.detail as { reason?: string } | null)?.reason));
+  // ONE CLOCK, AND EVERY ROW ON IT (owner, 08-19 evening, off check 407: the second wait began near
+  // 41 seconds and its rows printed 44). The wait's row is stamped where the MUSIC began, not where
+  // the engine worked it out, so pausing the recording at that second is what the row describes.
+  const musicAt = evs().find((e) => (e.detail as { step?: string } | null)?.step === "music_heard");
+  ok(!!musicAt && Math.abs((holds()[0].atMs ?? 0) - (musicAt.atMs ?? 0)) <= 1300,
+    "the wait's row sits at the music's own second, never seconds after it",
+    { music: musicAt?.atMs, hold: holds()[0]?.atMs });
+  ok(step("ears_shut")[0] && Math.abs((step("ears_shut")[0].atMs ?? 0) - (holds()[0].atMs ?? 0)) <= 1300,
+    "…and his ears shutting is written at that same second", { ears: step("ears_shut")[0]?.atMs, hold: holds()[0]?.atMs });
+  ok(step("ears_shut").every((e) => ((e.detail || {}) as { notASound?: boolean }).notASound === true),
+    "…and it is marked as a silent switch, so the sheet reads it apart from a sound");
   // He is dropped as soon as the engine is free to drop him. On this scene Staff's announce left him
   // owed a word (the rule that stops him being cut off mid thought), so the drop lands a beat later;
   // on a real check his recorded hold reply has already played by then and it is immediate.
@@ -3314,6 +3325,16 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
     "…while Echo still wrote it down, so it is on the record and the reader can name it");
   await sleep(6200);   // past the owed-word window, which is the only thing holding the drop
   ok(evs().some((e) => e.kind === "charlie_leave"), "…and he really is dropped off the call, which is what stops the meter");
+  // MUSIC MEANS NOBODY IS THERE TO HEAR HIM, so the drop is immediate and not a polite few seconds
+  // later (check 407 spent 5 awake seconds between declaring the wait and dropping him).
+  {
+    const left = evs().find((e) => e.kind === "charlie_leave");
+    ok(!!left && (left.atMs ?? 0) - (holds()[0]?.atMs ?? 0) < 2500,
+      "…and he goes at once, because music means nobody is waiting on his answer",
+      { hold: holds()[0]?.atMs, left: left?.atMs });
+    ok(((left?.detail || {}) as { notASound?: boolean }).notASound === true,
+      "…and the drop is marked a silent switch too");
+  }
   // STAFF REALLY COME BACK. The music stops first, which is what leaves the line clear, and then
   // they talk into it: speech-shaped sound with real gaps in it, and their own words behind it.
   // The gap is the rule doing its job — sound straight over the music's last note is refused, and
@@ -3321,10 +3342,35 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   quiet(tw, 130);
   for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
   await sleep(60);
+  // THE READER IS WHAT DECIDES NOW (owner, 08-19 evening), so it is stubbed here and answers what a
+  // reader answers about a person really talking to us. Its accuracy is proven on the owner's saved
+  // recordings by the workbench (scripts/hold-voice-bench.ts) and its wiring by scripts/test-hold-wake.ts;
+  // what this scene proves is that the answer moves the engine.
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    // Everything that is not the reader keeps going where it was going: the signed URL the agent's
+    // own session opens on is stubbed by this file already and must not be swallowed here.
+    if (!/chat\/completions|\/v1\/messages/.test(url)) return (realFetch as typeof globalThis.fetch)(input, init);
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({ lines: [{ n: 1, voice: "person", announcesWait: false, confidence: 0.9, why: "answers our question" }] }) } }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
   echoHeardStaff(room, "Yeah. We've got a few of those.");
-  await sleep(200);
+  await sleep(700);
+  globalThis.fetch = realFetch;
   ok(step("ears_back").length === 1, "the sound and their words together bring his ears back", step("ears_back").length);
   ok(evs().some((e) => e.kind === "hold_end"), "…the wait ends on the same proof, so his meter starts again with a person on the line");
+  // AND THE WAIT'S OWN LENGTH IS THE DISTANCE BETWEEN ITS OWN TWO ROWS. On 407 a row reading
+  // "Staff back after 6s" sat between rows stamped 44 and 47, because two clocks were in play.
+  {
+    const start = evs().find((e) => e.kind === "hold_start"), end = evs().find((e) => e.kind === "hold_end");
+    const said = Number(((end?.detail || {}) as { gapSec?: number }).gapSec ?? -1);
+    const drawn = Math.round((((end?.atMs ?? 0) - (start?.atMs ?? 0))) / 1000);
+    ok(said >= 0 && Math.abs(said - drawn) <= 1,
+      "the wait says it lasted what its own two rows say it lasted", { said, drawn });
+  }
+  await sleep(500);   // his session takes a moment to open again, exactly as on a real check
   ok(evs().some((e) => e.kind === "charlie_join" && ((e.detail as { segment?: number } | null)?.segment ?? 0) > 1),
     "…and he comes back as the next part of the same check");
   ok(f.raw.some((m) => m.includes("user_message") && m.includes("got a few of those")),

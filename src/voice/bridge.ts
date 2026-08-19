@@ -20,6 +20,7 @@ import { toMediaFrames } from "../calls/clip-cache";
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
 import { heardWrongDepartment, isPrivateNote, askedToBePutThrough, saysNobodyToTransfer, saidGoingToCheck, looksLikeAMenu, staffName, wrappedUp, usedTheirName, asksUsBack } from "./prompts";
+import { isSomebodyTalkingToUs } from "./verdict";
 import { guessLanguage } from "../calls/mapgraph";
 // WHAT LANGUAGE THE PERSON WHO PICKED UP IS SPEAKING, off the words of their first line. A separate
 // judge from `guessLanguage` on purpose: that one reads a MENU and its markers are menu words, so it
@@ -853,21 +854,24 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** How long the sound half stays good for: a person's words reach us through Echo a moment after
    *  their voice, so the two halves are allowed to land a few seconds apart. */
   const WAKE_TOGETHER_MS = 6000;
-  function shutCharliesEars(why: string): void {
+  function shutCharliesEars(why: string, atMs?: number): void {
     if (earsShutAtMs > 0) return;
-    earsShutAtMs = Date.now();
+    earsShutAtMs = atMs ?? Date.now();
     personSoundAtMs = 0;
+    // A SILENT SWITCH, MARKED AS ONE (owner, 08-19 evening). Nothing was said on the line at this
+    // second: it is our own machinery moving, and the sheet reads it apart from the rows that are
+    // sounds. Stamped at the moment the wait was recognised, never the moment the code ran.
     emit(room, "unknown", "Charlie's ears were shut for the wait, so none of the call reached him",
-      { step: "ears_shut", why });
+      { step: "ears_shut", why, notASound: true }, earsShutAtMs);
     log(`ears: shut (${why}) — Echo keeps listening, Charlie hears nothing`);
   }
-  function openCharliesEars(why: string): void {
+  function openCharliesEars(why: string, backAtMs?: number): void {
     if (earsShutAtMs === 0) return;
-    const shutMs = Date.now() - earsShutAtMs;
+    const shutMs = Math.max(0, (backAtMs ?? Date.now()) - earsShutAtMs);
     earsShutAtMs = 0;
     personSoundAtMs = 0;
     emit(room, "unknown", "A real person is talking to us again, so Charlie's ears came back on",
-      { step: "ears_back", why, shutMs });
+      { step: "ears_back", why, shutMs, notASound: true }, backAtMs);
     log(`ears: back on after ${shutMs}ms (${why})`);
     heldWords = [];   // whatever was on the line while they were shut was the music, never his to hear
     // EVERYTHING SAID WHILE THEY WERE SHUT, HANDED OVER AS THEIR TURN — the same pocket and the
@@ -883,10 +887,42 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  talking into a line the music has left, AND Echo has to have written words that are not Staff
    *  stepping away. Sound alone is what the advert defeats — it IS a voice — and words alone is
    *  what it defeats too, because it says real sentences. Neither one on its own opens his ears. */
-  function maybeWakeCharlie(line: string): void {
-    if (earsShutAtMs === 0) return;
-    if (!personSoundAtMs || Date.now() - personSoundAtMs > WAKE_TOGETHER_MS) return;
+  /** THE WAKE RULE READS THE WORDS THEMSELVES (owner's order, 08-19 evening: "the wake rule must
+   *  NOT lean on knowing our own advert recording's words, that passes the test and fails a real
+   *  store. Wake Charlie only on words aimed at us, and never on bare sound.")
+   *
+   *  So the question is asked of the same reader that judges a finished check, about the line that
+   *  just landed: is somebody talking to US, or is this something the store is playing at us? It
+   *  reads meaning, so it holds on a store we have never rung and in any language, and it knows
+   *  nothing about our own practice store's advert.
+   *
+   *  BARE SOUND NEVER WAKES HIM. On check 407 a sound alone brought him back, no words ever came,
+   *  and he sat awake for 5 seconds of nothing. Only written words can wake him now.
+   *
+   *  IF THE READER CANNOT ANSWER (no key, too slow, refused), the sound rule stands in: word-scale
+   *  speech with real silence in its gaps, on a line clear of the music. Never nothing, because a
+   *  real person left unheard costs the whole check. */
+  async function maybeWakeCharlie(line: string): Promise<void> {
+    if (earsShutAtMs === 0 || ended) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
+    const read = await isSomebodyTalkingToUs(
+      (getReceipt(room)?.transcript ?? []).slice(-4).map((l) => ({ who: l.who === "Agent" ? "Agent" : "Clerk", text: l.text })),
+    ).catch(() => null);
+    if (earsShutAtMs === 0 || ended) return;   // it ended while the reader was thinking
+    if (read) {
+      if (!read.person) {
+        emit(room, "unknown", "The store played that at us rather than saying it to us, so Charlie stayed off",
+          { step: "not_a_person", text: String(line).slice(0, 160), why: read.why, notASound: true });
+        log(`wake: the reader says that line was played at us (${read.why}) — he stays off`);
+        return;
+      }
+      if (read.announcesWait) return;   // a person, telling us they are stepping away again
+    } else {
+      // The reader could not answer. Fall back to the sound rule, which is measured on his own
+      // recordings and refuses the advert there, rather than waking on words nobody judged.
+      if (!personSoundAtMs || Date.now() - personSoundAtMs > WAKE_TOGETHER_MS) return;
+      log("wake: no read came back, standing on the sound rule instead");
+    }
     // A WAIT WE DECLARED OFF THE MUSIC ENDS HERE, on the same proof (owner, 08-19 evening). His
     // session is closed and his meter is off through the music; the wake rule is what brings both
     // back, so a recording talking at us can never do it. Every other kind of wait ends exactly as
@@ -1040,7 +1076,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (heOwesThemAWord()) { armTheMeterOff("the word owed was still his"); return; }
       if (Date.now() < agentPlayingUntil) { armTheMeterOff("our own audio was still playing"); return; }
       log(`meter off: ${why} — nobody is saying anything to us and the answer is still theirs to give`);
-      beginHold("quiet", Date.now());
+      // The wait began when the line went quiet, which is their last sound, not this beat's end.
+      beginHold("quiet", lastTheirVoiceStopAtMs > 0 ? lastTheirVoiceStopAtMs : Date.now() - THEIR_TURN_QUIET_MS);
     }, THEIR_TURN_QUIET_MS);
   }
   /** THE REOPEN ITSELF, exactly as it has always run: the note he is owed, the reconnect feed, and
@@ -1065,8 +1102,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
         log(`the rejoin wrote no words in ${Math.round(REJOIN_WORDLESS_MS / 1000)}s: the voice was the music, dropping again`);
         emit(room, "unknown", "The voice that brought Charlie back wrote no words, so it was the music and he is dropped again",
-          { step: "wordless_rejoin", afterMs: REJOIN_WORDLESS_MS });
-        beginHold("music", Date.now());
+          { step: "wordless_rejoin", afterMs: REJOIN_WORDLESS_MS, notASound: true }, hisEarsBackAtMs || undefined);
+        // THE MUSIC NEVER STOPPED. He was let back in at `hisEarsBackAtMs` and nothing was ever
+        // said, so the wait he is going back into started there, not at this timer's end (check
+        // 407: this call passed a plain Date.now() into a moment every other caller measured on the
+        // ear's own clock, and that is what printed 44 for a wait that began near 41).
+        beginHold("music", hisEarsBackAtMs || Date.now());
       }, REJOIN_WORDLESS_MS);
       if (!answerWaitTimer) {
         answerWaitTimer = setTimeout(() => {
@@ -1437,6 +1478,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
 
   /** True only inside the backstop's own call back into beginHold, so the gate lets it through. */
   let backstopFired = false;
+  /** @param atMs THE MOMENT THE WAIT REALLY STARTED, on the call's own wall clock, never the moment
+   *  the engine worked it out (owner, 08-19 evening, off check 407: the second wait began near 41
+   *  seconds and its rows printed 44, with "Staff back after 6s" sitting between rows saying 44 and
+   *  47, because two clocks were in play — the ear's own relative moment from one caller and a
+   *  plain Date.now() from another. Every caller backdates to the truth BEFORE calling now, and
+   *  what is written down is what a person listening to the recording would hear at that second. */
   function beginHold(reason: HoldReason, atMs: number) {
     if (onHold) return;
     // THE QUIET AFTER THE GOODBYE IS THE CHECK ENDING, NOT STAFF STEPPING AWAY (owner 08-04,
@@ -1482,20 +1529,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // A new wait starts, so the reconnect feed's turn is over, however it ended (owner task 08-15).
     reconnectFeed = null;
     onHold = true; holdReason = reason; heldWords = [];
-    shutCharliesEars(`the wait was declared (${reason})`);
+    shutCharliesEars(`the wait was declared (${reason})`, atMs);
     // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write ONLY its own line, and then
     // the wait it caused ended with a "back off hold" that had no "put on hold" anywhere above it —
     // a receipt you cannot read straight through (owner 07-28). Being handed on and being made to
     // wait are two facts, so a real transfer now says both, in that order. No new event kinds: the
     // set is a closed sixteen and both of these are already in it.
-    if (reason === "transfer") emit(room, "transfer", transferNote, { reason, atMs, department: department || null }, earMoment(atMs));
+    if (reason === "transfer") emit(room, "transfer", transferNote, { reason, atMs, department: department || null }, atMs);
     const note = reason === "transfer" ? "Waiting for the next department to pick up"
       : reason === "music" ? "Staff stepped away, hold music"
       // A HANDSET ON THE COUNTER. The store is still audible, nobody is talking to us, and the meter
       // stops exactly as it does on silence.
       : reason === "room" ? "The room went quiet, Staff put the phone down"
       : "Staff stepped away, the line went quiet";
-    emit(room, "hold_start", note, { reason, atMs }, earMoment(atMs));
+    emit(room, "hold_start", note, { reason, atMs }, atMs);
     // …AND THIS WAIT HAS AN ENDING NOW (round 1, item 1.6). Nothing ended a mid check wait before
     // this: a store that put the phone down and forgot about us ran to the carrier's own five minute
     // limit, and the customer waited all of it to be told nothing. Waiting is nearly free because
@@ -1526,7 +1573,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         log(`hold (${reason}): closing the agent — the meter stops until somebody comes back`);
         closeSegment(room);
         markNow(room, "charlieCloseMs");
-        emit(room, "charlie_leave", "Charlie dropped", { reason, strategy: "reopen" });
+        emit(room, "charlie_leave", "Charlie dropped", { reason, strategy: "reopen", notASound: true });
         try { eleven?.close(); } catch { /* torn down */ }
         eleven = null; ready = false; connecting = false;
       };
@@ -1539,7 +1586,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // person never hears him come and go choppily, and a hold that just proved it holds wordless
       // sound has proven there is nobody to hear anything (owner 08-18, check 381: the politeness
       // second was a metered second of hold music).
-      const wait = holdProvedWordless ? 0 : Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
+      // MUSIC MEANS NOBODY IS THERE TO HEAR HIM, so he goes at once (owner, 08-19 evening, off
+      // check 407's five awake seconds: the wait was declared at 11.8s and he was not dropped until
+      // 16.9s, because Staff's stepping-away line had left him owed a word. Nobody was owed
+      // anything: the store had put music on. Same reasoning the proven-wordless rejoin already
+      // uses, which is that the politeness second is a metered second of hold music.
+      const wait = (holdProvedWordless || reason === "music") ? 0 : Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
       if (wait <= 0) dropHim();
       else {
         log(`hold (${reason}): ${owedHimAWord > 0 ? "he has their answer and has not spoken yet" : `his session is only ${Math.round(onLineFor / 1000)}s old`}, giving him ${Math.round(wait / 1000)}s before closing him`);
@@ -1561,7 +1613,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
     musicRecognisedHold = false;
-    openCharliesEars("the wait ended and somebody came back");
+    openCharliesEars("the wait ended and somebody came back", backAtMs);
     holdProvedWordless = false; pendingComeback = null;
     // THE ANNOUNCEMENT IS SPENT (check 369). "Let me check, I'll put you on hold" announces ONE
     // wait, and this is that wait ending. It used to stay armed until Staff's next WRITTEN line
@@ -1594,7 +1646,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     lastHoldEndAtMs = Date.now();
     emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`,
       { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) },
-      backAtMs != null ? earMoment(backAtMs) : undefined);
+      backAtMs);
     // DELTA PLAYS THE RECORDING AGAIN AFTER A TRANSFER (owner 08-04: "Echo absolutely needs to
     // build this"). Whoever picks up the next department never heard the question, and Charlie
     // re-asking it himself is exactly the expensive way: the recording asks for free, in the same
@@ -2226,7 +2278,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // THE WAKE RULE'S WORDS HALF, tried LAST so the line is already in the pocket: if this is the
     // one that opens his ears, opening them hands him these very words as their turn (owner's
     // order, 08-19). The advert's own words never get here, because the sound half refuses them.
-    if (fresh && fromEcho) maybeWakeCharlie(txt);
+    if (fresh && fromEcho) void maybeWakeCharlie(txt);
     return fresh;
   }
 
@@ -2315,7 +2367,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       const n = openSegment(room, segmentBrain, segmentWhy);
       // THE ONE LINE that says the agent joined. Everything the recorded question and the handover
       // know about this join rides in its detail rather than writing lines of its own.
-      emit(room, "charlie_join", n === 1 ? "Charlie joined" : `Charlie reconnected, part ${n} of this check`, { reason: connectReason, segment: n, brain: segmentBrain, why: segmentWhy, ...joinFacts });
+      emit(room, "charlie_join", n === 1 ? "Charlie joined" : `Charlie reconnected, part ${n} of this check`, { reason: connectReason, segment: n, brain: segmentBrain, why: segmentWhy, notASound: true, ...joinFacts });
       log("eleven WS open -> sending init");
       // The question Delta already asked rides in as context, so the joining agent knows what the
       // clerk is answering and never asks it a second time.
@@ -2886,7 +2938,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // the line. The meter flips from "never checked" to a real measured zero at the same moment.
       startMeter(room, "holdMs");
       convEar = new ConversationEar({
-        holdStart: beginHold, holdEnd: endHoldOnEvidence,
+        // THE EAR SPEAKS IN ITS OWN SECONDS, so its moments are turned into the call's own clock
+        // right here at the door, once, instead of some callers backdating and others not.
+        holdStart: (reason, atMs) => beginHold(reason, earMoment(atMs) ?? Date.now()),
+        holdEnd: (gapMs, newPerson, atMs) => endHoldOnEvidence(gapMs, newPerson, earMoment(atMs) ?? Date.now()),
         // NOBODY IS COMING BACK. Not the same as stepping away to check a shelf: this is a handset
         // left on a counter. Recorded, and the give-up cap owns what to do about it.
         deadAir: (quietMs) => emit(room, "unknown", `Nothing has been said for ${Math.round(quietMs / 1000)}s, the line is dead air`, { deadAirSec: Math.round(quietMs / 1000) }),
@@ -2902,10 +2957,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // off the call, and on the advert scene no wait is ever declared, because an advert is a
           // voice and the listening rules can never refuse one. So this report, which is the one
           // moment the engine knows the line has gone to music, now declares the wait itself.
-          shutCharliesEars("Echo recognised hold music");
+          shutCharliesEars("Echo recognised hold music", earMoment(atMs) ?? Date.now());
           if (!onHold) {
             musicRecognisedHold = true;
-            beginHold("music", atMs);
+            beginHold("music", earMoment(atMs) ?? Date.now());
           }
         },
         // …and the sound half of the wake rule. It is a REPORT, exactly like the music one: what

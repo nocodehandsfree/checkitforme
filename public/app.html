@@ -2638,6 +2638,11 @@ function checkV2From(d,o){
   // Every row is filed by its millisecond. A row with nothing to file it by sits at the end of the
   // check rather than guessing itself a place in the middle.
   const add=(m,e)=>{e._ms=(m==null?lastMs:m);log.push(e);return e;};
+  // A SILENT SWITCH READS APART FROM A SOUND (owner, 08-19 evening). Some rows are our own
+  // machinery moving with nobody saying anything: Charlie's ears shutting and coming back, him
+  // being dropped and reconnected. The engine marks those, and they draw in the quiet grey so
+  // that pausing the recording at that second and hearing nothing is exactly what the row says.
+  const quietRow=e=>((e.detail||{}).notASound?{tc:'#8A8A96',c:'#5C5C68'}:{});
   // The nearest unclaimed spoken line for a step, inside its window. `first` takes the EARLIEST line
   // in the window instead of the nearest, which is the greeting's own rule: a greeting is the first
   // thing the store says, and now that Echo writes lines from the moment of pickup the line NEAREST
@@ -2683,7 +2688,7 @@ function checkV2From(d,o){
         mark:reg.emoji||(vv&&vv.e)||null,c:reg.color||(vv&&vv.c)||null,
         sub:decided?('Decided by: "'+decided+'"'):''});continue;
     }
-    if(e.kind==='charlie_join'){const seg=(e.detail||{}).segment;add(atM,{t:seg>1?'Charlie reconnected':'Charlie joined'});continue;}
+    if(e.kind==='charlie_join'){const seg=(e.detail||{}).segment;add(atM,{t:seg>1?'Charlie reconnected':'Charlie joined',...quietRow(e)});continue;}
     // A WAIT WEARS THE MARK YOUR STATUSES ALREADY GIVE IT (owner 08-06: "pull everything from the
     // statuses section, don't make up your own icons, we already have it"). Left on hold carries the
     // pause mark and its own colour in Statuses, so being put on hold draws exactly that. No such
@@ -2693,7 +2698,7 @@ function checkV2From(d,o){
     if(e.kind==='ringing'||e.kind==='transfer'){add(atM,{t:e.note,c:'var(--yellow)'});continue;}
     if(step==='wrap_up'){add(atM,{t:e.note,c:'var(--green)',say:takeLine('Agent',atM,10)});continue;}
     if((e.detail||{}).silent)continue; // bookkeeping the engine marked as not for the page
-    add(atM,{t:e.note||e.kind});
+    add(atM,{t:e.note||e.kind,...quietRow(e)});
   }
   // AN ISSUE PRINTS WHERE IT HAPPENED (owner 08-06): every behavior row that FAILED lands in the
   // log, red, at the second its evidence names, with the rule that commands the behavior under it,

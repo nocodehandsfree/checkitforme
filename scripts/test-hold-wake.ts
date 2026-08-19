@@ -127,6 +127,51 @@ console.log("\n▶ PLAIN HOLD MUSIC WAKES NOBODY EITHER (the waltz, nobody talki
   ok(wakes.length - before === 0, `no wake in 15 seconds of the waltz (${wakes.length - before})`);
 }
 
+// ---------------------------------------------------------------------------------------------
+// THE WAKE RULE'S OTHER HALF: THE WORDS (owner's order, 08-19 evening).
+//
+// "The wake rule must NOT lean on knowing our own advert recording's words, that passes the test
+// and fails a real store." So what decides is a READER asked about the line that just landed: is
+// somebody talking to US, or is the store playing this at us? The reader itself is proven on the
+// saved recordings by scripts/hold-voice-bench.ts (23 of 23, and it costs a model read, which is
+// why the bench is not in every build). What is proven HERE, on every build, is that the answer is
+// obeyed: a line the reader calls a recording never wakes him, a line it calls a person does, and
+// a slow or missing reader never leaves a real person unheard.
+//
+// The reader is stubbed at the one place it talks to the outside world, so this costs nothing and
+// can never flake. THE LINES ARE THE REAL ONES, off checks 398 to 407's own records.
+const ADVERT_LINE = "Thanks for holding. Did you know we price match any local competitor? Ask an associate about our rewards program, and start earning points on every purchase today.";
+const STAFF_ANSWER = "Yeah. We've got a few of those.";
+const STAFF_STEPPING_AWAY = "One moment. I'll go and have a look.";
+
+console.log("\n▶ THE READER'S ANSWER IS WHAT DECIDES, and the wake obeys it");
+{
+  const realFetch = globalThis.fetch;
+  const answer = (voice: "person" | "recording", announcesWait = false) => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({ lines: [{ n: 1, voice, announcesWait, confidence: 0.9, why: "stubbed for the test" }] }) } }],
+      model: "stub",
+    }), { status: 200, headers: { "content-type": "application/json" } })) as typeof globalThis.fetch;
+  };
+  const { isSomebodyTalkingToUs } = await import("../src/voice/verdict");
+  answer("recording");
+  const advert = await isSomebodyTalkingToUs([{ who: "Clerk", text: ADVERT_LINE }]);
+  ok(advert !== null && advert.person === false, "a line the reader calls a recording is not somebody talking to us", advert);
+  answer("person");
+  const staff = await isSomebodyTalkingToUs([{ who: "Agent", text: "do you have any Pokemon cards in stock right now?" }, { who: "Clerk", text: STAFF_ANSWER }]);
+  ok(staff !== null && staff.person === true, "…and a line it calls a person is", staff);
+  answer("person", true);
+  const away = await isSomebodyTalkingToUs([{ who: "Clerk", text: STAFF_STEPPING_AWAY }]);
+  ok(away !== null && away.announcesWait === true, "…and a person telling us they are stepping away says so", away);
+  // A READER THAT NEVER ANSWERS may not hang the call: it answers nothing and the caller falls back.
+  globalThis.fetch = (async () => new Promise<Response>(() => { /* never settles */ })) as typeof globalThis.fetch;
+  const t0 = Date.now();
+  const slow = await isSomebodyTalkingToUs([{ who: "Clerk", text: STAFF_ANSWER }], 300);
+  ok(slow === null, "a reader that never answers gives back nothing, so the caller can stand on the sound rule", slow);
+  ok(Date.now() - t0 < 1500, "…and it does not hold the line up waiting", Date.now() - t0);
+  globalThis.fetch = realFetch;
+}
+
 console.log(`\n════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 console.log(`════════════════════════════════`);

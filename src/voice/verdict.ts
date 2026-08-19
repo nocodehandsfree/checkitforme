@@ -192,6 +192,38 @@ export async function judgeHoldVoice(
   }
 }
 
+/**
+ * IS THIS LINE SOMEBODY TALKING TO US, RIGHT NOW, WHILE WE WAIT? (owner's order, 08-19 evening.)
+ *
+ * The same reader as `judgeHoldVoice` above, the same words, the same proof (23 of 23 on the saved
+ * recordings) — asked about ONE line while the check is still running, because Charlie's ears may
+ * only come back for a real person and the thing that fools every other test is a recording, which
+ * IS a voice. It reads MEANING, so it works on a store we have never rung, in any language, and it
+ * leans on nothing about our own practice store's advert: that is the whole point of asking a
+ * reader instead of matching words we already know.
+ *
+ * It is given the line and the couple of lines before it, because "yeah, we've got a few" only
+ * reads as an answer next to the question it answers.
+ *
+ * BEST EFFORT AND BOUNDED. No key, a slow model or a refusal answers `null`, and the caller falls
+ * back to its own rule rather than leaving a real person unheard.
+ */
+export async function isSomebodyTalkingToUs(
+  lines: Array<{ who: string; text: string }>,
+  timeoutMs = 1500,
+): Promise<{ person: boolean; announcesWait: boolean; confidence: number; why: string } | null> {
+  const clerk = lines.filter((l) => l.who === "Clerk" && String(l.text || "").trim().length > 2);
+  if (!clerk.length) return null;
+  const newest = clerk[clerk.length - 1];
+  const race = new Promise<null>((resolve) => setTimeout(() => resolve(null), Math.max(200, timeoutMs)));
+  const read = judgeHoldVoice(lines.slice(-4)).catch(() => null);
+  const out = await Promise.race([read, race]);
+  if (!out || !out.length) return null;
+  const mine = out.find((r) => r.line === newest.text) ?? out[out.length - 1];
+  if (!mine) return null;
+  return { person: mine.voice === "person", announcesWait: mine.announcesWait, confidence: mine.confidence, why: mine.why };
+}
+
 /** A clean one-line label for the verdict card, e.g. "3-pack blister · Surging Sparks". */
 export function productDetailLabel(v: ClerkVerdict | null): string | null {
   if (!v) return null;
