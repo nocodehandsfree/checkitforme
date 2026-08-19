@@ -1070,6 +1070,23 @@ __BRAND_HEAD__
   /* page title inside a card (Post your score, etc.) — reads as a headline, not a form label */
   .sctitle{display:flex;align-items:center;gap:9px;font-size:20px;font-weight:900;letter-spacing:-.4px;color:#fff;margin-bottom:14px}
   .kin{width:100%;background:#15151c;color:#fff;border:1px solid var(--border,#2a2a35);border-radius:11px;padding:12px;font-size:15px;box-sizing:border-box}
+  /* AUTOFILL (owner 08-19: "I don't like how the form looks yellow"). Safari and Chrome paint their
+     own yellow behind a remembered email; there is no background property to set, so the fill is
+     covered with a huge inset shadow in the field's own colour and the text is re-tinted. */
+  input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,input:-webkit-autofill:active,
+  textarea:-webkit-autofill,select:-webkit-autofill{
+    -webkit-text-fill-color:#fff;caret-color:#fff;
+    -webkit-box-shadow:0 0 0 1000px #15151c inset;box-shadow:0 0 0 1000px #15151c inset;
+    transition:background-color 9999s ease-in-out 0s}
+  html[data-skin="v2"] input:-webkit-autofill,html[data-skin="v2"] input:-webkit-autofill:hover,
+  html[data-skin="v2"] input:-webkit-autofill:focus,html[data-skin="v2"] input:-webkit-autofill:active{
+    -webkit-box-shadow:0 0 0 1000px #1B1B20 inset;box-shadow:0 0 0 1000px #1B1B20 inset}
+  /* A form's own error line: nothing at all until there is something to say, then a soft red card
+     under the field instead of raw red text on the sheet (owner 08-19). */
+  .fmerr:empty{display:none}
+  .fmerr{margin-top:10px;padding:11px 13px;border-radius:13px;background:rgba(239,68,68,.10);
+    border:1px solid rgba(239,68,68,.28);color:#FFB4B4;font-size:13px;font-weight:600;line-height:1.45;
+    text-align:center;text-wrap:balance}
   #sch_contact::placeholder{color:#6a6a78;font-style:italic;font-size:13px}
   #auth_phone::placeholder{color:#5e5e6c;font-style:italic;font-weight:400}
   #auth_phone:focus{outline:none;box-shadow:none;border:none}
@@ -2715,14 +2732,14 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <div id="sch_form">
     <div style="display:flex;justify-content:center;margin:2px 0 6px"><span class="mico" id="schIco"></span></div>
     <h3 style="margin:0;text-align:center" data-i18n="sch.title">Auto-check</h3>
-    <p style="margin:4px 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5;text-align:center" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results.<b id="sch_cat" style="display:none"></b></p>
+    <p style="margin:4px 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5;text-align:center;text-wrap:balance" data-i18n="sch.body">Select your days and times to automatically check <b id="sch_store">the store</b><b id="sch_cat" style="display:none"></b></p>
     <label class="klbl" data-i18n="sch.days">Which days?</label>
     <div id="sch_days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px"></div>
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
     <input id="sch_time" type="time" value="10:00" class="kin">
     <label class="klbl" data-i18n="sch.where">Add your cell or email</label>
     <input id="sch_contact" type="text" inputmode="email" autocomplete="email" data-i18n-ph="ph.schednum" placeholder="Enter number" class="kin">
-    <div id="sch_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
+    <div id="sch_err" class="fmerr"></div>
     <button class="cta" id="sch_btn" onclick="submitSchedule()" style="margin-top:8px;width:100%" data-i18n="sch.cta">Turn on auto-check →</button>
     </div>
     <!-- The sheet does NOT close on save (owner 08-06): it flips in place to this screen, which shows
@@ -3249,7 +3266,7 @@ const I18N={ es:{
   'sm.buyonline':'Comprar en línea','sm.notify':'Avísame cuando vuelva','sm.nocall':'No podemos llamar a {x}. Revisa su sitio o recibe un aviso cuando se reabastezca.',
   // watch modal
   'watch.title':'Avísame cuando vuelva','watch.sub':'Te avisamos en cuanto una llamada lo confirme en stock aquí.','watch.ph':'correo o teléfono','watch.cta':'Vigilar esta tienda →','sc.photolabel':'Foto',
-  'sch.body':'Verificamos <b id="sch_store">la tienda</b> automáticamente y te avisamos con los resultados.<b id="sch_cat" style="display:none"></b>','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
+  'sch.body':'Elige los días y las horas para verificar automáticamente <b id="sch_store">la tienda</b><b id="sch_cat" style="display:none"></b>','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
   'watch.verify.email':'<b>Ve a tu correo para verificar tu email.</b>','watch.verify.sms':'<b>Te enviaremos un mensaje para confirmar tu celular.</b>','watch.then':'Luego te avisamos en cuanto se confirme en stock.','watch.done2':'Listo','watch.left':'Te quedan {n} de {cap} alertas de texto este mes.',
   // schedule modal
   'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.where.em':'Agrega tu correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
@@ -3402,7 +3419,7 @@ Object.assign(I18N.es, {
   'auto.pauseall':'Pausar todo','auto.on':'Activas','auto.paused':'En pausa',
   'auto.rowon':'Activa','auto.rowoff':'Apagada','auto.edit':'Editar','auto.delete':'Borrar',
   'auto.next':'Próxima verificación el {d}','auto.nexttoday':'Próxima verificación hoy',
-  'auto.none':'Aún no tienes auto-verificaciones. Haz una verificación y actívala desde el resultado.',
+  'auto.none':'No hay verificaciones automáticas. Para activar una, abre una verificación de tu historial',
   'auto.onpill':'Activada. Seguimos verificando.','auto.offpill':'En pausa. No verificamos hasta que la actives.',
   'auto.allpaused':'Todo en pausa. No verificaremos nada.','auto.allon':'Todo activo. Seguimos verificando.',
   'auto.del.q':'¿Borrar la auto-verificación de {s}?','auto.del.note':'Lo que ya encontró queda en tu historial.',
@@ -3420,6 +3437,8 @@ Object.assign(I18N.es, {
   'auto.saved.cta':'Ver mis auto-verificaciones',
   'up.keep':'Sigue verificando esta tienda','up.keep.sub':'Llamamos los días que elijas y te decimos qué dicen.',
   'up.keep.row':'Crea una auto-verificación','up.keep.rowsub':'Elige los días y llamamos a la tienda por ti.',
+  'sch.noproduct':'Elige la tienda y el producto primero, luego activa la auto-verificación.',
+  'sch.off':'Las auto-verificaciones están apagadas ahora mismo. Inténtalo más tarde.',
 });
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
@@ -7997,7 +8016,7 @@ async function openAutoChecks(){
           <button class="alrm" style="background:rgba(74,222,128,.12);color:#4ADE80" onclick="openAutoEdit(${s.id})" aria-label="${t('auto.edit','Edit')}">${Z_ICO_PEN}</button>
           <button class="alrm" onclick="autoDeleteAsk(${s.id})" aria-label="${t('auto.delete','Delete')}">${Z_ICO_TRASH}</button>
         </div></div>`;}).join('')
-      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('auto.none',"You don't have any auto-checks yet. Run a check on a store and turn one on from the result."))}</span></div>`;
+      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('auto.none','No checks have been automated. To activate visit a check in your history'))}</span></div>`;
     $('autoList').innerHTML=master+rows; };
   window.__autoPaint=paint;
   ov.innerHTML=shell(AUTO_ME?'':`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
@@ -9855,12 +9874,22 @@ async function submitSchedule(){
   let contact=($('sch_contact').value||'').trim();
   if(!contact){ try{ contact=(ACCOUNT&&ACCOUNT.email)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} } // empty box → default to their account contact
   if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact)&&smsAlertsOn(); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); $('sch_err').textContent=''; return; } }
+  // WHICH PRODUCT (owner 08-19: the save failed on him and the page only said "That didn't go
+  // through"). A check opened from the history can reach this sheet with no product picked, and the
+  // server refuses a schedule without one, so fall back to the product this check asked about and
+  // then to the site's own product. Still none = say what is missing, never the blanket line.
+  const askedId=(((ASKED_CATS||[]).find(x=>x&&x.id)||{}).id)
+    ||((CATS.find(c=>(ASKED_CATS||[]).some(a=>a&&a.label&&String(a.label).toLowerCase()===String(c.label).toLowerCase()))||{}).id);
+  const catId=SEL_CAT||SEL_CATS[0]||askedId||(BRAND_CAT&&BRAND_CAT.id)||null;
+  if(!SEL_STORE||!SEL_STORE.id||!catId){ $('sch_err').textContent=t('sch.noproduct','Pick the store and the product first, then turn the auto-check on.'); return; }
   const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
-  const body={ retailerId:SEL_STORE.id, categoryId:SEL_CAT, specificProduct:SEL_PRODUCT||undefined,
+  const body={ retailerId:SEL_STORE.id, categoryId:catId, specificProduct:SEL_PRODUCT||undefined,
     daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined, lang:LANG };
   const r=await appApi('/app/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   btn.disabled=false; btn.textContent=t('sch.cta','Turn on auto-check →');
   if(r&&r.error==='members_only'){ closeSchedule(); openBuy('out'); return; }
+  if(r&&r.error==='unauthorized'){ closeSchedule(); signIn(); return; }
+  if(r&&r.error==='scheduling_off'){ $('sch_err').textContent=t('sch.off','Auto-checks are switched off right now. Try again later.'); return; }
   if(!r||r.error){ $('sch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('schedule_set',{retailerId:SEL_STORE.id,days:[...SCH_DAYS].join(',')||'auto'});
   // No pill and no closing: the sheet stays open and flips to the saved screen (owner 08-06). The old

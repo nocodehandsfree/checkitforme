@@ -606,8 +606,12 @@ export async function sendTestAlert(event: AlertEvent, to: string, channelOverri
 /** Opt a user into an alert (restock of a store/product). Dedups on the same target; reactivates if muted. */
 export async function alertSubscribe(userId: string, o: { kind?: string; retailerId?: number | null; categoryId?: number | null; productLabel?: string | null; channel?: Channel }): Promise<{ ok: true; id: number; already?: boolean }> {
   const kind = o.kind || "restock", channel: Channel = o.channel === "email" ? "email" : "sms";
+  // ONE ALERT PER STORE (owner 08-19: he signed up for the Fun store twice and got two rows). A named
+  // store matches on the store alone, whatever product the tap carried, so a second sign-up comes back
+  // as "already". The any-store opt-in has no store to match on, so it still matches on the product.
   const existing = (await db.select().from(alertSubscriptions).where(and(eq(alertSubscriptions.userId, userId), eq(alertSubscriptions.kind, kind))))
-    .find((r) => (r.retailerId ?? null) === (o.retailerId ?? null) && (r.productLabel ?? "") === (o.productLabel ?? ""));
+    .find((r) => (r.retailerId ?? null) === (o.retailerId ?? null)
+      && (o.retailerId != null || (r.productLabel ?? "") === (o.productLabel ?? "")));
   if (existing) {
     // Already ON → tell the caller so the page can say "You've already set an alert for this store"
     // (owner 07-30) instead of pretending a fresh one was created. OFF → quietly re-arm it.
@@ -631,7 +635,9 @@ export async function alertSlotsUsed(userId: string): Promise<number> {
 export async function alertExists(userId: string, retailerId: number | null, productLabel: string | null): Promise<boolean> {
   const rows = await db.select({ retailerId: alertSubscriptions.retailerId, productLabel: alertSubscriptions.productLabel })
     .from(alertSubscriptions).where(and(eq(alertSubscriptions.userId, userId), eq(alertSubscriptions.active, 1)));
-  return rows.some((r) => (r.retailerId ?? null) === (retailerId ?? null) && (r.productLabel ?? "") === (productLabel ?? ""));
+  // Same rule as alertSubscribe: one alert per named store, whatever product it was set from.
+  return rows.some((r) => (r.retailerId ?? null) === (retailerId ?? null)
+    && (retailerId != null || (r.productLabel ?? "") === (productLabel ?? "")));
 }
 
 /** Master "Pause all alerts" (the switch on top of the Alerts list): paused = fan-out skips this whole
