@@ -172,6 +172,23 @@ console.log("\n▶ THE READER'S ANSWER IS WHAT DECIDES, and the wake obeys it");
   globalThis.fetch = realFetch;
 }
 
+console.log("\n▶ FIX 3 ON HIS OWN RECORDINGS: the reconnect starts on the returning voice's first sound");
+{
+  // The sound half is the ONE thing allowed to start his session opening again, because opening one
+  // takes the voice provider about four and a half seconds and that sat between Staff's answer and
+  // his reply. It has to fire on the person coming back and on nothing else, which is exactly the
+  // measurement above: zero reports inside the advert, one when the person returns.
+  const { ear, wakes, music } = earUnderTest();
+  feedFrames(ear, PERSON.frames);
+  feedQuiet(ear, 300);
+  feedFrames(ear, ADVERT.frames);
+  const insideTheAdvert = wakes.filter((w) => w.atMs >= (music[0] ?? 0)).length;
+  ok(insideTheAdvert === 0, "nothing inside the advert would start his session opening", insideTheAdvert);
+  feedQuiet(ear, 400);
+  feedFrames(ear, PERSON.frames);
+  ok(wakes.length > 0, "…and the person coming back would, on their very first word's worth of sound", wakes.length);
+}
+
 console.log(`\n════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 console.log(`════════════════════════════════`);

@@ -333,5 +333,27 @@ head("A PERSON SPOKE BETWEEN THE MUSIC STAMP AND THE JUDGED LINE: the stamp belo
   ok("the recording starts at its own line, not the older music stamp", w.holdFromMs === 20000 && w.offFromMs === 23000, w);
 }
 
+console.log("\n▶ THE WASTE FAILS THE CHECK (owner's ruling, 08-19 night): green to 3, yellow to 5, red from 6");
+{
+  const clean = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71, awakeOnHoldSec: 3 })!;
+  ok("3 seconds awake on hold is green and passes", clean.pass === true && clean.rows.some((r) => r.label.includes("Awake") && r.tone === "g"), clean.rows.find((r) => r.label.includes("Awake")));
+  const yellow = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71, awakeOnHoldSec: 5 })!;
+  ok("5 seconds is yellow and still passes", yellow.pass === true && yellow.rows.some((r) => r.label.includes("Awake") && r.tone === "y"));
+  const red = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71, awakeOnHoldSec: 6 })!;
+  ok("6 seconds is red and FAILS the whole check", red.pass === false, red.fails);
+  ok("…and the check says which row failed, in plain words",
+    red.fails.some((f) => /awake 6 seconds while the store had us waiting/.test(f)) && red.shortFails.some((f) => /awake on hold, 6 seconds/.test(f)),
+    { fails: red.fails, short: red.shortFails });
+  ok("…and the row wears the red", red.rows.some((r) => r.label.includes("Awake") && r.tone === "r" && r.pass === false));
+  // THE TRUE SECONDS, NEVER AN ADJUSTED NUMBER. The advert ruling forgives seconds elsewhere on the
+  // sheet; it may never touch this one, which is the whole point of grading it.
+  const withAdvert = meterVerdict(TEST_CARDS.hold_music_advert, { meterSec: 46, speakingSec: 13, listeningSec: 15, profitPct: 56,
+    awakeOnHoldSec: 9, advert: { asWaitSec: 20, gradedProfitPct: 70 } })!;
+  ok("a check whose meter the advert ruling forgives still fails on its true awake seconds",
+    withAdvert.pass === false && withAdvert.shortFails.some((f) => /awake on hold, 9 seconds/.test(f)), withAdvert.shortFails);
+  const none = meterVerdict(clearYes, { meterSec: 19, profitPct: 71 })!;
+  ok("a check that never measured it is not graded on it", !none.rows.some((r) => r.label.includes("Awake")));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

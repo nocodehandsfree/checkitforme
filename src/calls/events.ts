@@ -238,6 +238,25 @@ export function emit(room: string, kind: EventKind, note?: string, detail?: Reco
 }
 
 /**
+ * WHERE A ROW STAMPED AT THIS MOMENT WOULD REALLY BE DRAWN (owner, 08-19 night: "the sentence must
+ * read the very same second its own row is drawn at").
+ *
+ * `emit` above never lets a backdated stamp jump above the row before it or past now, so the second
+ * a row DRAWS at is not always the second the engine measured. A sentence that carries a number
+ * ("Staff back after 26s") has to be built from the drawn seconds or it can disagree with its own
+ * two rows, which is exactly what check 412's sheet did. This answers the same question `emit` will
+ * answer, without writing anything, so the sentence and the row are the one number.
+ */
+export function whereItWouldDraw(room: string, happenedAtEpochMs?: number): number | null {
+  const r = receipts.get(room);
+  if (!r || r.closed) return null;
+  const real = (happenedAtEpochMs != null && happenedAtEpochMs > 1e12) ? happenedAtEpochMs - r.startMs : null;
+  const now = Date.now() - r.startMs;
+  const last = r.events.length ? r.events[r.events.length - 1].atMs : 0;
+  return real == null ? now : Math.max(last, Math.min(now, real));
+}
+
+/**
  * ADD FACTS TO AN EVENT ALREADY ON THE TIMELINE. The last one of its kind, which is the one still
  * being lived through.
  *

@@ -22,6 +22,11 @@ import type { TestCard } from "./behaved";
 export const METER_GOAL_SEC = 23;
 export const METER_YELLOW_MAX_SEC = 30;
 export const PROFIT_FLOOR_PCT = 67;
+/** THE WASTE'S OWN BANDS (owner's ruling, 08-19 night): the seconds Charlie sits awake while the
+ *  store has us waiting are green to 3, yellow to 5, and red from 6, and a red one fails the whole
+ *  check. Always the TRUE measured seconds, never a number any forgiveness has touched. */
+export const AWAKE_ON_HOLD_GREEN = 3;
+export const AWAKE_ON_HOLD_YELLOW = 5;
 /** Kept for the one release that imported the old name. The goal is the same 23. */
 export const METER_CAP_SEC = METER_GOAL_SEC;
 
@@ -248,16 +253,22 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     // seconds of 08-16. Shown whenever it was measured; its own bound is the owner's open
     // decision (spec decision 2), so it is not graded alone yet. It already drags the two graded
     // numbers: waited seconds sit inside the meter cap and cost money against the floor.
-    // THE WASTE THAT USED TO HIDE BEHIND A PASSING CHECK (owner's order, 08-19, fix 4). Its own
-    // number on every sheet: the seconds his session was open and billing while the store had us on
-    // hold. On the advert scene that is the whole fault in one number — he sat awake through a
-    // recorded voice — and it is printed whether the check passed or failed. Shown, not graded: what
-    // a hold is allowed to cost is the owner's own number to rule, and until he rules one, printing
-    // an invented bar in red would be us deciding it for him.
-    if (m.awakeOnHoldSec != null && m.awakeOnHoldSec > 0) {
-      rows.push({ label: "Awake while the store had us on hold", value: `${m.awakeOnHoldSec}s`, pass: null,
-        say: { pre: "Charlie stayed awake ", num: secWord(m.awakeOnHoldSec), post: " while the store had us waiting." },
-        open: "The store was playing music, an advert, or nothing at all, and Charlie's meter was running through it. Every one of these seconds is money spent on hearing a store's hold music. When the system recognises the wait, he is dropped and this number is small; when it cannot, this is what it costs." });
+    // THE WASTE FAILS THE CHECK NOW (owner's ruling, 08-19 night): green to 3 seconds, yellow to 5,
+    // red from 6, and a red one fails the whole check by name. These are TRUE seconds, measured on
+    // the call itself while his session was open and billing with the store holding us: no
+    // forgiveness of any kind is applied to this number, whatever the grade does elsewhere.
+    if (m.awakeOnHoldSec != null) {
+      const sec = m.awakeOnHoldSec;
+      const tone: "g" | "y" | "r" = sec <= AWAKE_ON_HOLD_GREEN ? "g" : sec <= AWAKE_ON_HOLD_YELLOW ? "y" : "r";
+      toPass.push(`awake on hold ${AWAKE_ON_HOLD_YELLOW} seconds or less`);
+      rows.push({ label: "Awake while the store had us on hold", value: `${sec}s, green at ${AWAKE_ON_HOLD_GREEN}`,
+        pass: tone !== "r", tone,
+        say: { pre: "Charlie stayed awake ", num: secWord(sec), post: " while the store had us waiting." },
+        open: "The store was playing music, an advert, or nothing at all, and Charlie's meter was running through it. Every one of these seconds is money spent on hearing a store's hold music. When the system recognises the wait he is dropped and this number is small; when it cannot, this is what it costs. It is the real measured number, never an adjusted one." });
+      if (tone === "r") {
+        fails.push(`Charlie sat awake ${sec} seconds while the store had us waiting, against ${AWAKE_ON_HOLD_GREEN} green and red from ${AWAKE_ON_HOLD_YELLOW + 1}.`);
+        shortFails.push(`awake on hold, ${sec} seconds`);
+      }
     }
     if (waited != null) {
       rows.push({ label: "Of that, waiting on a quiet line", value: `${waited}s`, pass: null,

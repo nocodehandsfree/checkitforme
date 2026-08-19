@@ -416,35 +416,22 @@ console.log("▶ the set question the RECORDING asks is the same sentence his di
   ok(!/[\u2014\u2013]/.test(SET_ASK_LINE), "no dash in it (they read strangely through ElevenLabs)");
 }
 
-console.log("\u25b6 asksUsBack: a question back at us is never answered with a goodbye (the recorded goodbye's guard)");
+console.log("\u25b6 EXACTLY TWO RECORDINGS SURVIVE (owner's ruling, 08-19 night)");
 {
-  const { asksUsBack } = await import("../src/voice/prompts");
-  for (const q of [
-    "Sorry, which set do you mean?",
-    "What do you mean, like the brand?",
-    "Can you say that again?",
-    "Do you want the small packs or the boxes?",
-    "Huh?",
-    "Pardon me, the name of what",
-  ]) ok(asksUsBack(q), `a question back: "${q.slice(0, 44)}"`);
-  for (const a of [
-    "Pitch black the booster boxes.",
-    "Yeah. We've got a few of those.",
-    "It's the booster boxes, the black ones",
-    "Next week, maybe. I'm not certain.",
-    "No, just the packs.",
-  ]) ok(!asksUsBack(a), `an answer, never flagged: "${a.slice(0, 44)}"`);
-}
-
-console.log("\u25b6 the goodbye the RECORDING says is the owner's ruled sign-off, no name in it (08-19)");
-{
-  const { GOODBYE_LINE, GOODBYE_LINE_ES } = await import("../src/calls/charlie-setup");
-  ok(GOODBYE_LINE === "Thanks so much, have a good one!",
-    "the recorded goodbye is his ruled sentence, word for word");
-  ok(!/\{\{?|\bname\b/i.test(GOODBYE_LINE), "no name and no variable in it: one line for every store");
-  ok(!!GOODBYE_LINE_ES && !/\{\{?/.test(GOODBYE_LINE_ES), "its Spanish ships beside it, no variable in it");
-  ok(!/[\u2014\u2013]/.test(GOODBYE_LINE) && !/[\u2014\u2013]/.test(GOODBYE_LINE_ES),
-    "no dash in either (they read strangely through ElevenLabs)");
+  // His rule: a recording may stand only where nobody can answer back. So two are left, the opening
+  // question, asked into a line where nobody has spoken yet, and the short line played as Staff walk
+  // away. His set question and his goodbye are a conversation, so he says both himself, live.
+  const { readFileSync } = await import("fs");
+  const setup = await import("../src/calls/charlie-setup");
+  ok(setup.HOLD_ACK_LINE === "No worries, take your time!",
+    "the line played as Staff walk away is still a recording, in his words", setup.HOLD_ACK_LINE);
+  ok(!("GOODBYE_LINE" in setup), "the goodbye recording is gone: he says his own sign-off");
+  const shared = readFileSync("src/calls/charlie-setup.ts", "utf8");
+  ok(!/setAskClip|goodbyeClip/.test(shared), "…and neither recording is made before a check any more");
+  const bridge = readFileSync("src/voice/bridge.ts", "utf8");
+  ok(!/setAskClip|goodbyeClip|playSetAsk|sayTheRecordedGoodbye/.test(bridge),
+    "…and the engine has no door left that could play one");
+  ok(/openingClip/.test(bridge) && /holdAckClip/.test(bridge), "…while the two he kept are still there");
 }
 
 console.log("▶ his 08-19 rulings are in section 12, word for word");
