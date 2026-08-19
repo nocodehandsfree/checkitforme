@@ -46,7 +46,7 @@ import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, last
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, type BehavedRow } from "./calls/behaved";
-import { meterVerdict } from "./calls/meter";
+import { meterVerdict, advertAsWait } from "./calls/meter";
 import { listSimRuns, readSimRun, fileSimRun, type SimRunIn, type SimCallIn } from "./calls/simulations";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
@@ -6470,7 +6470,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // DID THIS TEST PASS (owner 08-07). The card names the rows that must be green and the status the
   // check has to come back with, and `graded` is those two read against this check. Omitted while a
   // check is still going, because a test that has not finished has not failed either.
-  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null, graded?: { rows: BehavedRow[]; statusKey: string | null } | null) => {
+  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null, graded?: { rows: BehavedRow[]; statusKey: string | null } | null, spokenLines?: Array<{ who: string; text: string; atMs: number | null; endMs?: number | null }> | null) => {
     const stepOf = (name: string) => timeline.find((e) => (e.detail || {}).step === name) || null;
     const named = stepOf("named_test");
     const card = named ? TEST_CARDS[String((named.detail || {}).card || "")] ?? null : null;
@@ -6520,6 +6520,22 @@ app.get("/api/admin/receipt/:room", async (c) => {
         // change shit"). A hold test is priced and graded exactly like every other check: the real
         // profit the check made, against the 67% floor, and no second number of any kind.
         profitPct,
+        // THE ADVERT RULING (owner, 08-19): when the after-call reader proved a Staff line was a
+        // recording the store played, the GRADE treats that stretch as a wait — the as-if window is
+        // measured off the record by advertAsWait (meter.ts), and the graded profit prices those
+        // Charlie seconds out of the grade only. The record, the real cost and the charge are
+        // untouched, and the sheet prints the real numbers beside the graded ones.
+        advert: ((): { asWaitSec: number; gradedProfitPct: number | null } | null => {
+          const asIf = advertAsWait(timeline as Array<{ kind: string; atMs?: number | null; detail?: Record<string, unknown> | null }>, spokenLines ?? null);
+          const asWaitSec = asIf ? Math.round(asIf.forgivenMs / 1000) : 0;
+          if (!asIf || asWaitSec <= 0) return null;
+          const realSec = cost?.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0;
+          const charlieUsd = cost?.charlieUsd ?? 0;
+          if (realSec <= 0 || totalUsd <= 0 || priceUsd <= 0) return { asWaitSec, gradedProfitPct: null };
+          const gradedCharlieUsd = charlieUsd * Math.max(0, realSec - asWaitSec) / realSec;
+          const gradedTotal = totalUsd - charlieUsd + gradedCharlieUsd;
+          return { asWaitSec, gradedProfitPct: Math.round(((priceUsd - gradedTotal) / priceUsd) * 100) };
+        })(),
         // THE NAMED GAPS, read off the check's own record (owner box 08-16 late): the engine
         // stamped each as it was measured, so nothing here is re-derived or guessed.
         ...((): { answerGapWorstSec: number | null; handoverGapWorstSec: number | null; dropGapWorstSec: number | null } => {
@@ -6570,7 +6586,8 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // to end log of the entire transaction which is huge for myself and any agent"). The steps were
       // already here; what was missing was the conversation itself, which is half of what he reads.
       lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000), atMs: l.atMs, endMs: l.endMs })),
-      v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null),
+      v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null, undefined,
+        live.transcript.map((l) => ({ who: l.who, text: l.text, atMs: l.atMs, endMs: l.endMs }))),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
@@ -6605,24 +6622,12 @@ app.get("/api/admin/receipt/:room", async (c) => {
       };
     }
   }
-  return c.json({
-    room, live: false,
-    timeline,
-    seconds,
-    // Same flag the by-id route sends, so the one viewer can tell "never written down" from "free".
-    stamped: !!cost,
-    // WAS THE CUSTOMER REALLY CHARGED (owner 08-06). The charge step was written from what the
-    // finalizer EXPECTED to bill, so a check nobody was billed for still drew "Customer charged".
-    // The truth is the charge stamp on the check's own row, and this is it: null when there is no
-    // row to stamp (an admin call is never a customer's check), never a guess.
-    charged: attached ? attached.chargedAt != null : null,
-    cost: cost ? { ...cost, readable: readable(cost) } : null,
-    behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
-    // A finished check's timed lines ride an event's detail (receipt-store stamps them on the last
-    // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
-    // is found by searching back rather than assumed to be last). Older checks predate the stamp and
-    // fall back to the flat transcript with no clock, exactly as before.
-    lines: ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null; endMs: number | null }> | null => {
+  // A finished check's timed lines ride an event's detail (receipt-store stamps them on the last
+  // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
+  // is found by searching back rather than assumed to be last). Older checks predate the stamp and
+  // fall back to the flat transcript with no clock, exactly as before. Built BEFORE the envelope so
+  // the advert grading (v2For) can read the same lines the sheet draws.
+  const spokenLines = ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null; endMs: number | null }> | null => {
       type Said = { who: string; text: string; atSec: number | null; atMs?: number | null; endMs?: number | null };
       // ONE CLOCK FOR THE WHOLE SHEET (owner 08-06): a line's real millisecond is what puts it in
       // order against the steps. A check recorded before the writer kept it has seconds only, and
@@ -6644,10 +6649,25 @@ app.get("/api/admin/receipt/:room", async (c) => {
       ?? String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
         const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
         return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null, endMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null, endMs: null };
-      }),
+      });
+  return c.json({
+    room, live: false,
+    timeline,
+    seconds,
+    // Same flag the by-id route sends, so the one viewer can tell "never written down" from "free".
+    stamped: !!cost,
+    // WAS THE CUSTOMER REALLY CHARGED (owner 08-06). The charge step was written from what the
+    // finalizer EXPECTED to bill, so a check nobody was billed for still drew "Customer charged".
+    // The truth is the charge stamp on the check's own row, and this is it: null when there is no
+    // row to stamp (an admin call is never a customer's check), never a guess.
+    charged: attached ? attached.chargedAt != null : null,
+    cost: cost ? { ...cost, readable: readable(cost) } : null,
+    behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
+    lines: spokenLines,
     v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null,
       { rows: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
-        statusKey: attached?.statusKey ?? attached?.status ?? null }),
+        statusKey: attached?.statusKey ?? attached?.status ?? null },
+      spokenLines),
   });
 });
 // THE HEAR-THE-CALL BUTTON'S AUDIO (owner box 08-17). Every check we dial ourselves is recorded at
