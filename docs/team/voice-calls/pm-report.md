@@ -1,141 +1,101 @@
-# Voice agent report — tests five, six, seven (2026-08-18)
+# Voice agent report — the music box, then the listener + the wording (2026-08-18/19)
 
-## Test five, hold with music, scene 20: THE HEARING FAULT FROM CHECK 377 IS FIXED, proven live on check 379. The pill still says Test failed, on cost rows that sit on a floor (math below).
+## 08-19 EARLY, SECOND BUILD AND FOUR DIALS. The listener that hears Staff say they are stepping
+## away now knows 124 phrasings in seven groups, with 35 lines pinned that must NEVER read as
+## walking away (a false yes drops Charlie while Staff are still thinking). 159 of 159 green, and
+## the suite runs on every build via test-all.sh. The owner's wording ruling is in at all three
+## doors in one commit, and the reader still understands "tin" when Staff say it. DIALS: **396
+## scene 23 PASSED** (meter 27s, drop 3s green, profit 70%) · **397 scene 24 PASSED** (meter 30s,
+## drop 3s green, profit 68%), so test six is green on both halves, and both records carry his new
+## sentence "and is it a pack or a box" · **398 scene 22: the after-call reader met a live call and
+## named the advert on the record**, and the card still fails as predicted (no hold declared, 46
+## metered seconds, Charlie answered the advert). What the engine should do about that line is his
+## open ruling. TWO SUITE REDS ARE PRE-EXISTING, proven by stashing my work: workflow-truth's
+## restock-wording assertion and test-one-question's 2. NOTE: the simulation agent's own writeup of
+## its 123 lines is not committed anywhere, so the list was rebuilt from committed sources and every
+## line is marked with where it came from; paste their exact 123 in if they turn up, it only grows.
 
-**The fix (checks 377/378 both showed it).** The ear banked any loud sound as "a person is back"
-the moment the music test's window was poisoned by a dip. Check 378's own carrier tape settled how
-to tell them apart: the music held the line 100% loud for fourteen straight seconds while real
-speech never passed about two thirds loud in any one second — the gaps are the whole difference.
-(Loudness swing separates nothing: on the same tape the music swung 600→6500 inside single seconds,
-exactly like a voice. A first fix using swing flapped three times on check 378 and was removed.)
-Now, on a hold, a run of sound banks as comeback evidence only when it breaks at word scale;
-an unbroken run past 1.2s is struck as the music. The rejoin still backdates to their first word.
-- src/calls/listen-nav.ts (ConversationEar) — src/voice untouched, no .unlock needed.
-- Rig: 3 new ear scenes (377's dip · music that keeps dipping · the swell) fail on the old engine,
-  pass now. The rig's raw SPEECH shape gained the silent fifth frame its own `speak` helper always
-  had, because the tape proved gapless speech is a music shape. Suites: listen-nav 68 · delta-clip
-  bank 339/0 · bridge 13 · dropped-call 28 · call-events 124 · behaved 99 · meter 65 · clips 10 ·
-  gates 9 · robot store held · tsc clean.
-- **Check 379 (scene 20): card half PASS, Meter stopped GREEN, one hold, one drop, one comeback,
-  their answer handed once.** 377 had him rejoin at 25.6s into a music dip and bill through 14s of
-  music; 379 dropped at 24s, stayed off through all 7.6s of remaining music, and rejoined backdated
-  to Staff's real voice at 31.6s.
 
-**Why the pill still says failed — the floor, second by second (check 379, meter 43s):**
-- 10s: joins as his recorded question ends (no meter under the question).
-- 10→15.5: the robot thinks, then announces the hold. 5.5s waiting on the store's own scripted pace.
-- 17→19: our recorded hold reply plays.
-- 18→24: music. The ear needs 6 unbroken seconds to call sound music (quiet needs 3, because a
-  quiet line proves itself faster). 6s of meter. Shortening it moves WHEN his ear switches off —
-  banned by the standing law.
-- 24→31.6: dropped, meter off through the music (this is the stretch 377 billed).
-- 33→37.5: their answer handed 1s after their voice stopped (green); his reply took 4.5s — Echo's
-  writer finalizing plus the voice provider generating. Benched 08-15: the provider cannot lower
-  its turn wait; the own-brain plan is the owner's open decision.
-- 37.5→46: follow-up turn, then 5s of scripted robot silence before the wrap-up nudge.
-- 46→57: goodbye generated and played out. 11s this dial; check 378 did the same in 5s — provider
-  variance, same benched floor.
-- Floor ≈ 31-35s meter on this scene's script even on a lucky dial → the 30s yellow line is out of
-  reach without the own-brain work or a re-ruled band. Profit rides the same seconds: 378 made 59%
-  (pass), 379 made 52% (fail) — a coin flip around the 56 floor at ~12¢ against 25¢ with the hold
-  forcing the second billed minute.
-- **The announced hold drop gap row can never be green on a music hold**: green is 3, red from 6,
-  and the music proof time IS 6s. The row's bands were written on quiet holds. Grading stands as
-  ruled — flagging the collision, not touching it.
+## STATUS: DIALED AND DONE. Scene 21 PASSED (check 393). Scene 20's new meter floor is 32 to 34
+## seconds (checks 394, 395), down from 39 and 43, still over his 31 line by 1 to 3 seconds, and
+## what is left there is the voice provider's reply time, not the music. The sheet now names the
+## reader that really answered and its real price (proven on 393, 394, 395). Handoff for a fresh
+## chat: docs/team/voice-calls/echo-handoff.md.
 
-**Known reds not the card's:** the customer screen said "Left on hold" while the record says
-in_stock on 378 and 379 — the 08-07 screen-vs-record list fault, pre-existing.
+## THE DIALS, every one by its number
+- **392** scene 21, first dial on the new engine: card PASS, drop row 3s GREEN, meter 37s red, so
+  the pill said failed. The 37 was the tail after the answer, not the music.
+- **393** scene 21, re-dial: **THE PILL SAYS TEST PASSED.** Meter 27s yellow, drop row 3s green,
+  answer gap 2s green, handover 1s green, profit 71%. His item 1 for tonight is met: Charlie
+  dropped 3 seconds after Staff walked off, graded green.
+- **394** scene 20: "Echo recognised hold music" ON THE RECORD at 1200ms, dated to the music's own
+  first note; hold declared the same second; Charlie dropped 3s later, drop row 3s GREEN (it read
+  6s red on every classic dial before this). Meter 32s, profit 66%, card PASS.
+- **395** scene 20 again, for a floor and not a single point: same stamp at 1200ms, same 3s green
+  drop row, meter 34s, profit 65%, card PASS. Answer gap 7s red — the provider was slow that dial.
+- One dial was LOST to my own mistake: I pushed the reader fix and dialed before staging had
+  restarted, so the harness timed out on the Check button and no check was placed. No money burned
+  beyond the run. Push, wait for /api/health, then dial.
 
-## Test five, scene 21 (the swelling waltz): dialed once (check 380, pill FAILED), the fault it
-## showed is built and rig-proven, re-dial next.
+## What is built, in his order
 
-**What check 380 showed.** The intro read as a room hold and dropped at exactly 3s (that row went
-green). Then the waltz itself — which on the line plays at speech level with gaps in it, measured
-off 380's own tape — fooled the ear into a rejoin 3s into the clip, and Charlie sat OPEN through
-the whole swell, ~10 metered seconds of music with nobody there, never re-dropped: the exact fault
-the owner named ("if he sits in music with no voice he drops again"). Meter 48s red, profit 54%
-red, card half green (rosily: the sheet cannot see the open-line music).
+**1. Echo recognises hold music about a second in.** The evidence is the one this file already
+trusts everywhere else: sound running on with no gap in it, longer than any voice manages
+(`MAX_SPEECH_RUN_MS`, 1.2s, the same number and the same rule the comeback refusal already used).
+The ear gained one report, `musicHeard`, and the bridge writes it on the record as
+"Echo recognised hold music" (step `music_heard`), dated to the music's own first note.
+- MEASURED FIRST, on the robot store's own carrier recordings, not guessed: the longest unbroken
+  run inside real speech was 980ms (checks 384, 382, 387, 391). The only run past the 1.2s bar was
+  check 383's advert, which is a recording and is meant to be caught.
+- I tried a second idea first and threw it away: judging music by how STEADY its loudness is. On
+  the tapes it looked clean per line, but sliding a one-second window across real speech (the
+  decision the live ear actually makes) it would have called 30 of 106 windows of a real person
+  music, because a mostly-quiet second has few loud frames and reads as steady. That is item 6 of
+  the box — it would have traded a Staff answer for speed — so it is not in the build.
 
-**The fix, built and proven on the rig (nothing about it dialed yet).** No energy rule can refuse
-the waltz — its sound IS speech-shaped — but Echo can: it writes every word said on the line, and
-a "voice" that writes nothing inside 5 seconds was the music. So after a wordless rejoin Charlie
-drops again, and THAT hold has proven it holds wordless sound, so its next comeback needs Echo's
-first written word — backdated to the moment the ear heard the voice — or the same music would
-rejoin him in a loop at ~5 metered seconds a cycle. A real comeback is untouched: its words land
-inside the window. src/voice/bridge.ts, owner-named task, .unlock opened and deleted. New bank
-scene "CHECK 380'S SHAPE" fails on the old engine, passes now: delta-clip 347/0 · listen-nav 68 ·
-bridge 13 · dropped-call 28 · call-events 124 · behaved 99 · meter 65 · clips 10 · gates 9 · robot
-store held · tsc clean · spec suite 6 reds, all on the pre-existing list (baseline has 7).
+**2. The drop is ONE number.** `holdMusicMs` 6000 → 3000, so music waits exactly as long as
+silence. It is not an Admin box (code only), so nothing needed saving in Admin. Safe at 3 because
+the test underneath is a fraction, not a clock, and it was measured over that same 3 seconds: the
+loudest three seconds of real speech filled 71%, 73%, 53% and 54% of the window against a 96% bar.
 
-## SCENE 21 PASSED (check 382). The re-dial after two calibrations inside the named fix (the
-wordless window set to the writer's benched worst, 4s, and an immediate drop when a rejoin proves
-wordless — there is provably nobody to be polite to): **the pill says Test passed.** Meter 27s
-yellow passing, profit 70% green, drop gap 3s green, handover 1s green, answer gap 2s green,
-7.4 cents — the cheapest hold check yet. The record: false rejoin at 22s (the plucks), proven
-wordless and dropped the same second at 25s, the escalated hold refused the swell for 7 seconds,
-and Staff's real words reopened him backdated with their answer handed once.
+**Proven on replays before any dial.** Bank 347/0 · listen-nav 78 (10 new asserts, including the
+measured guard that a real person's longest run never marks music) · bridge 13 · dropped-call 33 ·
+call-events 124 · behaved 99 · meter 65 · receipt 15 · clips 10 · gates 9 · prompts 226 · robot
+store held · tsc clean. No old shape moved and nothing about a talking person changed.
 
-## SCENE 20 FLOOR CONFIRMED (check 384, second clean dial). Card pass, hold clean, profit 60%
-green. Meter 39s red: the classic clip is loud from its first frame, so only the 6-second unbroken
-music proof can declare it (no quiet for the announced 3s path) — that 6s is the drop-gap row's
-permanent red on this scene — plus the provider's reply swing (his slowest answer ran 7s this
-dial, 4.5s on 379, 2.2s on 382). Both are outside the standing law: shortening the music proof
-moves when his ear switches off, and the provider's turn wait is benched as unmovable. Scene 20's
-meter floor is 39-43 against a pass line of 30.
+**Replayed against the real tapes too** (offline, driving the real ear with the real recordings):
+on check 384 Echo says music 1.2s in and the wait opens on the same three seconds — item 1 and
+item 3's green drop row, on a real recording. On check 382 (the swelling waltz) it never marks:
+that clip's first 4.6 seconds are single plucks with long gaps, sparser than speech, so the ear
+reads it as a quiet wait and stops the meter on the same 3 seconds. Nothing is lost there — 382's
+drop row was already green at 3.
 
-## SCENE 22 IS A FLOOR THE OWNER HAS TO RULE ON (check 383, dialed once). NO hold was ever
-declared: on the line the ad-mix measures as a VOICE (loud 14-100% by the second, runs under 1s,
-gaps under 0.9s — measured off 383's tape), so neither the quiet path nor the music proof can ever
-fire, and the ad even WRITES real words through Echo ("Thanks for holding. Did you know we price
-match any local competitor? Ask an associate…" is on the record as a Clerk line), so the wordless
-principle cannot catch it either. Charlie sat metered through all 22 seconds (meter 54s, profit
-43%, Meter stopped missing). The owner said it himself on the card: a recorded voice is the
-closest thing to Staff returning that is not Staff. The honest fix is the READER judging the
-words — a recording announcing a hold is not a person answering — the same model-not-word-list
-fix already on his list for check 376's Spanish announce. Nothing sound-level remains.
+**7. The advert judging is built and proven.** After a check settles, the same reader re-reads the
+written record and says, for each Staff line, whether a person said it or the store played it, and
+whether it announces a wait in any language. It runs at the one place a check settles exactly once
+(the verdict tail, whichever of the three doors won), after the answer, the charge and the
+customer's screen are already done. It can never stop a live call and a wrong answer costs one
+line on the record.
+- PROVEN BEFORE ANY DIAL, on the real lines of checks 383, 384, 391, 382 and 376, committed into
+  `scripts/hold-voice-bench.ts` so a reword can be re-run on the same recordings for good:
+  **19 of 19 right, first wording.** No recording taken for a person, no person taken for a
+  recording. It caught check 383's advert ("Thanks for holding. Did you know we price match...")
+  and check 376's Spanish hold announcement, which a word list can never read.
 
-## TEST SIX: scene 23 (quieter room) hearing PERFECT (check 385) — room hold declared, dropped at
-3s green, no false rejoin through the whole busy room, comeback backdated, handed once, profit 63%
-green; meter 35s red on the provider's reply swing alone (7s slowest answer). Scene 24 (louder
-room, check 386) found a REAL fault, FIXED: the ear rightly called the room (proven by replaying
-386's own tape through it), but the scene's announce — "Let me put this down a sec and go check."
-— was the one wait line the announce matcher missed, so the room hold sat behind the inversion
-gate and Charlie billed through 20 seconds of store noise (meter 42s, Meter stopped missing).
-Taught the matcher, never the transcript (the 08-04 ruling): bare "go check/look/see" and "put
-this/the phone down" now read as an announce, and every hold scene's own announce line is pinned
-in test-prompts with negatives. Suites all green (prompts 226, bank 347/0, the usual set), tsc
-clean, one-question's 2 reds are the documented pre-existing baseline. Re-dialing 24 next, then
-scene 6 (test seven, hold where nobody returns).
+## THE READER FIX IS SHIPPED (tonight's item 3), the finding below is now closed
+**Every check's second read has been silently falling back to a different model than the record
+claims.** `VERDICT_MODEL` is `groq:llama-3.3-70b-versatile`; staging's own GROQ key 404s on that
+model (its model list has no llama-3.3 at all — only gpt-oss and prompt-guard), so every read falls
+back to gpt-4o-mini while the record stamps "The answer was double checked · groq:llama-3.3-70b-
+versatile" and prices it at the groq rate. The reads themselves are landing, so no check is wrong
+because of it, but the record and the cost line both said something untrue. FIXED: `llmNamed`
+reports which model actually answered after a refused vendor falls back, the reader carries it up
+as `readBy`, `readCostUsd` prices what really ran (gpt-4o-mini at 0.000207, not Groq's 0.000626),
+and all three settle doors stamp it, so the whole family went in one commit. Proven live: checks
+393, 394 and 395 all read `gpt-4o-mini` / 207 where 392 and everything before it read
+`groq:llama-3.3-70b-versatile` / 626. The owner ruled the OpenAI reader stays for now.
 
-## SCENE 24 PASSED on the re-dial (check 387): meter 29s yellow, answer gap 2s green, handover 1s
-green, drop gap 3s green, profit 68% green. The louder room declares, drops at 3, and holds.
-Scene 23 re-dialed once more (check 388): card pass, structural rows green, meter 45s — the
-provider swung slow again (its twin scene 24 passed at 29). Re-dialing until the provider's coin
-lands green would be padding; the floor math covers it.
-
-## TEST SEVEN (scene 6, nobody returns): TWO REAL FAULTS FOUND AND FIXED, one dial from green.
-Check 389: meter finally trivially green (7 seconds — dropped at the announce, off for 118), but
-the status came back "No clear answer" against the card's "Left on hold". Two causes, both fixed:
-(1) the robot's own hangup at 134s beat our 120-second hold cap by two seconds, and the record's
-answer for that death was racing the hangup row's database write, so the settle saw no ending at
-all. New decider `diedOnAHold` (a hold that opened and never closed IS the ending, whoever hung
-up) anchors on the hold events committed two minutes earlier, so it cannot lose that race.
-(2) Check 390 then showed the fix not landing: THREE doors settle a verdict (the sweep, the
-on-demand settle a watcher triggers, the webhook) and only the sweep carried ANY of the record's
-rules — died-mid-hold, our own cap, Staff hung up, no-straight-answer. Law 11: one shared decider
-(`statusFromTheRecord`, service.ts) now runs at all three doors. dropped-call 33, tsc clean, all
-suites green. Scene 6 re-dials on this deploy.
-
-## TEST SEVEN PASSED (check 391): Left on hold, meter 10s green, drop gap 0 green, card whole —
-and the dial doubles as live proof of the three-door fix. The harness's one red is the
-word-for-word row on a dropped "Um" filler, the documented 08-04 teach-the-matcher shape.
-
-## WHERE THE THREE TESTS STAND AT SESSION END (checks 378-391, ~$1.10 of dials):
-- Test five: scene 21 (swell) SHEET GREEN · scene 20 (classic) hearing correct on two clean dials,
-  meter floor 39-43s (6s music proof + provider swing; the drop-gap row structurally red, grading
-  vs standing law, HIS call) · scene 22 (advert) needs HIS reader ruling.
-- Test six: scene 24 (louder room) SHEET GREEN · scene 23 (quieter room) behavior perfect, meter a
-  provider-swing coin flip (twin scene passed at 29s).
-- Test seven: SHEET GREEN.
-Every fix rode the rig first, the bank grew to 347 replays with zero reds, no old shape moved, and
-every dial's record and photos are pushed. His final dials are rehearsed.
+## NEXT, for whoever picks this up
+Scene 22 (the advert in the music) has not been re-dialed: the judge is proven on its saved record
+but has never met a fresh dial of it. Everything else, and every trap that bit me, is written in
+docs/team/voice-calls/echo-handoff.md so a fresh chat can boot on it.

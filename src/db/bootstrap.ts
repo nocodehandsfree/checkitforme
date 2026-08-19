@@ -125,6 +125,21 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE accounts ADD COLUMN alerts_paused_at INTEGER").catch(() => {});
   // Auto-check results alert: link a fired call back to the customer schedule that placed it.
   await client.execute("ALTER TABLE call_results ADD COLUMN customer_schedule_id INTEGER").catch(() => {});
+  // Master "Pause all" on the Auto-checks list: one switch stands every auto-check of an account down.
+  await client.execute("ALTER TABLE accounts ADD COLUMN auto_checks_paused_at INTEGER").catch(() => {});
+  // The days an auto-check could NOT run (store off the website, out of checks) — so the customer's
+  // record of that auto-check has no silent gaps. One row per schedule per store-local day.
+  await client.execute(`CREATE TABLE IF NOT EXISTS customer_schedule_skips (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    schedule_id INTEGER NOT NULL,
+    finder_user_id TEXT NOT NULL,
+    retailer_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    detail TEXT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  )`);
+  await client.execute("CREATE UNIQUE INDEX IF NOT EXISTS csk_one_per_day ON customer_schedule_skips (schedule_id, day)").catch(() => {});
   // Per-account language for alert copy: "es" sends Spanish, else English.
   await client.execute("ALTER TABLE accounts ADD COLUMN language TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN published INTEGER NOT NULL DEFAULT 1").catch(() => {});
@@ -256,7 +271,7 @@ export async function bootstrap() {
     "charlie_connected_seconds INTEGER", "charlie_talking_seconds INTEGER",
     "charlie_speaking_seconds INTEGER",
     "charlie_listening_seconds INTEGER", "charlie_silent_seconds INTEGER",
-    "ring_seconds INTEGER", "hold_seconds INTEGER", "billed_minutes INTEGER",
+    "ring_seconds INTEGER", "hold_seconds INTEGER", "awake_on_hold_seconds INTEGER", "billed_minutes INTEGER",
     "map_version TEXT", "attempt_of INTEGER", "engine_version TEXT",
     // Which brain answered, what the walk to a person achieved, and how many times the agent's
     // session had to be opened. All three self-heal on boot the same way every column above does.

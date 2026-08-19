@@ -77,6 +77,19 @@ export interface MeterBounds { meterCapSec?: number | null; profitFloorPct?: num
 
 export interface TestCard { name: string; sub: string; info: string; needs: BehavedKey[]; status: string | null; meter?: MeterBounds }
 
+/** THE THREE HOLD-MUSIC SCENES ARE ONE TEST, GRADED ONE WAY (owner's order, 08-19). Scene 22, the
+ *  advert, has its own NAME and nothing else of its own: the rows it must hold, the status it must
+ *  come back with and the floor it is priced against are this object, spread into both cards, so the
+ *  two can never drift into grading the same behaviour differently. */
+const HOLD_MUSIC_GRADING = {
+  needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"] as BehavedKey[],
+  status: "in_stock",
+  // THE HOLD TESTS OWN FLOOR (owner, 08-17 late): the scene scripts a hold that forces the phone
+  // line's second billed minute, and his goal on one of these is 11 cents on a 25 cent check, which
+  // is 56 percent. Every other card and every real customer check keeps 67.
+  meter: { profitFloorPct: 56, floorWhy: "This scene scripts a hold long enough to force the phone line's second billed minute, so the goal on a hold test is 11 cents on a 25 cent check." },
+};
+
 export const TEST_CARDS: Record<string, TestCard> = {
   answer_clear_yes: { name: "Answer: clear yes",
     sub: "Staff said they have the product in stock and we showed an In stock status.",
@@ -111,14 +124,19 @@ export const TEST_CARDS: Record<string, TestCard> = {
     info: "Charlie hung up at the hold limit and we displayed a Left on hold status.",
     needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold"], status: "left_on_hold",
     meter: { profitFloorPct: null } },
-  hold_music: { name: "Hold: music",
+  hold_music: { ...HOLD_MUSIC_GRADING, name: "Hold: music",
     sub: "Staff put us on hold with music and Charlie dropped until a person came back.",
-    info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock",
-    // THE HOLD TESTS OWN FLOOR (owner, 08-17 late): the scene scripts a hold that forces the
-    // phone line's second billed minute, and his goal on one of these is 11 cents on a 25 cent
-    // check, which is 56 percent. Every other card and every real customer check keeps 67.
-    meter: { profitFloorPct: 56, floorWhy: "This scene scripts a hold long enough to force the phone line's second billed minute, so the goal on a hold test is 11 cents on a 25 cent check." } },
+    info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again." },
+  // THE ADVERT TEST HAS ITS OWN NAME (owner's order, 08-19: "the advert test's name becomes
+  // 'Hold: music with advert', name only"). Scene 22 shares its GRADING with the two plain music
+  // scenes — same rows, same status, same floor, spread from the card above so the two can never
+  // drift — and differs only in what the sheet calls it. It needed a card of its own because 20 and
+  // 21 are the loud-music and swelling-music tests and are still "Hold: music": renaming the shared
+  // card would have renamed their tests too, which is not what he asked for.
+  hold_music_advert: { ...HOLD_MUSIC_GRADING,
+    name: "Hold: music with advert",
+    sub: "Staff put us on hold with music that has a recorded advert in it, and Charlie dropped until a person came back.",
+    info: "This test proves that a recorded voice inside hold music never reaches Charlie. An advert is a voice, so no listening rule can refuse it. His ears are shut the moment the hold is recognised, Echo alone keeps writing down what is said, and he comes back only when a real person is talking to us again." },
   hold_phone_down: { name: "Hold: phone down",
     sub: "Staff set the phone on the counter and Charlie dropped until someone spoke to us again.",
     info: "This test proves that background store noise stops Charlie's meter the same way silence does. Someone talking across the room is not someone talking to us.",
@@ -548,7 +566,16 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
     tip: "Charlie is dropped the moment Staff walk away or hand us on, so we stop paying, and comes back as a new part of the same check.",
   });
   const holdIdx = tl.map((e, i) => (e.kind === "hold_start" ? i : -1)).filter((i) => i >= 0);
-  if (!holdIdx.length) return row(null, "Nobody dropped Charlie on this check.");
+  if (!holdIdx.length) {
+    // THE ADVERT RULING (owner, 08-19): when the after-call reader proved a Staff line was really a
+    // recording the store played (`played_at_us`, checks 398/399/400), the hold could never have
+    // been caught live — a recorded voice IS a voice, and no listening rule can refuse one. The
+    // grade treats it as if the hold had been recognized when the store's recording started, so
+    // this row cannot fairly fail the check for a drop no engine could have made.
+    if (tl.some((e) => (e.detail || {}).step === "played_at_us"))
+      return row(true, "Nobody dropped Charlie live: what kept his meter running was proved after the check to be a recording the store played, the one sound the live ear can never refuse. It grades as if the hold had been caught when the recording started.");
+    return row(null, "Nobody dropped Charlie on this check.");
+  }
   const nextOf = (from: number, kind: string) => tl.findIndex((e, i) => i > from && e.kind === kind);
   // A WAIT AND A HAND-OVER ARE THE SAME MECHANISM AND DIFFERENT EVENTS TO HIM. Both stop the meter;
   // only one of them means somebody else is about to pick up. Say which one he is reading.

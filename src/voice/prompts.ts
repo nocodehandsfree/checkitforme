@@ -53,11 +53,11 @@ If Staff say they don't carry {{category}}, the store does not sell {{category}}
 
 Once the answer is settled, never confirm it again and never re-ask anything Staff already gave. On a yes, ask only what this check still needs, and ask it once and only once. The moment you have what the check needs, thank Staff warmly and end the check with end_call.
 
-When the {{category}} is in stock, ask ONE question and only one, for whatever Staff have not already told you. If they have given both the set name and the package type, ask nothing, thank them warmly and wrap up. If they have described the package, like "it's black boxes", ask only for the set name: "oh nice, do you know the name of the set, like {{set_example}}?". If they have given only the set name, ask only for the package type: "oh nice, is that packs or a box or a tin?". If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it packs or a box or a tin?". Always keep a real set name in the question so Staff know what you mean. Take whatever they answer and never ask again, no matter how little they gave you. If their reply does not fit your question, like another "yeah" or a "we do", and they are not going off to check, that still counts as their answer: never repeat the question in any wording, thank them warmly and wrap up. If they don't know the set name, thank them warmly and wrap up.
+When the {{category}} is in stock, ask ONE question and only one, for whatever Staff have not already told you. If they have given both the set name and the package type, ask nothing, thank them warmly and wrap up. If they have described the package, like "it's black boxes", ask only for the set name: "oh nice, do you know the name of the set, like {{set_example}}?". If they have given only the set name, ask only for the package type: "oh nice, is it a pack or a box?". If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it a pack or a box?". Always keep a real set name in the question so Staff know what you mean. Take whatever they answer and never ask again, no matter how little they gave you. If their reply does not fit your question, like another "yeah" or a "we do", and they are not going off to check, that still counts as their answer: never repeat the question in any wording, thank them warmly and wrap up. If they don't know the set name, thank them warmly and wrap up.
 
 When nothing is in stock, ask only one question, and ask it in one sentence: "got it, do you know what day and time you might get more in?". If Staff give you a day and a time, thank them warmly and wrap up. If they give you only a day, like "check back tomorrow", ask only for the time: "oh nice, any idea what time?". If they only say more is coming, like "we're getting some soon", ask for the day and the time together, exactly as you asked the first time. Take whatever they answer, even "soon", and never ask a third time.
 
-One even, relaxed voice the whole call, the same on your first line, your questions, and your goodbye. At most ONE exclamation mark in an entire call, and never on the goodbye; sign offs land soft, like "Perfect, thanks so much, have a good one." Never say a dash in anything; write the beat with a comma instead, "thanks so much, have a good one". Vary your wording like a real person, never saying a line the exact same way twice; that is about how you phrase things, never permission to ask again. Stores are noisy and Staff will not always catch you. If they ask you to repeat, say they did not hear you, or ask what you said, say the same question again once, plainly and a little slower. That is the only time you ever say a question twice. If they answer it and you simply do not like the answer, that is still their answer, never a reason to ask again. Never correct yourself out loud and never think out loud. No "wait", no "actually", no "you already said". Finish your sentence in your head, then say only the finished sentence. Never list options or sound scripted. Let Staff finish before you reply, never talk over them. Use skip_turn only while you are WAITING, through ringing, hold music, or Staff stepping away, and never speak into a wait. The moment Staff finish telling you something, it is your turn, answer right away; even a one word answer like "yeah" is a complete answer, never something to wait through. If Staff speak Spanish, continue in Spanish. If they ask who's calling, you're just a regular customer checking on {{category}}.
+One even, relaxed voice the whole call, the same on your first line, your questions, and your goodbye. At most ONE exclamation mark in an entire call, and never on the goodbye. Keep every reply short. Confirm in two or three words, like "oh nice" or "got it", never a sentence repeating what they said. Thank them once, not twice. Sign off soft and short, like "thanks so much, have a good one." Warm and short beats warm and long every time. Never say a dash in anything; write the beat with a comma instead, "thanks so much, have a good one". Vary your wording like a real person, never saying a line the exact same way twice; that is about how you phrase things, never permission to ask again. Stores are noisy and Staff will not always catch you. If they ask you to repeat, say they did not hear you, or ask what you said, say the same question again once, plainly and a little slower. That is the only time you ever say a question twice. If they answer it and you simply do not like the answer, that is still their answer, never a reason to ask again. Never correct yourself out loud and never think out loud. No "wait", no "actually", no "you already said". Finish your sentence in your head, then say only the finished sentence. Never list options or sound scripted. Let Staff finish before you reply, never talk over them. Use skip_turn only while you are WAITING, through ringing, hold music, or Staff stepping away, and never speak into a wait. Music, a recorded voice, an in-store announcement or an advert are all waiting, never Staff talking to you. If you are not sure a real person just spoke to you, use skip_turn and wait. Never say a note about the call out loud, never describe what you are hearing, and never speak words inside brackets. The moment Staff finish telling you something, it is your turn, answer right away; even a one word answer like "yeah" is a complete answer, never something to wait through. If Staff speak Spanish, continue in Spanish. If they ask who's calling, you're just a regular customer checking on {{category}}.
 
 {{special_instructions}}
 
@@ -110,6 +110,15 @@ export function departmentNote(category: string, mayAskForTransfer: boolean): st
  * his own way, and that is deliberate. Nothing here forces him to read this name back word for word.
  */
 export const SET_EXAMPLE = "Chaos Rising";
+
+/** THE SET QUESTION, THE ONE THE RECORDING ASKS (owner, 08-19). His ruled sentence, word for word
+ *  the same as the both-pieces question in section 10 above, so the recording and his own
+ *  instructions can never drift apart; `{set_example}` is filled with the category's own set.
+ *  A test asserts section 10 still carries it. */
+export const SET_ASK_LINE = "oh nice, do you know the name of the set, like {set_example}, and is it a pack or a box?";
+export function setAskLine(setExample?: string | null): string {
+  return SET_ASK_LINE.replace(/\{set_example\}/g, String(setExample || "").trim() || SET_EXAMPLE);
+}
 
 /**
  * WE LANDED IN THE WRONG DEPARTMENT — read off the words, because it cannot be read off the audio.
@@ -210,7 +219,84 @@ export function askedToBePutThrough(line: string): boolean {
 // it, and bare "go check" was only known inside "i'll go check", so the phone-down wait was never
 // announced, the room hold sat behind the inversion gate, and Charlie billed through 20 seconds of
 // store noise the ear had rightly called the room. Taught the matcher, never the transcript.
-const GOING_TO_CHECK = /\b(?:hold on|hang on|one (?:sec|second|moment|minute)|just a (?:sec|second|moment|minute)|let me (?:check|see|look|go|double.?check|find out|ask|grab)|lemme (?:check|see|look|go)|bear with|give me a (?:sec|second|minute|moment)|i'?ll (?:check|go check|go look|go see|be right back)|go (?:check|look|see)\b|put (?:this|that|it|the phone) down|checking (?:on|for) (?:that|you)|be right (?:back|with you)|put you on hold|i'?m gonna put you on hold)\b/i;
+const GOING_TO_CHECK = new RegExp([
+  // 1. Asking us to hold, plainly. "hold on" but never "hold on TO something", which is Staff
+  //    telling us to keep a receipt, and "you hold" but never "we hold those behind the counter".
+  "\\b(?:please hold|hold,? please|hold the line|hold up)\\b",
+  "\\bhold on\\b(?! to\\b)",
+  "\\b(?:you|mind|minding) hold(?:ing)?\\b",
+  "\\b(?:on|onto)(?: a| a brief| a quick| a short)? hold\\b",
+  "\\bholding you\\b",
+  // 2. Going to look. The verb has to be theirs and immediate: "let me know", "let me tell you"
+  //    and "let me be honest" are conversation, not a walk to the shelf.
+  "\\b(?:let me|lemme|let's|i'?ll|i will|i'?m gonna|gonna|going to|imma)\\s+(?:just\\s+)?(?:go\\s+(?:and\\s+)?)?(?:double.?check|check|see(?! you\\b)|look|verify|find out|find some(?:one|body)|ask|grab|get|pull|run|walk|head)\\b",
+  "\\b(?:go|going) (?:and )?(?:check|look|see|ask|grab|get)\\b",
+  "\\bchecking (?:on|for|that|it)\\b",
+  "\\b(?:have|having|take|taking|go|going|grab)\\s+a\\s+(?:quick\\s+)?look\\b",
+  "\\bgo up to the (?:front|back|counter)\\b",
+  "\\blook(?:ing)? (?:that |it |this )?up\\b",
+  // 3. Putting the phone down.
+  "\\b(?:put|putting|set|setting|lay|laying)\\s+(?:you|the phone|this|it|that)\\s+down\\b",
+  "\\bput you down\\b",
+  // 4. Asking us to wait. A bare "second" or "minute" is never enough on its own: "they're in the
+  //    second aisle" and "it's a minute from here" are directions, not a wait.
+  "\\b(?:one|just one|just a|two|a couple(?: of)?|couple)\\s+(?:sec|secs|second|seconds|moment|moments|minute|minutes)\\b",
+  "\\bgive me (?:a|one|just a|just one)\\s+(?:sec|second|moment|minute)\\b",
+  "\\bwait (?:a|one|just a|just one)\\s+(?:sec|second|moment|minute)\\b",
+  "\\b(?:bear|stay) with (?:me|us)\\b",
+  "\\bhang (?:on|tight)\\b",
+  "\\b(?:stand by|sit tight)\\b",
+  "\\bif you can (?:hold|wait)\\b",
+  // 5. Going to ask somebody else, and 6. saying they will be back. "come back any time" is an
+  //    invitation, so only THEIR return counts.
+  "\\b(?:be|coming|come|back) right back\\b",
+  "\\bbe right (?:back|with you)\\b",
+  "\\bbe with you in (?:a|one|just a)\\s+(?:sec|second|moment|minute)\\b",
+  "\\bright back with you\\b",
+  "\\bi'?ll be back\\b",
+  "\\bi'?ll be a minute\\b",
+  "\\b(?:this'?ll|it'?ll|that'?ll) (?:just )?(?:take|be)\\s+(?:a|just a|one)\\s+(?:sec|second|moment|minute)\\b",
+  // 7. Sorry, and softened.
+  "\\bexcuse me (?:for )?(?:a|one)\\s+(?:sec|second|moment|minute)\\b",
+  "\\bapolog(?:ies|ise|ize)\\b(?=.*\\bhold\\b)",
+].join("|"), "i");
+/**
+ * A NOTE HE MEANT TO KEEP TO HIMSELF, NEVER A THING TO SAY OUT LOUD (owner, 08-19).
+ *
+ * THE FAULT: on checks 398 and 399 the store's own advert was handed to Charlie as if Staff had
+ * spoken, and instead of waiting he described it onto the line: "[System: Store announcement /
+ * advertisement playing, not a staff member speaking]" went to the store as speech. His directions
+ * were changed to forbid it and I read them back off the voice service to be sure they had landed;
+ * he did it anyway. So the words are judged here instead, at the door, exactly as the 08-06 fault
+ * was: telling him never fixed that one either.
+ *
+ * IT JUDGES ONLY WHAT CHARLIE IS ABOUT TO SAY. Nothing Staff say ever reaches this function, so it
+ * can never block a real answer, only our own side's note.
+ *
+ * NARROW ON PURPOSE, two shapes and no more:
+ *  1. Anything in square brackets. Brackets are never speech: they are how the system hands him a
+ *     note, and all three real cases carried them.
+ *  2. A reply that describes the call instead of talking to Staff, by its own words. The list is
+ *     short and every phrase on it is a description of what is happening on the line, never
+ *     something a person says to a shop assistant.
+ */
+const TALKING_ABOUT_THE_CALL = new RegExp([
+  "^\\s*(?:system|note|status|internal)\\s*[:\\-]",
+  "\\b(?:automated|recorded|pre.?recorded) (?:message|greeting|announcement|voice)\\b",
+  "\\b(?:in.?store|store) (?:message|announcement|advert|advertisement)\\b",
+  "\\b(?:hold|holding) (?:recording|message|music) (?:is |still )?(?:playing|plays)\\b",
+  "\\b(?:advert|advertisement|commercial) (?:is )?playing\\b",
+  "\\bnot a (?:staff|real|live) (?:member|person)\\b",
+  "\\bno(?:body| one) (?:is )?(?:speaking|talking) to (?:me|us)\\b",
+  "\\bwaiting for (?:staff|someone|a person) to (?:return|come back)\\b",
+].join("|"), "i");
+export function isPrivateNote(line: string): boolean {
+  const t = String(line || "").trim();
+  if (!t) return false;
+  if (/\[[^\]]*\]/.test(t)) return true;          // anything in square brackets
+  return TALKING_ABOUT_THE_CALL.test(t);
+}
+
 export function saidGoingToCheck(line: string): boolean {
   return GOING_TO_CHECK.test(String(line || ""));
 }
@@ -315,6 +401,17 @@ const WRAP_UP = new RegExp([
 ].join("|"), "i");
 export function wrappedUp(line: string): boolean {
   return WRAP_UP.test(String(line || ""));
+}
+
+/** THEIR LINE IS A QUESTION BACK AT US, not an answer (the recorded goodbye's guard, owner's order
+ *  08-19). After OUR recording asks the set question, the next fresh Staff line closes the check —
+ *  unless they are asking us something, because a goodbye played over "sorry, which set?" hangs up
+ *  on a person mid-conversation. Words only, pure, tested both ways. */
+export function asksUsBack(line: string): boolean {
+  const t = String(line || "").trim();
+  if (!t) return false;
+  if (/\?\s*$/.test(t)) return true;
+  return /^(?:what|which|who|when|sorry|pardon|huh|hm+|say (?:that )?again|come again|can you|could you|do you|are you|wait,? (?:what|which))\b/i.test(t);
 }
 /**
  * HIS LAST WORDS, judged as an ending. A wrap-up in the MIDDLE of a conversation needs a goodbye

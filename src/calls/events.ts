@@ -90,6 +90,10 @@ export interface Meters {
    *  actually runs the ear that measures it, so "we never checked" still reads differently from
    *  "it was zero". */
   holdMs: number | null;
+  /** THE SECONDS CHARLIE WAS AWAKE DURING A RECOGNISED HOLD (owner's order, 08-19, fix 4). His
+   *  session open and billing while the store had us on hold — waiting, music, or an advert playing
+   *  at us. It is the waste that used to hide inside a passing check, so every sheet prints it. */
+  awakeOnHoldMs: number;
 }
 
 /** One stretch of the reasoning agent being connected. Normally there is exactly one. If he is
@@ -108,7 +112,7 @@ export interface CharlieSegment {
 
 const zeroMeters = (): Meters => ({
   charlieOpenMs: null, charlieCloseMs: null, answeredMs: null, humanMs: null,
-  navEndMs: null, endMs: null, speakingMs: 0, listeningMs: 0, ringingMs: 0, holdMs: null,
+  navEndMs: null, endMs: null, speakingMs: 0, listeningMs: 0, ringingMs: 0, holdMs: null, awakeOnHoldMs: 0,
 });
 
 export interface Receipt {
@@ -437,7 +441,7 @@ export function markNow(room: string, key: StampKey): void {
 }
 
 /** Durations: add milliseconds to a running total. */
-export function addMs(room: string, key: "speakingMs" | "listeningMs" | "ringingMs" | "holdMs", ms: number): void {
+export function addMs(room: string, key: "speakingMs" | "listeningMs" | "ringingMs" | "holdMs" | "awakeOnHoldMs", ms: number): void {
   try {
     const r = receipts.get(room);
     if (!r || r.closed || !Number.isFinite(ms) || ms <= 0) return;
@@ -519,6 +523,9 @@ export interface Rollup {
   ringSeconds: number;
   /** Clerk away / hold music while the session was open. Null until hold detection ships. */
   holdSeconds: number | null;
+  /** OF THAT, THE SECONDS HIS SESSION WAS AWAKE AND BILLING (owner's order, 08-19). Waiting is
+   *  nearly free when he is dropped; this is the part that was not. */
+  awakeOnHoldSeconds: number;
   /** Whole minutes the carrier charged, rounded up. */
   billedMinutes: number;
   /** Seconds spent walking the menu (dial → menu finished). Null on a store with no menu. */
@@ -602,6 +609,9 @@ export function rollup(r: Receipt): Rollup {
     listeningSecs,
     ringSeconds,
     holdSeconds: m.holdMs !== null ? sec(m.holdMs) : null,
+    // …and how much of that he was AWAKE for, which is the half that costs money (owner, 08-19).
+    // Capped at what he was billed for: it can never claim more of his meter than he actually ran.
+    awakeOnHoldSeconds: Math.min(sec(m.awakeOnHoldMs), charlieSecs),
     billedMinutes: callSecs > 0 ? Math.ceil(callSecs / 60) : 0,
     menuSeconds: m.navEndMs !== null ? sec(m.navEndMs) : null,
     stepsFired: steps.length,
@@ -645,6 +655,7 @@ export interface StampedCall {
   charlieSilentSeconds?: number | null;
   ringSeconds?: number | null;
   holdSeconds?: number | null;
+  awakeOnHoldSeconds?: number | null;
   billedMinutes?: number | null;
   menuSeconds?: number | null;
   brain?: string | null;
@@ -696,6 +707,9 @@ export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string;
     listeningSecs: stamped ? (call.charlieListeningSeconds ?? 0) : 0,
     ringSeconds: stamped ? (call.ringSeconds ?? 0) : 0,
     holdSeconds: call.holdSeconds ?? null,
+    // The waste is stamped on the row like every other measured second; a check written before it
+    // existed reads nought, which is the truth about a check nobody measured it on.
+    awakeOnHoldSeconds: call.awakeOnHoldSeconds ?? 0,
     billedMinutes: call.billedMinutes ?? (callSecs > 0 ? Math.ceil(callSecs / 60) : 0),
     menuSeconds: call.menuSeconds ?? null,
     stepsFired: steps.length,

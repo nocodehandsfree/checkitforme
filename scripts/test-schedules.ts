@@ -3,7 +3,7 @@
 import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { retailers, categories } from "../src/db/schema";
-import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "../src/customer-schedules";
+import { createSchedule, listSchedulesDetailed, deleteSchedule, updateSchedule, pauseAllSchedules, listScheduleSkips, customerScheduleTick } from "../src/customer-schedules";
 import { setPolicy } from "../src/policy";
 
 let pass = 0, fail = 0;
@@ -37,6 +37,29 @@ async function main() {
   ok((await customerScheduleTick()) === 0, "tick fires nothing when flags.scheduling is OFF");
   await setPolicy({ flags: { scheduling: true } } as never);
   ok((await customerScheduleTick()) === 0, "tick fires nothing when today is not a scheduled day (no real call placed)");
+
+  console.log("▶ edit (owner 08-19: switch to a different day or time)");
+  await updateSchedule("user_test_1", row.id, { daysOfWeek: "5,2", timeLocal: "08:30" });
+  let one = (await listSchedulesDetailed("user_test_1"))[0];
+  ok(one.daysOfWeek === "2,5", "days are saved in week order, not the order they were tapped");
+  ok(one.timeLocal === "08:30", "the time moved");
+  await updateSchedule("user_other", row.id, { timeLocal: "23:00" });
+  one = (await listSchedulesDetailed("user_test_1"))[0];
+  ok(one.timeLocal === "08:30", "another account cannot edit this auto-check");
+  await updateSchedule("user_test_1", row.id, { active: false });
+  one = (await listSchedulesDetailed("user_test_1"))[0];
+  ok(one.active === false, "the row switch turns one auto-check off");
+  ok(one.nextDow === null, "an auto-check that is off has no next check");
+  await updateSchedule("user_test_1", row.id, { active: true, daysOfWeek: notToday, timeLocal: "00:01" });
+
+  console.log("▶ pause all");
+  await pauseAllSchedules("user_test_1", true);
+  one = (await listSchedulesDetailed("user_test_1"))[0];
+  ok(one.paused === true && one.nextDow === null, "pause all stands every auto-check down");
+  ok((await customerScheduleTick()) === 0, "a paused account fires nothing");
+  ok((await listScheduleSkips("user_test_1", row.id)).length === 0, "a pause the customer chose is not written down as a fault");
+  await pauseAllSchedules("user_test_1", false);
+  ok((await listSchedulesDetailed("user_test_1"))[0].paused === false, "pause all lifts again");
 
   console.log("▶ delete");
   await deleteSchedule("user_test_1", row.id);

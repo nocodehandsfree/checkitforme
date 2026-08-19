@@ -55,9 +55,9 @@ says("If they have given both the set name and the package type, ask nothing, th
   "10. both given, he asks nothing at all");
 says(`If they have described the package, like "it's black boxes", ask only for the set name: "oh nice, do you know the name of the set, like {{set_example}}?".`,
   "10. package given, he asks only the set name");
-says(`If they have given only the set name, ask only for the package type: "oh nice, is that packs or a box or a tin?".`,
+says(`If they have given only the set name, ask only for the package type: "oh nice, is it a pack or a box?".`,
   "10. set given, he asks only the package");
-says(`If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it packs or a box or a tin?".`,
+says(`If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it a pack or a box?".`,
   "10. neither given, both in ONE sentence");
 says(`When nothing is in stock, ask only one question, and ask it in one sentence: "got it, do you know what day and time you might get more in?".`,
   "11. the restock question, one sentence");
@@ -168,7 +168,7 @@ ok(mayNot === "If Staff cannot answer about Pokémon, never ask to be put throug
 ok(mayNot.length > 0 && mayAsk.length > 0, "section 5 is never empty: it is two texts, not insert-or-nothing");
 
 console.log("\n▶ the set name example comes from the site's catalog (builder note)");
-ok(RESTOCK_PROMPT.includes("like {{set_example}}, and is it packs or a box or a tin?"), "the example question carries the catalog's set name");
+ok(RESTOCK_PROMPT.includes("like {{set_example}}, and is it a pack or a box?"), "the example question carries the catalog's set name");
 ok(!RESTOCK_PROMPT.includes("Chaos Rising"), "the hand-written set name is gone from the words");
 ok(SET_EXAMPLE === "Chaos Rising", "…and the floor under an unreadable catalog is never a blank example");
 
@@ -368,6 +368,97 @@ console.log("\n▶ THE DRIFT ALARM: the joining Charlie gets the same words, plu
   ok(!("firstMessage" in sent), "nothing sets a first message: the recorded question already spoke");
   ok(joiningPrompt("X") === `${JOINING_RULE}\n\nX`, "one function builds it, and it is the one the push calls");
   ok(!/[—–]/.test(JOINING_RULE), "no dashes in what he is told (they read strangely through ElevenLabs)");
+}
+
+console.log("▶ a note he meant to keep to himself is never a thing to say out loud");
+{
+  // Checks 398 and 399: the store's advert was handed to him as if Staff had spoken, and he
+  // described it onto the line. His directions were changed to forbid it and he did it anyway, so
+  // the words are judged at the door now. The three caught here are the REAL lines off those checks.
+  const { isPrivateNote } = await import("../src/voice/prompts");
+  for (const note of [
+    "[System: Store announcement / advertisement playing, not a staff member speaking]",  // check 399
+    "[Automated in-store message playing while on hold]",                                  // check 398
+    "[Automated message/hold recording - waiting for staff to return]",                    // check 383
+    "System: an automated message is playing",
+    "Note: waiting for staff to return",
+    "An in-store announcement is playing right now.",
+    "That was a recorded message, not a staff member.",
+  ]) ok(isPrivateNote(note), `caught: "${note.slice(0, 52)}"`);
+  // …and every one of these is Charlie really talking to Staff. A wrong catch here would take a
+  // real reply off the line, which is the one thing this must never do.
+  for (const said of [
+    "oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?",
+    "No worries, take your time!",
+    "Perfect, thanks so much, have a good one!",
+    "Oh gotcha, no worries.",
+    "got it, do you know what day and time you might get more in?",
+    "Sorry, could you say that again?",
+    "Ah nice, is that the black boxes?",
+    "Oh okay, no worries, thanks for checking.",
+    "Do you know if the shipment message said a time?",
+    "Any idea what time they put them out?",
+  ]) ok(!isPrivateNote(said), `spoken, never caught: "${said.slice(0, 46)}"`);
+}
+
+console.log("▶ the set question the RECORDING asks is the same sentence his directions carry");
+{
+  // The set question is a recording now (owner, 08-19), so two copies of one sentence exist: the
+  // one Charlie is told to ask and the one our own file says out loud. They can never be allowed to
+  // drift, because a store would hear the recording ask one thing while his directions expect
+  // another. ONE source, asserted both ways.
+  const { SET_ASK_LINE, setAskLine } = await import("../src/voice/prompts");
+  ok(RESTOCK_PROMPT.includes(SET_ASK_LINE.replace("{set_example}", "{{set_example}}")),
+    "his own instructions carry the recorded sentence word for word");
+  ok(setAskLine("Pitch Black") === "oh nice, do you know the name of the set, like Pitch Black, and is it a pack or a box?",
+    "…and the category's own set name goes into it");
+  ok(setAskLine("") === setAskLine(SET_EXAMPLE), "…with the catalog's set name when a check names none");
+  ok(!/[\u2014\u2013]/.test(SET_ASK_LINE), "no dash in it (they read strangely through ElevenLabs)");
+}
+
+console.log("\u25b6 asksUsBack: a question back at us is never answered with a goodbye (the recorded goodbye's guard)");
+{
+  const { asksUsBack } = await import("../src/voice/prompts");
+  for (const q of [
+    "Sorry, which set do you mean?",
+    "What do you mean, like the brand?",
+    "Can you say that again?",
+    "Do you want the small packs or the boxes?",
+    "Huh?",
+    "Pardon me, the name of what",
+  ]) ok(asksUsBack(q), `a question back: "${q.slice(0, 44)}"`);
+  for (const a of [
+    "Pitch black the booster boxes.",
+    "Yeah. We've got a few of those.",
+    "It's the booster boxes, the black ones",
+    "Next week, maybe. I'm not certain.",
+    "No, just the packs.",
+  ]) ok(!asksUsBack(a), `an answer, never flagged: "${a.slice(0, 44)}"`);
+}
+
+console.log("\u25b6 the goodbye the RECORDING says is the owner's ruled sign-off, no name in it (08-19)");
+{
+  const { GOODBYE_LINE, GOODBYE_LINE_ES } = await import("../src/calls/charlie-setup");
+  ok(GOODBYE_LINE === "Thanks so much, have a good one!",
+    "the recorded goodbye is his ruled sentence, word for word");
+  ok(!/\{\{?|\bname\b/i.test(GOODBYE_LINE), "no name and no variable in it: one line for every store");
+  ok(!!GOODBYE_LINE_ES && !/\{\{?/.test(GOODBYE_LINE_ES), "its Spanish ships beside it, no variable in it");
+  ok(!/[\u2014\u2013]/.test(GOODBYE_LINE) && !/[\u2014\u2013]/.test(GOODBYE_LINE_ES),
+    "no dash in either (they read strangely through ElevenLabs)");
+}
+
+console.log("▶ his 08-19 rulings are in section 12, word for word");
+{
+  says("Music, a recorded voice, an in-store announcement or an advert are all waiting, never Staff talking to you.",
+    "12. a recording is waiting, never Staff talking to him");
+  says("If you are not sure a real person just spoke to you, use skip_turn and wait.",
+    "12. unsure it was a person, he waits in silence");
+  says("Never say a note about the call out loud, never describe what you are hearing, and never speak words inside brackets.",
+    "12. and he never says a note out loud (check 398: he announced the advert)");
+  says("Confirm in two or three words, like \"oh nice\" or \"got it\", never a sentence repeating what they said.",
+    "12. confirmations are two or three words");
+  says("Thank them once, not twice.", "12. one thank you");
+  says("Warm and short beats warm and long every time.", "12. warm and short beats warm and long");
 }
 
 console.log("▶ every way the robot store announces a wait really reads as one (check 386)");

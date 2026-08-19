@@ -50,6 +50,8 @@ run "unit: simulations (the build contract walls)" "$ENV $TSX scripts/test-simul
 run "unit: clips are the same recording every check" "$ENV $TSX scripts/test-clip-stability.ts"
 run "unit: call-events (the cost buckets sum)" "$ENV $TSX scripts/test-call-events.ts"
 run "unit: listen-nav (the ear)" "$ENV $TSX scripts/test-listen-nav.ts"
+run "unit: the wake rule, on his own recordings" "$ENV $TSX scripts/test-hold-wake.ts"
+run "unit: every way Staff say they are stepping away" "$ENV $TSX scripts/test-going-to-check.ts"
 run "unit: robot store words" "$ENV $TSX scripts/test-robot-store.ts"
 run "unit: No clear answer, the new status" "$ENV $TSX scripts/test-no-straight-answer.ts"
 run "unit: the Spanish greeting + the vague yes" "$ENV $TSX scripts/test-staff-language.ts"

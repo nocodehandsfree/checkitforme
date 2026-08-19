@@ -156,6 +156,18 @@ head("METER STOPPED ON HOLD");
   const lateClose: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 10), ev("charlie_join", 10), ev("hold_start", 20), ev("hold_end", 50), ev("charlie_leave", 70), ev("hangup", 70)];
   ok("a close after somebody came back does NOT count as stopping for the hold", at(lateClose).pass === false);
   ok("no hold at all is null", at(cleanDirect).pass === null);
+  // THE ADVERT RULING (owner, 08-19, off checks 398/399/400): a recorded voice inside the hold music
+  // is the one sound the live ear can never refuse, so no hold is ever declared and this row used to
+  // fail the check by name. When the after-call reader proved the recording (played_at_us on the
+  // record), the row grades as if the hold had been caught when the recording started.
+  const advertProved: BehavedEvent[] = [
+    ev("dialed", 0, { plan: [] }), ev("human_detected", 8), ev("charlie_join", 9),
+    ev("charlie_leave", 55), ev("hangup", 55),
+    ev("unknown", 55, { step: "played_at_us", lines: [{ line: "Thanks for holding. Did you know we price match any local competitor?", why: "advertising", announcesWait: false }] }),
+  ];
+  ok("a judge-proven recording with no live hold PASSES the row", at(advertProved).pass === true, at(advertProved).why);
+  ok("…and the why names the proof and the fair grading", /recording the store played/.test(at(advertProved).why) && /as if the hold had been caught/.test(at(advertProved).why), at(advertProved).why);
+  ok("without the proof the same shape stays null, exactly as before", at(advertProved.filter((e) => (e.detail || {}).step !== "played_at_us")).pass === null);
 }
 
 head("THE WORDS OFF A FINISHED ROW");
@@ -298,7 +310,16 @@ head("…and every way it can go wrong");
 head("THE LOCKED TEST CARDS (owner 08-04, the exact product card he added 08-06, and the two he added 08-07) — word for word, so nothing drifts");
 {
   const names = Object.values(TEST_CARDS).map((c) => c.name);
-  ok("all the locked cards exist", names.length === 20, String(names.length));
+  ok("all the locked cards exist", names.length === 21, String(names.length));
+  // THE ADVERT TEST HAS ITS OWN NAME AND NOBODY ELSE'S GRADING (owner's order, 08-19). Scenes 20
+  // and 21 are still "Hold: music"; only scene 22's card is renamed, and its rows, its status and
+  // its floor are the SAME values, spread from one object so they can never drift apart.
+  ok("the advert test is named for the advert", TEST_CARDS.hold_music_advert.name === "Hold: music with advert", TEST_CARDS.hold_music_advert.name);
+  ok("…and the plain music test keeps its own name", TEST_CARDS.hold_music.name === "Hold: music", TEST_CARDS.hold_music.name);
+  ok("…and the two are graded identically, name apart",
+    TEST_CARDS.hold_music_advert.needs.join(",") === TEST_CARDS.hold_music.needs.join(",")
+    && TEST_CARDS.hold_music_advert.status === TEST_CARDS.hold_music.status
+    && TEST_CARDS.hold_music_advert.meter?.profitFloorPct === TEST_CARDS.hold_music.meter?.profitFloorPct);
   // The two he added 08-07. The wrap-up used to be filed under the 4 minute limit, which is our own
   // safety net and a different test; Delta failing had never been tested on purpose at all.
   ok("the wrap-up card is his own words", TEST_CARDS.wrapup_never_answered.name === "Wrapup: they never answered"

@@ -55,7 +55,7 @@ async function main() {
   // The restock question and the set question are FIXED sections now, not swappable instruction
   // blocks: every check asks them, in the owner's approved wording.
   ok(prompt.includes("what day and time more might come in"), "the restock question is in EVERY live check");
-  ok(prompt.includes("is it packs or a box or a tin?"), "the set question carries the owner's package wording");
+  ok(prompt.includes("is it a pack or a box?"), "the set question carries the owner's package wording");
   ok(!prompt.includes("{{set_example}}") && /like [A-Z]/.test(prompt), "…and a real set name off the site's catalog is filled into it");
   // Copy law: dashes are banned in anything the agent SAYS. Instruction prose may use them; the
   // quoted example lines (what the model imitates) may not — except the explicit "don't do this" sample.

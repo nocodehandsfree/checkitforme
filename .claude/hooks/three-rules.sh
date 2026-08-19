@@ -94,7 +94,15 @@ B. BUILD IT RIGHT, PROVE IT, SHIP IT. Anything he sees follows the design and
    Then ship it — push and deploy (staging and Admin go live without him). Never
    wait for him to say "ship." Only stop for real money or a production release.
 
-C. DON'T BURN HIS COMPUTE. Never start a background task, poll, or watcher
+C. WORK SILENTLY (owner 08-08, from his own screen). Any text you type between
+   commands reaches his phone UNCHECKED: the reply lock reads only the final
+   reply of a turn, never the narration while you work. So while working, type
+   NOTHING: no progress notes, no "queued before the owner woke", no status
+   lines full of commit ids and Z times. One turn ends in ONE message, the
+   checked reply. A scheduled wake-up with nothing new says exactly "Nothing
+   new since the last check." and nothing else.
+
+D. DON'T BURN HIS COMPUTE. Never start a background task, poll, or watcher
    unless he asked. If the job truly needed one, kill it the second you're
    done — never leave it lingering, never start one just to wait on a deploy, a
    promote, or another agent.
@@ -129,11 +137,14 @@ answer (every fact, number, name, decision, quote intact) to a scratch file, run
 bash scripts/check-reply.sh <file> in the FOREGROUND, wait, and send EXACTLY the
 approved text. Never resend text he has already seen.
 
-ALSO EVERY TURN: done means DEMONSTRATED, never claimed — drive it yourself and
-say what you saw, or say NOT verified and why. Ship it without waiting for him
-(staging and Admin go live without him); stop only for real money or a
-production release. Never start a background task, poll, or watcher unless he
-asked for one.
+ALSO EVERY TURN: WORK SILENTLY. Text you type between commands reaches his
+phone UNCHECKED, the reply lock never reads it, so type nothing while working;
+one turn ends in one checked reply, and a scheduled wake-up with nothing new
+says exactly "Nothing new since the last check." Done means DEMONSTRATED,
+never claimed: drive it yourself and say what you saw, or say NOT verified and
+why. Ship without him (staging and Admin go live without him); stop only for
+real money or a production release. Never start a background task, poll, or
+watcher unless he asked for one.
 EOF
 
 if [ "$MODE" = "FULL" ]; then

@@ -102,8 +102,8 @@ export async function notifyAfterVerdict(callId: number): Promise<void> {
     await notifyAutoCheckResult(callId); // no-op unless this check came from an auto-check
   } catch { /* alerts must never break a finalize */ }
 }
-/** Auto-check results alert: a scheduled check just reached a terminal state → tell the schedule's
- *  owner what happened (in stock, not, nobody answered), on the channel their contact implies.
+/** Auto-check results alert: an auto-check just reached a terminal state → tell the schedule's
+ *  owner IF we found it in stock, on the channel their contact implies.
  *  Email rides the account address (confirm-gated); a phone contact gets the text directly. */
 async function notifyAutoCheckResult(callId: number): Promise<void> {
   try {
@@ -114,6 +114,11 @@ async function notifyAutoCheckResult(callId: number): Promise<void> {
     const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
     const cat = (await db.select().from(categories).where(eq(categories.id, row.categoryId)))[0];
     const st = row.statusKey ? (await db.select().from(statuses).where(eq(statuses.key, row.statusKey)))[0] : null;
+    // THE PING GOES OUT ON IN STOCK ONLY (owner 2026-08-19). Every other outcome is still written
+    // down and still shows on that auto-check's own record in My Checks; it just does not buzz a
+    // phone. The owner's own tone bucket decides what "in stock" is, as everywhere else.
+    const inStock = st ? st.tone === "in" : row.confirmed === true;
+    if (!inStock) return;
     const result = st?.label || (row.confirmed === true ? "In stock" : row.confirmed === false ? "Not in stock" : "No clear answer");
     // Language rides the schedule owner's account so {result} and the copy match (Copper's ES).
     const acct = await getAccount(sched.finderUserId).catch(() => null);
@@ -139,7 +144,7 @@ import { activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { callTuning } from "./tuning";
-import { STATUS_READ_USD } from "./cost";
+import { STATUS_READ_USD, readCostUsd } from "./cost";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
@@ -1424,6 +1429,8 @@ export async function ingestPending(): Promise<number> {
     let restockDayHeard: string | null = null;
     let restockTimeHeard: string | null = null;
     let secondUsed = false;
+    // WHO REALLY READ IT, carried out of the block so the record can name the worker (08-18 night).
+    let secondReadBy: string | null = null;
     if (outcome.status === "completed") {
       // THE READER RULE (owner 07-29), one shared implementation — see consensusFor in
       // src/voice/verdict.ts. This used to run the second read for EXTRACTION ONLY on a decisive
@@ -1437,6 +1444,7 @@ export async function ingestPending(): Promise<number> {
       finalStatusKey = consensus.statusKey;
       definitive = consensus.definitive;
       secondUsed = !!second;
+      secondReadBy = second?.readBy ?? null;
       productDetail = productDetailLabel(second);
       restockDayHeard = second?.restockDay ?? null; // restock day staff VOLUNTEERED — captured even unprompted
       restockTimeHeard = second?.restockTime ?? null;
@@ -1491,7 +1499,7 @@ export async function ingestPending(): Promise<number> {
     const decidedBy = lastClerkLine(outcome.transcript);
     console.log(`[finalize] check ${row.id}: writing the verdict tail (read=${secondUsed ? "yes" : "no"}, charged=${willCharge})`);
     void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0,
-      { secondReadModel: secondUsed ? VERDICT_MODEL : null, secondReadUsd: secondUsed ? STATUS_READ_USD : 0, decidedBy, charged: willCharge });
+      { secondReadModel: secondUsed ? (secondReadBy ?? VERDICT_MODEL) : null, secondReadUsd: secondUsed ? readCostUsd(secondReadBy) : 0, decidedBy, charged: willCharge });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // The old direct path's thin receipt closes here — this is the only moment it learns the call is
     // over, since nothing streams to us on that lane. A bridged call closed its own long ago and

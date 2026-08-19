@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-18T19:38:55.246Z",
+  "at": "2026-08-19T19:09:40.057Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 6,
-      "name": "Walks away, never comes back",
+      "scenario": 22,
+      "name": "Hold with an advert in the music, then an answer",
       "items": [
         {
           "n": 1,
@@ -57,14 +57,14 @@
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": false,
-          "detail": "\"Um, give me just a second. Let me double-check.\" → written down only in part"
+          "pass": true,
+          "detail": "3 lines, all exact"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 191 looks · header held at 62px"
+          "detail": "0 bounce(s) over 51 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -76,58 +76,58 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": true,
-          "detail": "we signed off: \"No worries, take your time!\""
+          "detail": "we signed off: \"Thanks so much, have a good one!\""
         },
         {
           "n": 14,
           "name": "we never ask the same question twice",
           "pass": true,
-          "detail": "2 things said, none of them twice"
+          "detail": "4 things said, none of them twice"
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 137 seconds and the line closed at 137 — 0 seconds of nothing"
+          "detail": "the answer was in at 50 seconds and the line closed at 50 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Tue, Aug 18 · 7:36 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
+          "detail": " Result Wed, Aug 19 · 7:08 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": true,
-          "detail": "the screen said unclear, the record says unclear (left_on_hold)"
+          "pass": false,
+          "detail": "the screen said unclear, the record says in (in_stock)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
           "pass": true,
-          "detail": "got left_on_hold · this scenario is left_on_hold"
+          "detail": "got in_stock · this scenario is in_stock"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 9.2¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 5.5¢"
         }
       ],
       "shots": [
-        "./robot-run/06-store-found.png",
-        "./robot-run/06-checking.png",
-        "./robot-run/06-live.png",
-        "./robot-run/06-result.png"
+        "./robot-run/22-store-found.png",
+        "./robot-run/22-checking.png",
+        "./robot-run/22-live.png",
+        "./robot-run/22-result.png"
       ],
-      "startedAt": 1787081752713,
-      "checkId": 391,
-      "cost": 0.091781,
-      "costReadable": "9.2¢",
+      "startedAt": 1787166476755,
+      "checkId": 407,
+      "cost": 0.054733,
+      "costReadable": "5.5¢",
       "robotCost": null,
       "charged": true,
-      "statusKey": "left_on_hold"
+      "statusKey": "in_stock"
     }
   ],
   "jsErrors": []

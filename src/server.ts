@@ -23,7 +23,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
-import { costBuckets, STATUS_READ_USD } from "./calls/cost";
+import { costBuckets, STATUS_READ_USD, readCostUsd } from "./calls/cost";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, settleChecksLostToARestart, setActiveVoice, statusFromTheRecord, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
@@ -46,7 +46,7 @@ import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, last
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, type BehavedRow } from "./calls/behaved";
-import { meterVerdict } from "./calls/meter";
+import { meterVerdict, advertAsWait } from "./calls/meter";
 import { listSimRuns, readSimRun, fileSimRun, type SimRunIn, type SimCallIn } from "./calls/simulations";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
@@ -62,7 +62,7 @@ import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSe
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
-import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
+import { createSchedule, listSchedulesDetailed, deleteSchedule, updateSchedule, pauseAllSchedules, listScheduleSkips, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
@@ -3747,7 +3747,7 @@ app.get("/pub/result/:cid", async (c) => {
     // the owner watches. Same recorder, same three rows, whichever door wins the race (the recorder
     // itself never writes a second verdict onto a check that has one).
     void recordVerdict(row.id, settledKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
-      { secondReadModel: second ? VERDICT_MODEL : null, secondReadUsd: second ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: charged1 });
+      { secondReadModel: second ? (second.readBy ?? VERDICT_MODEL) : null, secondReadUsd: second ? readCostUsd(second.readBy) : 0, decidedBy: lastClerkLine(o.transcript), charged: charged1 });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // This on-demand settle used to be the ONE finalize path that never sent the alerts, so a check
     // the customer watched to the end produced no in-stock email (owner 07-30). Same notifier as the
@@ -4247,10 +4247,25 @@ app.post("/app/zones/run/:runId/stop-one", async (c) => {
 });
 
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
+// The Auto-checks list paints each row as the site's own store row, so every schedule carries the
+// chain's real logo the same way the homepage and the Alerts list get theirs.
+async function schedulesWithLogos(userId: string) {
+  const list = await listSchedulesDetailed(userId);
+  if (!list.length) return list;
+  const stores = await retailerMap();
+  const chainRows = await cachedChains();
+  const schedChains = new Map(chainRows.map((x) => [x.id, x.name]));
+  const schedTypes = new Map(chainRows.map((x) => [x.id, x.type]));
+  return list.map((s) => {
+    const st = stores.get(s.retailerId);
+    const l = chainLogoInfo((st?.chainId && schedChains.get(st.chainId)) || storeChainName(st?.name || s.storeFull));
+    return { ...s, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect, storeType: (st?.chainId && schedTypes.get(st.chainId)) || "Other" };
+  });
+}
 app.get("/app/schedules", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  return c.json(await listSchedulesDetailed(u.id));
+  return c.json(await schedulesWithLogos(u.id));
 });
 app.post("/app/schedule", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
@@ -4270,7 +4285,58 @@ app.post("/app/schedule", async (c) => {
 app.delete("/app/schedules/:id", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  return c.json(await deleteSchedule(u.id, Number(c.req.param("id"))));
+  await deleteSchedule(u.id, Number(c.req.param("id")));
+  return c.json({ ok: true, schedules: await schedulesWithLogos(u.id) });
+});
+// Turn one auto-check off or on, or move it to different days or a different time. Answers with the
+// whole list so the Auto-checks screen repaints from one round trip (the Alerts list works this way).
+app.patch("/app/schedules/:id", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const b = await c.req.json().catch(() => ({}));
+  await updateSchedule(u.id, Number(c.req.param("id")), { active: b.active, daysOfWeek: b.daysOfWeek, timeLocal: b.timeLocal });
+  return c.json({ ok: true, schedules: await schedulesWithLogos(u.id) });
+});
+// The master "Pause all" switch on the Auto-checks list.
+app.post("/app/schedules/pause-all", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const b = await c.req.json().catch(() => ({}));
+  await pauseAllSchedules(u.id, !!b.paused);
+  return c.json({ ok: true, schedules: await schedulesWithLogos(u.id) });
+});
+// EVERY RUN OF ONE AUTO-CHECK (owner 2026-08-19: each one is its own record and somebody has to be
+// able to see what happened). Checks come back in the same shape as /app/history so the report paints
+// with the page's own row, verdict and conversation pieces; a day it could not run rides along as a
+// skip row so the record has no silent gaps.
+app.get("/app/schedules/:id/runs", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const id = Number(c.req.param("id"));
+  const mine = (await listSchedulesDetailed(u.id)).find((x) => x.id === id);
+  if (!mine) return c.json({ error: "not_found" }, 404);
+  const stores = await retailerMap();
+  const cats = await categoryLabelMap();
+  const runChains = new Map((await cachedChains()).map((x) => [x.id, x.name]));
+  const rows = (await db.select().from(callResults).where(eq(callResults.customerScheduleId, id)).orderBy(desc(callResults.startedAt)).limit(120))
+    .filter((r) => r.providerCallId);
+  const checks = rows.map((r) => {
+    const st = stores.get(r.retailerId);
+    const sName = st?.name || "A store";
+    const l = chainLogoInfo((st?.chainId && runChains.get(st.chainId)) || storeChainName(sName));
+    return {
+      cid: r.providerCallId, storeId: r.retailerId, storeName: sName, location: st?.location || "",
+      categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
+      ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
+      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard,
+      shipmentTime: r.shipmentTimeHeard ?? null, charged: !!r.chargedAt,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect,
+    };
+  });
+  const skips = (await listScheduleSkips(u.id, id)).map((k) => ({
+    skip: true, day: k.day, reason: k.reason, detail: k.detail || null, ts: (k.createdAt || 0) * 1000,
+  }));
+  return c.json({ schedule: mine, checks, skips });
 });
 
 // ---- Referrals: give free checks, get free checks ----
@@ -4873,6 +4939,26 @@ app.get("/api/admin/test-calls", async (c) => {
     .filter((r) => r.partOfCheck == null)
     .filter((r) => config.staging.on || ownerOnly.has(r.retailerId) || r.finderUserId === master)
     .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+  // WHICH TEST EACH CHECK RAN, ON THE ROW ITSELF (owner's order, 08-19, fix 1). Every check we dial
+  // at the robot store already stamps its test on its own record (`named_test`, bridge-place.ts), and
+  // until now only the sheet inside read it: the log said what the store answered and never what was
+  // being tested. Read by the card's KEY and looked up in TEST_CARDS, never off the old note's text,
+  // so a test that is renamed reads its new name on every check that ever ran it, and the row and the
+  // sheet's own heading can never disagree. One query for the whole page.
+  const testNameByRoom = new Map<string, string>();
+  {
+    const rooms = all.map((r) => r.room).filter((x): x is string => !!x);
+    if (rooms.length) {
+      const named = await db.select({ room: callEvents.room, detail: callEvents.detail, note: callEvents.note })
+        .from(callEvents).where(and(inArray(callEvents.room, rooms), like(callEvents.note, "Test: %")));
+      for (const n of named) {
+        if (!n.room || testNameByRoom.has(n.room)) continue;
+        let key = ""; try { key = String((JSON.parse(n.detail || "{}") as { step?: string; card?: string }).card || ""); } catch { /* the note stands in */ }
+        const name = (key && TEST_CARDS[key]?.name) || String(n.note || "").replace(/^Test:\s*/, "");
+        if (name) testNameByRoom.set(n.room, name);
+      }
+    }
+  }
   const rows = all.map((r) => {
     const wf = wfFor(r.retailerId);
     const cat = cats.get(r.categoryId) || "";
@@ -4892,6 +4978,9 @@ app.get("/api/admin/test-calls", async (c) => {
       summary: r.summary || null,
       // The join key back to the receipt, so a row opens the SAME sheet the Calls page opens.
       room: r.room || null,
+      // The name of the test this check ran, off its own record. Null on a check that ran no named
+      // test, which is every real customer check.
+      test: (r.room && testNameByRoom.get(r.room)) || null,
       // The route that really ran, and what the check really cost. A row with no stamped total was
       // written before this engine priced anything, so it says nothing rather than "free".
       lane: r.lane || null,
@@ -6470,7 +6559,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // DID THIS TEST PASS (owner 08-07). The card names the rows that must be green and the status the
   // check has to come back with, and `graded` is those two read against this check. Omitted while a
   // check is still going, because a test that has not finished has not failed either.
-  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null, graded?: { rows: BehavedRow[]; statusKey: string | null } | null) => {
+  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null, graded?: { rows: BehavedRow[]; statusKey: string | null } | null, spokenLines?: Array<{ who: string; text: string; atMs: number | null; endMs?: number | null }> | null) => {
     const stepOf = (name: string) => timeline.find((e) => (e.detail || {}).step === name) || null;
     const named = stepOf("named_test");
     const card = named ? TEST_CARDS[String((named.detail || {}).card || "")] ?? null : null;
@@ -6490,6 +6579,10 @@ app.get("/api/admin/receipt/:room", async (c) => {
     const totalUsd = (cost?.totalUsd ?? 0) + readUsd;
     const priceUsd = ((await getPolicy()).pricing.perCallCents / 100) * 1_000_000;
     const profitPct = totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null;
+    // THE ADVERT RULING'S WINDOW (owner, 08-19), measured once off the record: when the after-call
+    // reader proved a Staff line was really a recording the store played, the grade treats that
+    // stretch as a wait — as if the hold had been recognized when the store's recording started.
+    const asIf = advertAsWait(timeline as Array<{ kind: string; atMs?: number | null; detail?: Record<string, unknown> | null }>, spokenLines ?? null);
     // The workflow bubble: the same store to chain to default resolution every call uses.
     let workflow: { name: string; d: Array<[string, string]> } | null = null;
     try {
@@ -6516,20 +6609,44 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // check is finished, same as the verdict — an unfinished test has not failed either.
       meter: graded ? meterVerdict(card, { meterSec: sums?.charlieConnectedSeconds ?? null,
         speakingSec: sums?.speakingSecs ?? null, listeningSec: sums?.listeningSecs ?? null,
+        // THE WASTE, ITS OWN NUMBER ON THE SHEET (owner's order, 08-19, fix 4): the seconds his
+        // session was awake and billing while the store had us on hold, measured on the call.
+        awakeOnHoldSec: sums?.awakeOnHoldSeconds ?? null,
         // THE SET-ASIDE IS GONE (owner, 08-17 evening: "we already have a system, I didn't ask to
         // change shit"). A hold test is priced and graded exactly like every other check: the real
         // profit the check made, against the 67% floor, and no second number of any kind.
         profitPct,
+        // THE ADVERT RULING (owner, 08-19): when the after-call reader proved a Staff line was a
+        // recording the store played, the GRADE treats that stretch as a wait — the as-if window is
+        // measured off the record by advertAsWait (meter.ts), and the graded profit prices those
+        // Charlie seconds out of the grade only. The record, the real cost and the charge are
+        // untouched, and the sheet prints the real numbers beside the graded ones.
+        advert: ((): { asWaitSec: number; gradedProfitPct: number | null } | null => {
+          const asWaitSec = asIf ? Math.round(asIf.forgivenMs / 1000) : 0;
+          if (!asIf || asWaitSec <= 0) return null;
+          const realSec = cost?.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0;
+          const charlieUsd = cost?.charlieUsd ?? 0;
+          if (realSec <= 0 || totalUsd <= 0 || priceUsd <= 0) return { asWaitSec, gradedProfitPct: null };
+          const gradedCharlieUsd = charlieUsd * Math.max(0, realSec - asWaitSec) / realSec;
+          const gradedTotal = totalUsd - charlieUsd + gradedCharlieUsd;
+          return { asWaitSec, gradedProfitPct: Math.round(((priceUsd - gradedTotal) / priceUsd) * 100) };
+        })(),
         // THE NAMED GAPS, read off the check's own record (owner box 08-16 late): the engine
         // stamped each as it was measured, so nothing here is re-derived or guessed.
         ...((): { answerGapWorstSec: number | null; handoverGapWorstSec: number | null; dropGapWorstSec: number | null } => {
           let answer: number | null = null, handover: number | null = null, drop: number | null = null;
           let lastHold: number | null = null;
+          // A GAP STAMPED INSIDE THE AS-IF WAIT DOES NOT GRADE (the advert ruling, check 401): the
+          // engine measured Charlie "answering" the store's recording — his silenced note came 14
+          // seconds after the announce, all of it while the recording owned the line. Had the hold
+          // been recognized, that turn would never have existed, so the stamp is not a measurement
+          // of Charlie. The stamp stays on the record; only the grade disregards it.
+          const poisoned = (ms: number | null) => asIf != null && ms != null && ms >= asIf.offFromMs && ms <= asIf.toMs;
           for (const e of timeline as Array<{ kind: string; atMs?: number; detail?: Record<string, unknown> | null }>) {
             const det = (e.detail || {}) as Record<string, unknown>;
             const ms = typeof e.atMs === "number" ? e.atMs : null;
-            if (det.step === "gaps" && typeof det.answerGapWorstMs === "number") answer = Math.max(answer ?? 0, Math.round(det.answerGapWorstMs / 1000));
-            if (det.step === "missed_turn" && typeof det.sinceVoiceStopMs === "number") handover = Math.max(handover ?? 0, Math.round(det.sinceVoiceStopMs / 1000));
+            if (det.step === "gaps" && typeof det.answerGapWorstMs === "number" && !poisoned(ms)) answer = Math.max(answer ?? 0, Math.round(det.answerGapWorstMs / 1000));
+            if (det.step === "missed_turn" && typeof det.sinceVoiceStopMs === "number" && !poisoned(ms)) handover = Math.max(handover ?? 0, Math.round(det.sinceVoiceStopMs / 1000));
             if (e.kind === "hold_start" && ms != null) lastHold = ms;
             if (e.kind === "charlie_leave" && ms != null && lastHold != null) { drop = Math.max(drop ?? 0, Math.round((ms - lastHold) / 1000)); lastHold = null; }
           }
@@ -6570,7 +6687,8 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // to end log of the entire transaction which is huge for myself and any agent"). The steps were
       // already here; what was missing was the conversation itself, which is half of what he reads.
       lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000), atMs: l.atMs, endMs: l.endMs })),
-      v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null),
+      v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null, undefined,
+        live.transcript.map((l) => ({ who: l.who, text: l.text, atMs: l.atMs, endMs: l.endMs }))),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
@@ -6605,24 +6723,12 @@ app.get("/api/admin/receipt/:room", async (c) => {
       };
     }
   }
-  return c.json({
-    room, live: false,
-    timeline,
-    seconds,
-    // Same flag the by-id route sends, so the one viewer can tell "never written down" from "free".
-    stamped: !!cost,
-    // WAS THE CUSTOMER REALLY CHARGED (owner 08-06). The charge step was written from what the
-    // finalizer EXPECTED to bill, so a check nobody was billed for still drew "Customer charged".
-    // The truth is the charge stamp on the check's own row, and this is it: null when there is no
-    // row to stamp (an admin call is never a customer's check), never a guess.
-    charged: attached ? attached.chargedAt != null : null,
-    cost: cost ? { ...cost, readable: readable(cost) } : null,
-    behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
-    // A finished check's timed lines ride an event's detail (receipt-store stamps them on the last
-    // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
-    // is found by searching back rather than assumed to be last). Older checks predate the stamp and
-    // fall back to the flat transcript with no clock, exactly as before.
-    lines: ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null; endMs: number | null }> | null => {
+  // A finished check's timed lines ride an event's detail (receipt-store stamps them on the last
+  // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
+  // is found by searching back rather than assumed to be last). Older checks predate the stamp and
+  // fall back to the flat transcript with no clock, exactly as before. Built BEFORE the envelope so
+  // the advert grading (v2For) can read the same lines the sheet draws.
+  const spokenLines = ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null; endMs: number | null }> | null => {
       type Said = { who: string; text: string; atSec: number | null; atMs?: number | null; endMs?: number | null };
       // ONE CLOCK FOR THE WHOLE SHEET (owner 08-06): a line's real millisecond is what puts it in
       // order against the steps. A check recorded before the writer kept it has seconds only, and
@@ -6644,10 +6750,25 @@ app.get("/api/admin/receipt/:room", async (c) => {
       ?? String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
         const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
         return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null, endMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null, endMs: null };
-      }),
+      });
+  return c.json({
+    room, live: false,
+    timeline,
+    seconds,
+    // Same flag the by-id route sends, so the one viewer can tell "never written down" from "free".
+    stamped: !!cost,
+    // WAS THE CUSTOMER REALLY CHARGED (owner 08-06). The charge step was written from what the
+    // finalizer EXPECTED to bill, so a check nobody was billed for still drew "Customer charged".
+    // The truth is the charge stamp on the check's own row, and this is it: null when there is no
+    // row to stamp (an admin call is never a customer's check), never a guess.
+    charged: attached ? attached.chargedAt != null : null,
+    cost: cost ? { ...cost, readable: readable(cost) } : null,
+    behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
+    lines: spokenLines,
     v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null,
       { rows: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
-        statusKey: attached?.statusKey ?? attached?.status ?? null }),
+        statusKey: attached?.statusKey ?? attached?.status ?? null },
+      spokenLines),
   });
 });
 // THE HEAR-THE-CALL BUTTON'S AUDIO (owner box 08-17). Every check we dial ourselves is recorded at
@@ -7783,6 +7904,8 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let definitive = o.confirmed === true || o.confirmed === false;
       let productDetail: string | null = null;
       let restockDayHeard: string | null = null;
+      // WHO REALLY READ IT (08-18 night): carried out of the block so the record names the worker.
+      let secondReadBy: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
         // THE READER RULE (owner 07-29), one shared implementation — consensusFor in
@@ -7792,6 +7915,7 @@ app.post("/webhooks/elevenlabs", async (c) => {
           o.transcript, label || "the product", undefined, row?.room,
         );
         confirmed = consensus.confirmed; definitive = consensus.definitive;
+        secondReadBy = second?.readBy ?? null;
         // THE RECORD'S FACTS DECIDE OVER THE READER at the webhook door too (law 11, check 390).
         statusKey = await statusFromTheRecord(row?.room, consensus.confirmed, consensus.statusKey, o.transcript);
         productDetail = productDetailLabel(second);
@@ -7812,7 +7936,7 @@ app.post("/webhooks/elevenlabs", async (c) => {
       await notifyAfterVerdict(o.callId);
       // …and the same verdict tail as every other door (law 11).
       void recordVerdict(o.callId, statusKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
-        { secondReadModel: o.status === "completed" ? VERDICT_MODEL : null, secondReadUsd: o.status === "completed" ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: !!(row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) });
+        { secondReadModel: o.status === "completed" ? (secondReadBy ?? VERDICT_MODEL) : null, secondReadUsd: o.status === "completed" ? readCostUsd(secondReadBy) : 0, decidedBy: lastClerkLine(o.transcript), charged: !!(row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) });
     }
     return c.json({ ok: true });
   } catch (e) {

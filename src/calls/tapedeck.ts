@@ -123,7 +123,7 @@ export const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
   set: ["Oh nice! Is it Chaos Rising? Or do you know the name of the set?", "Awesome, any idea which set it is? Like Chaos Rising, or a different one?", "Oh sweet, do you know the name of the set? Like Chaos Rising?"],
   // Context-neutral phrasing: this clip plays after a set ANSWER and after "I don't know the set",
   // so no variant may assume either (owner 07-15: "No worries" read like it presumed confusion).
-  type: ["Gotcha, do you know if it's booster packs or a tin?", "And is it booster packs, or more like a box or a tin?"],
+  type: ["Gotcha, and is it a pack or a box?", "And is it a pack or a box?"],
   no: ["Ah, no worries. Any idea what day you usually get card shipments in?", "Okay no problem, do you know when your next shipment usually lands?"],
   wrap: ["Awesome, thanks so much! Have a good one!", "Perfect, thank you so much, take care!"],
   clarify: ["Oh sorry, I was just asking if you have any {category} in stock right now?"],
@@ -1078,7 +1078,7 @@ export const ROBOT_SCENES: RobotScene[] = [
   // that is not Staff. Charlie must stay dropped through the whole advertisement, must never answer
   // it, and not one word of it may reach the record as something Staff said to us. The voice is
   // already mixed under the music in the committed file, so this plays it whole and mixes nothing.
-  { n: 22, card: "hold_music", name: "Hold with an advert in the music, then an answer", expect: "in_stock", acts: [
+  { n: 22, card: "hold_music_advert", name: "Hold with an advert in the music, then an answer", expect: "in_stock", acts: [
     { listen: true }, { say: "One moment, I'll go and have a look." },
     { clip: "musicWithAd" },
     { say: "Yeah, we've got a few of those." },

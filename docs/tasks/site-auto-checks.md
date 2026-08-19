@@ -1,7 +1,21 @@
 # Auto-checks get their own section (owner-named 2026-08-05)
 
-**System:** site · **Status:** build NOT started. ONE comp approved (the list), the rest still need
-sharpening. Consumer site is frozen: this task IS the unlock authority for `public/checkit.html`.
+**System:** site · **Status:** BUILT and merged to staging 08-19 (PR #123). The owner ruled the rest of
+the pictures in on 08-19 and added four of his own rulings, below. Consumer site is frozen: this task IS
+the unlock authority for `public/checkit.html`.
+
+## What the owner ruled 08-19 (all built)
+- **Every auto-check that happens is its own record and somebody has to be able to see what happened
+  with it.** Checks already carried `customerScheduleId`; the days one could NOT run were silent, so
+  `customer_schedule_skips` writes one row per schedule per store-local day (store_off · no_checks),
+  cleared if the check later runs, and `GET /app/schedules/:id/runs` serves checks + skips.
+- **An auto-check can be moved to different days or a different time** (`PATCH /app/schedules/:id`),
+  built so a suggested better time can drop into that same screen when we start learning patterns.
+  Plus the row on/off and `POST /app/schedules/pause-all`.
+- **The result ping goes out on IN STOCK ONLY**; every other outcome still lands on the record.
+- **The In stock screen offers the auto-check too** (`canNotify` had always hidden it).
+- Spelling is "Auto-check"; the list's line is "Delete, pause or edit your auto-checks."
+- Also built, not comped: the empty list, the report before any run, the edit sheet, the locked row.
 
 **THE PICTURES AND WHERE THEY STAND: `docs/specs/auto-checks/README.md`.** Read it before you draw
 anything. The owner's ruling 08-06, his words: a ring filled 3 of 12 reads as progress toward a
@@ -53,5 +67,12 @@ the auto-check report.
 
 **Verify-live output (paste on close):**
 ```
-(none yet)
+HEAD = 312c41511e8e · origin/main = 731b21de8377
+staging  https://staging.checkitforme.com/ → LIVE (serving HEAD)
+prod     https://checkitforme.com/ → NOT-LIVE (serving 731b21de8377) — expected until the next promote
+admin    https://admin.checkitforme.com/ → NOT-LIVE (serving 731b21de8377) — expected until the next promote
 ```
+Driven on staging through the curl relay: the list (2 rows, "Delete, pause or edit your auto-checks."),
+the My Checks row ("2 stores on a schedule"), the report head and the edit sheet (7 chips, 2 picked),
+no page errors. Writes proven with curl on staging: pause-all answers ok both ways (so the new account
+column is there), and /app/schedules, PATCH, /runs and pause-all all answer 401 unauthenticated.
