@@ -24,7 +24,10 @@ type Src = { id: number; card: string; status: string | null; meter: number; spe
   /** How long each Staff turn lasted, in seconds, measured on the call itself. */
   staffTurns: number[];
   /** How long Charlie took to start talking after a hold ended, in seconds, per time it happened. */
-  backGaps: number[] };
+  backGaps: number[];
+  /** The gap between Staff finishing a line and one of OUR OWN recordings starting to play, per
+   *  recording. These are files we already hold, so the wait is ours, not the voice company's. */
+  clipGaps: number[] };
 
 async function sources(): Promise<Src[]> {
   const list = await api("/api/admin/test-calls");
@@ -53,11 +56,24 @@ async function sources(): Promise<Src[]> {
       const gap = (l.atMs - pend) / 1000;
       if (gap > 0 && gap < 25 && backs.some((b) => Math.abs(b - pend) < 15000)) backGaps.push(gap);
     });
+    // Our own recordings: the opening question, the hold reply, the set question, the goodbye.
+    const CLIPS = ["question_clip", "hold_ack_clip", "set_ask_clip", "signoff", "goodbye_played_out", "wrap_up"];
+    const staffTimed = timed.filter((l: any) => l.who !== "Agent");
+    const clipGaps: number[] = [];
+    for (const e of (d.timeline || [])) {
+      const step = String((e.detail || {}).step || "");
+      const at = e.atMs != null ? e.atMs : (e.atSec != null ? e.atSec * 1000 : null);
+      if (at == null || !CLIPS.includes(step)) continue;
+      const prev = staffTimed.filter((l: any) => (l.endMs ?? l.atMs) <= at).pop();
+      if (!prev) continue;
+      const g = (at - (prev.endMs ?? prev.atMs)) / 1000;
+      if (g > 0 && g < 25) clipGaps.push(g);
+    }
     const lines = (d.lines || []).map((l: any) => ({ who: l.who === "Agent" ? "charlie" : "staff", text: String(l.text || "") }));
     out.push({ id: r.id, card: keyByName.get(r.test)!, status: TEST_CARDS[keyByName.get(r.test)!].status,
       meter: s.charlieConnectedSeconds, speak: s.speakingSecs, listen: s.listeningSecs,
       turns: lines.filter((l: { who: string }) => l.who === "charlie").length || 2,
-      call: s.callSecs ?? s.charlieConnectedSeconds, lines, staffTurns, backGaps });
+      call: s.callSecs ?? s.charlieConnectedSeconds, lines, staffTurns, backGaps, clipGaps });
   }
   return out;
 }
@@ -81,6 +97,13 @@ const IDEAS: Array<{ name: string; sub: string; info: string; apply: (s: Src) =>
   { name: "Seconds: one less thing to say", sub: "Charlie says one fewer thing on the check.",
     info: "Measured off 83 of his own turns: he speaks 3.5 seconds a turn and takes 1.3 seconds to start. One turn removed is 4.8 seconds off every check that had a turn to spare. Nothing about how he sounds changes.",
     apply: (s) => Math.max(0, s.meter - (s.turns > 1 ? SPEAK_PER_TURN + THINK_PER_TURN : 0)) },
+  { name: "Seconds: press play sooner", sub: "Our own recordings start half a second after Staff stop, instead of 2.2 seconds.",
+    info: "The opening question, the hold reply, the set question and the goodbye are recordings we already hold on file. Measured on the last 16 checks, one starts 2.2 seconds after Staff stop talking on average and up to 9.7. Charlie is on the meter for every one of those seconds and nothing is being said. Nothing he says changes and the customer gets the same answer.",
+    apply: (s) => Math.max(0, s.meter - sum(s.clipGaps.map((g) => Math.max(0, g - 0.5)))) },
+  { name: "Seconds: press play sooner and back quicker", sub: "Recordings start sooner, and the wait after a hold comes down too.",
+    info: "The two waits that are ours rather than the voice company's, taken together.",
+    apply: (s) => Math.max(0, s.meter - sum(s.clipGaps.map((g) => Math.max(0, g - 0.5)))
+      - sum(s.backGaps.map((g) => Math.max(0, g - NORMAL_REPLY)))) },
   { name: "Seconds: off while Staff talk", sub: "Dropped for every Staff turn, and the 5 seconds to bring him back counted.",
     info: "Echo writes down every word Staff say, so Charlie does not have to be on the line while they talk. Bringing him back costs about 5 seconds each time, and this run pays that cost for every Staff turn.",
     apply: (s) => Math.max(0, s.meter - sum(s.staffTurns) + WAKE_COST * s.staffTurns.length) },
