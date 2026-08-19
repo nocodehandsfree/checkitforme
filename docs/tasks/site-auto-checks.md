@@ -67,5 +67,12 @@ the auto-check report.
 
 **Verify-live output (paste on close):**
 ```
-(staging deploy rolling at the time of the merge; re-run `bash scripts/verify-live.sh`)
+HEAD = 312c41511e8e · origin/main = 731b21de8377
+staging  https://staging.checkitforme.com/ → LIVE (serving HEAD)
+prod     https://checkitforme.com/ → NOT-LIVE (serving 731b21de8377) — expected until the next promote
+admin    https://admin.checkitforme.com/ → NOT-LIVE (serving 731b21de8377) — expected until the next promote
 ```
+Driven on staging through the curl relay: the list (2 rows, "Delete, pause or edit your auto-checks."),
+the My Checks row ("2 stores on a schedule"), the report head and the edit sheet (7 chips, 2 picked),
+no page errors. Writes proven with curl on staging: pause-all answers ok both ways (so the new account
+column is there), and /app/schedules, PATCH, /runs and pause-all all answer 401 unauthenticated.

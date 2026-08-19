@@ -378,8 +378,8 @@
      what left the chrome stuck on base-black through entire live calls (owner 07-16, "not transparent
      until the status reveals"). v2's bloom keeps the root at #1D1D22 permanently, so every re-read,
      whenever it happens, lands on the same value and the chrome always blends. */
-  html:not([data-skin="v2"]):has(#acctOverlay.on),html:not([data-skin="v2"]):has(#buyOverlay.on),html:not([data-skin="v2"]):has(#pageOverlay.on),html:not([data-skin="v2"]):has(.csheet.on),html:not([data-skin="v2"]):has(#zones.on),html:not([data-skin="v2"]):has(#histOverlay.on),html:not([data-skin="v2"]):has(#zmenuOv.on),html:not([data-skin="v2"]):has(#emailOv.on),html:not([data-skin="v2"]):has(#alertsOv.on),html:not([data-skin="v2"]):has(#featOv.on),html:not([data-skin="v2"]):has(#scorePostOv.on){background:#0C0C12!important}
-  html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
+  html:not([data-skin="v2"]):has(#acctOverlay.on),html:not([data-skin="v2"]):has(#buyOverlay.on),html:not([data-skin="v2"]):has(#pageOverlay.on),html:not([data-skin="v2"]):has(.csheet.on),html:not([data-skin="v2"]):has(#zones.on),html:not([data-skin="v2"]):has(#histOverlay.on),html:not([data-skin="v2"]):has(#zmenuOv.on),html:not([data-skin="v2"]):has(#emailOv.on),html:not([data-skin="v2"]):has(#alertsOv.on),html:not([data-skin="v2"]):has(#featOv.on),html:not([data-skin="v2"]):has(#scorePostOv.on),html:not([data-skin="v2"]):has(#autoOv.on),html:not([data-skin="v2"]):has(#autoRepOv.on),html:not([data-skin="v2"]):has(#autoEditOv.on){background:#0C0C12!important}
+  html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body,html:has(#autoOv.on) body,html:has(#autoRepOv.on) body,html:has(#autoEditOv.on) body{background:var(--bg)!important}
   /* GLASS-EDGE VEILS: attempted 07-16 (rgba veils extending Safari's own edge dim/haze ramps) and
      REVERTED same day — they muddied the verdict blooms the owner already approved. Safari's ~50%-dim
      top strip and hazed bottom zone over the flat v2 base are ACCEPTED as the platform look on regular
@@ -2122,13 +2122,13 @@ html[data-skin="v2"] #zones .modal::before,html[data-skin="v2"] #histOverlay .mo
 html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 /* Zone dialogs (actions menu / rename / delete / check confirm) = bottom sheets too — the comp shows
    them sliding up from the bottom edge over the dimmed zones list, same recipe as scorePostOv. */
-html[data-skin="v2"] #zmenuOv,html[data-skin="v2"] #emailOv,html[data-skin="v2"] #alertsOv,html[data-skin="v2"] #featOv{align-items:flex-end;padding:0}
-html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #zmenuOv,html[data-skin="v2"] #emailOv,html[data-skin="v2"] #alertsOv,html[data-skin="v2"] #featOv,html[data-skin="v2"] #autoOv,html[data-skin="v2"] #autoRepOv,html[data-skin="v2"] #autoEditOv{align-items:flex-end;padding:0}
+html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal,html[data-skin="v2"] #autoOv .modal,html[data-skin="v2"] #autoRepOv .modal,html[data-skin="v2"] #autoEditOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
 /* The bottom slide-up was invisible against the page behind it (owner 07-21: the check-zone confirm
    "got lost"). A hairline top-edge border + deeper drop shadow separates the sheet from the page. */
-html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{border:1px solid rgba(255,255,255,.15);border-bottom:0;box-shadow:0 -20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07)}
-html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
-html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal,html[data-skin="v2"] #autoOv .modal,html[data-skin="v2"] #autoRepOv .modal,html[data-skin="v2"] #autoEditOv .modal{border:1px solid rgba(255,255,255,.15);border-bottom:0;box-shadow:0 -20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before,html[data-skin="v2"] #autoOv .modal::before,html[data-skin="v2"] #autoRepOv .modal::before,html[data-skin="v2"] #autoEditOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal,html[data-skin="v2"] #autoOv.on .modal,html[data-skin="v2"] #autoRepOv.on .modal,html[data-skin="v2"] #autoEditOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 /* Feature sheets: a centred header block (raised icon tile, name, the promise) over ONE carved well of
    points. The points used to sit loose on the sheet and read as a list that fell there (owner 07-26). */
 html[data-skin="v2"] #featOv .fi-head{text-align:center;margin:0 0 16px}
@@ -2139,11 +2139,11 @@ html[data-skin="v2"] #featOv .fi-pts{background:#1B1B20;border-radius:18px;paddi
 html[data-skin="v2"] #featOv .fi-pt{display:flex;align-items:flex-start;gap:12px;padding:13px 0;font-size:14.5px;font-weight:600;color:rgba(255,255,255,.9);line-height:1.4}
 html[data-skin="v2"] #featOv .fi-pt>span:first-child{flex:0 0 auto;margin-top:2px;display:flex}
   /* Alerts can hold up to 10 stores, so let the sheet scroll instead of running off-screen (owner 07-23). */
-  html[data-skin="v2"] #alertsOv .modal{max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  html[data-skin="v2"] #alertsOv .modal,  html[data-skin="v2"] #autoOv .modal,  html[data-skin="v2"] #autoRepOv .modal,  html[data-skin="v2"] #autoEditOv .modal{max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
   /* With one or two alerts the sheet was sized by its contents and parked low, leaving My checks
      showing behind it (owner 08-02). A floor of 72% of the screen makes it cover the page like every
      other full sheet; it still grows with the list up to the 86% cap above. */
-  html[data-skin="v2"] #alertsOv .modal{min-height:72dvh}
+  html[data-skin="v2"] #alertsOv .modal,  html[data-skin="v2"] #autoOv .modal,  html[data-skin="v2"] #autoRepOv .modal,  html[data-skin="v2"] #autoEditOv .modal{min-height:72dvh}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
 /* sheet-mode (body.sheetopen): the sheet box overshoots 120px under the iOS bar so rows ghost through the
    glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
@@ -2370,7 +2370,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   html[data-skin="v2"] .ckarc1,html[data-skin="v2"] .ckarc2,html[data-skin="v2"] .rpill .d{animation:none}
 }
 /*V2END*/</style>
-<meta name="build" content="0a59a1b6024b">
+<meta name="build" content="312c41511e8e">
 </head>
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
@@ -2728,6 +2728,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <div class="overlay" id="scheduleOverlay" onclick="if(event.target===this)closeSchedule()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeSchedule()">×</span>
+    <div id="sch_form">
     <div style="display:flex;justify-content:center;margin:2px 0 6px"><span class="mico" id="schIco"></span></div>
     <h3 style="margin:0;text-align:center" data-i18n="sch.title">Auto-check</h3>
     <p style="margin:4px 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5;text-align:center" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results.<b id="sch_cat" style="display:none"></b></p>
@@ -2739,6 +2740,10 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <input id="sch_contact" type="text" inputmode="email" autocomplete="email" data-i18n-ph="ph.schednum" placeholder="Enter number" class="kin">
     <div id="sch_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sch_btn" onclick="submitSchedule()" style="margin-top:8px;width:100%" data-i18n="sch.cta">Turn on auto-check →</button>
+    </div>
+    <!-- The sheet does NOT close on save (owner 08-06): it flips in place to this screen, which shows
+         what was just set up and drops them straight into their auto-checks list. -->
+    <div id="sch_done" style="display:none"></div>
   </div>
 </div>
 
@@ -3085,7 +3090,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 
 <script>
 const BRAND = {"key":"needoh","name":"NeeDoh<b>Check</b>","category":"NeeDoh","accent":"#EC4899","accent2":"#F97316","logoUrl":"/logos/products/needoh.png?v=3","emoji":"🟢"};   // injected per subdomain (vertical micro-site)
-window.SWITCHER = {"current":"needoh","list":[{"key":"poke","slug":"pokemon","label":"Pokémon","emoji":"⚡","logoUrl":""}]}; // {current, list:[{key,slug,label,emoji}]} for the product switcher
+window.SWITCHER = {"current":"needoh","list":[{"key":"poke","slug":"pokemon","label":"Pokémon","emoji":"⚡","logoUrl":""},{"key":"onepiece","slug":"onepiece","label":"One Piece","emoji":"🏴‍☠️","logoUrl":"/logos/products/onepiece.png"},{"key":"topps","slug":"toppsbasketball","label":"Topps NBA","emoji":"🏀","logoUrl":"/logos/products/topps.png?v=3","tag":"NBA Cards"},{"key":"needoh","slug":"needoh","label":"NeeDoh","emoji":"🟢","logoUrl":"/logos/products/needoh.png?v=3"}]}; // {current, list:[{key,slug,label,emoji}]} for the product switcher
 let BRAND_CAT = null;           // resolved category object for a vertical site, else null
 let STORES=[], CATS=[], SEL_STORE=null, SEL_CAT=null, SEL_CATS=[], ASKED_CATS=[], SEL_PRODUCT='', SEL_KIOSK=false, KIOSK_OK=false, POLL=null, LASTRES=null, TRANSLATED=false, ORIGHTML='', MODE='call';
 let RSTATUSES={}; // statuses registry: server-defined verdicts (single source of truth)
@@ -3396,7 +3401,7 @@ Object.assign(I18N.es, {
   'ref.both2':'Ambos reciben <b style="color:#fff">{n} {c} gratis</b> cuando se registran.',
   'ref.check1':'verificación','ref.checkN':'verificaciones',
   'ref.msg2':'¡Oye! Mira esta tecnología, está increíble.\nUna IA llama a las tiendas y encuentra {x} en stock a precio de tienda.\nRegístrate y los dos recibimos {r}:','ref.cardsword':'cartas',
-  'acct.filtered':'Mostrando','acct.row.zones':'Administrar zonas',
+  'acct.filtered':'Mostrando','acct.row.zones':'Zonas',
   'acct.row.zones.locked':'Check+ · verifica todas tus tiendas cercanas a la vez',
   'acct.row.zones.sub':'Verifica toda una zona de un toque.',
   'sc.noinstock':'Aquí solo salen las tiendas donde lo encontraste en stock. Haz una verificación primero.',
@@ -3406,6 +3411,31 @@ Object.assign(I18N.es, {
   'toast.anytown':'Otras ciudades necesitan Check+. ¿Te apuntas?',
   'toast.locating2':'Buscando tiendas','toast.payment2':'🎉 Pago recibido. Agregando tus verificaciones…',
   'auth.wetexted':'Te enviamos un mensaje a','auth.entercode':'escribe el código abajo','auth.notget':'¿No llegó?','auth.resend':'Reenviar','auth.changenum':'Cambiar número',
+  'acct.row.auto':'Auto-verificaciones','acct.row.auto.none':'Crea una y llamamos por ti',
+  'acct.row.auto.one':'1 tienda programada','acct.row.auto.sub':'{n} tiendas programadas',
+  'acct.row.auto.locked':'Check+ · llamamos a la tienda por ti los días que elijas',
+  'auto.title':'Auto-verificaciones','auto.sub':'Borra, pausa o edita tus auto-verificaciones.',
+  'auto.pauseall':'Pausar todo','auto.on':'Activas','auto.paused':'En pausa',
+  'auto.rowon':'Activa','auto.rowoff':'Apagada','auto.edit':'Editar','auto.delete':'Borrar',
+  'auto.next':'Próxima verificación el {d}','auto.nexttoday':'Próxima verificación hoy',
+  'auto.none':'Aún no tienes auto-verificaciones. Haz una verificación y actívala desde el resultado.',
+  'auto.onpill':'Activada. Seguimos verificando.','auto.offpill':'En pausa. No verificamos hasta que la actives.',
+  'auto.allpaused':'Todo en pausa. No verificaremos nada.','auto.allon':'Todo activo. Seguimos verificando.',
+  'auto.del.q':'¿Borrar la auto-verificación de {s}?','auto.del.note':'Lo que ya encontró queda en tu historial.',
+  'auto.del.yes':'Bórrala','auto.del.no':'Consérvala','auto.deleted':'Auto-verificación borrada',
+  'auto.today':'hoy','auto.todaycap':'Hoy',
+  'auto.rep.week':'Esta semana','auto.rep.norun':'Sin verificación ese día',
+  'auto.skip.nochecks':'No pudimos llamar. Te quedaste sin verificaciones ese día.',
+  'auto.skip.storeoff':'No pudimos llamar. La tienda estaba fuera del sitio ese día.',
+  'auto.rep.noneweek':'Nada esta semana.','auto.rep.first':'Aún nada. La primera verificación es el {d}.',
+  'auto.rep.nonext':'Aún nada.','auto.rep.edit':'Cambiar días u hora',
+  'auto.edit.title':'Cambia esta auto-verificación','auto.edit.save':'Guardar cambios','auto.edit.saving':'Guardando…',
+  'auto.edit.done':'Guardado. Ahora llamamos los días nuevos.',
+  'auto.saved.title':'La auto-verificación está activa.','auto.saved.sub':'Verificamos por ti y te enviamos el resultado.',
+  'auto.saved.days':'Días','auto.saved.from':'Desde','auto.saved.next':'Próxima verificación',
+  'auto.saved.cta':'Ver mis auto-verificaciones',
+  'up.keep':'Sigue verificando esta tienda','up.keep.sub':'Llamamos los días que elijas y te decimos qué dicen.',
+  'up.keep.row':'Crea una auto-verificación','up.keep.rowsub':'Elige los días y llamamos a la tienda por ti.',
 });
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
@@ -4238,11 +4268,16 @@ const DOWSHORT={'0':'Sun','1':'Mon','2':'Tue','3':'Wed','4':'Thu','5':'Fri','6':
 async function loadSchedules(){
   const card=$('schedCard'); if(!card) return;
   // Auto-checks are a per-tier premium module: gate on scheduled_checks (comp→true). Starves window.SCHEDS
-  // so #schedCard, the My-checks #acctScheds block, AND the calendar rings all go empty in one shot.
-  if(!(isAuthed()&&ACCOUNT&&ACCOUNT.subscription==='active'&&hasFeature('scheduled_checks'))){ card.style.display='none'; window.SCHEDS=[]; return; }
+  // so #schedCard, the Auto-checks list, AND the calendar rings all go empty in one shot.
+  // A comp account could SAVE an auto-check and never SEE it: the server lets a comp account through
+  // (isCompAccount || subscription active) while this line asked for the subscription alone, so the
+  // owner's own account has never seen one of these screens (owner 08-05). Comp counts here too now.
+  if(!(isAuthed()&&ACCOUNT&&(ACCOUNT.comp||ACCOUNT.subscription==='active')&&hasFeature('scheduled_checks'))){ card.style.display='none'; window.SCHEDS=[]; try{ autoRowSync(); }catch(_){ } return; }
   const list=await appApi('/app/schedules');
+  // An EMPTY answer must clear the list (it used to leave the old one standing), but a FAILED answer
+  // must not: a blip would have emptied the Auto-checks row and its screen in front of the customer.
+  if(Array.isArray(list)){ window.SCHEDS=list; try{ autoRowSync(); if(window.__autoPaint) window.__autoPaint(list); }catch(_){ } }
   if(!Array.isArray(list)||!list.length){ card.style.display='none'; return; }
-  window.SCHEDS=list; try{ if(isV2()&&$('acctOverlay').classList.contains('on')) renderAcctScheds(); }catch(_){ }
   if(isV2()){ card.style.display='none'; try{ renderTodayCal(); }catch(_){ } return; } // v2: auto-checks moved into My checks (owner) — and repaint sched rings
   card.style.display='';
   if(false){
@@ -6782,7 +6817,21 @@ function showResult(o, cid){
   // one actionable row will render (entitlement AND its global flag), so it can never show an empty module.
   const _rAlert = F.restockAlerts!==false && hasFeature('restock_alerts');
   const _sAuto  = F.scheduling!==false && hasFeature('scheduled_checks');
-  const upsell = !(canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? '' : ((_rAlert||_sAuto) ? `
+  // IN STOCK IS OFFERED THE AUTO-CHECK TOO (owner 08-19). The box used to appear only when the answer
+  // was NOT in stock, so everybody who heard the good news walked away with nothing set up. On an in
+  // stock answer it is the auto-check on its own, under its own headline: there is no restock to be
+  // told about when they just got one.
+  const upsell = (inStock && _sAuto) ? `
+    <div class="upmod">
+      <button type="button" class="upmod-h" onclick="this.closest('.upmod').classList.toggle('open')" aria-label="${esc(t('up.keep','Keep checking this store'))}">
+        <div class="t">${AUTO_ICO(PURP,15)} ${t('up.keep','Keep checking this store')}</div>
+        <span class="upmod-chev"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </button>
+      <div class="upmod-body">
+        <div class="s">${t('up.keep.sub',"We call on the days you pick and tell you what they say.")}</div>
+        <div class="uprow" onclick="openSchedule()"><div class="upi">${AUTO_ICO(PURP,15)}</div><div class="uptxt"><div class="a">${t('up.keep.row','Set up an auto-check')}</div><div class="b">${t('up.keep.rowsub','Pick the days and we call the store for you.')}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>
+      </div>
+    </div>` : !(canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? '' : ((_rAlert||_sAuto) ? `
     <div class="upmod">
       <button type="button" class="upmod-h" onclick="this.closest('.upmod').classList.toggle('open')" aria-label="${esc(t('up.restock',"Don't miss the restock"))}">
         <div class="t">${ICO.bell(PURP)} ${t('up.restock',"Don't miss the restock")}</div>
@@ -7254,21 +7303,6 @@ function actReset(){ ACT_WOFF=0; ACT_DAY=undefined; ACT_TONE=''; }
 function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); }
 // Auto-checks block inside My checks (owner: manage them where the account lives; shows the product
 // per check so multi-vertical users see what each auto-check is for).
-function renderAcctScheds(){
-  const host=$('acctScheds'); if(!host) return;
-  if(!hasFeature('scheduled_checks')){ host.innerHTML=''; return; } // tier without auto-checks → no module
-  const list=window.SCHEDS||[];
-  if(!list.length){ host.innerHTML=''; return; }
-  const cal='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
-  host.innerHTML=`<div style="margin-top:16px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${t('sched.step2','Your auto-checks')}</div>`+
-    list.map(sc=>{ const days=(sc.daysOfWeek||'').split(',').filter(Boolean).map(d=>DOWSHORT[d]).join(', ')||t('sched.shipday','shipment day');
-      return `<div style="display:flex;align-items:center;gap:11px;margin-top:8px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)">
-      <span style="width:34px;height:34px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${cal}</span>
-      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;line-height:1.3">${esc(sc.store)} · <b style="color:var(--accent,#FFCB05)">${esc(sc.category)}</b></div>
-        <div style="margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${esc(days)} · ${t('sched.from','from')} ${esc(sc.timeLocal||'10:00')}${sc.specificProduct?(' · '+esc(sc.specificProduct)):''}</div></div>
-      <button onclick="cancelSchedule(${sc.id})" style="flex:0 0 auto;background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.4);color:#FF8A8A;padding:7px 14px;border-radius:999px;font-weight:700;font-size:12px;cursor:pointer">${t('sched.cancel','Cancel')}</button>
-    </div>`;}).join('');
-}
 function acctTab(which,fromPop){
   const modal=document.querySelector('#acctOverlay .modal'); if(!modal) return;
   try{ if(!fromPop && $('acctOverlay').classList.contains('on') && !(history.state&&history.state.v==='acct'&&history.state.t===which)) history.pushState({v:'acct',t:which},''); }catch(_){ }
@@ -7301,14 +7335,14 @@ function acctTab(which,fromPop){
     panel.innerHTML=
       (member?row(spark,t('acct.row.plan','Manage plan'),compAcct?t('plan.unlcycle','Unlimited · billed monthly'):t('plan.cycle','Billed monthly · cancel anytime'),"ACCT_RETURN='overview';closeAccount();openBuy('manage')"):'')+
       row(calic,t('acct.row.hist','Check history'),histSub,"ACCT_RETURN='overview';closeAccount();openHistory(true)")+
+      row(AUTO_ICO(AC2),t('acct.row.auto','Auto-checks'),hasFeature('scheduled_checks')?`<span id="acctAutoSub">${autoCountLbl((window.SCHEDS||[]).length)}</span>`:t('acct.row.auto.locked','Check+ · we call the store for you on the days you pick'),hasFeature('scheduled_checks')?"openAutoChecks()":"ACCT_RETURN='overview';closeAccount();openBuy('premium')")+
       row(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`,t('acct.row.alerts','Alerts'),t('acct.row.alerts.sub','Restock and auto check pings.'),"openAlerts()")+
-      row(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,t('acct.row.zones','Manage Zones'),hasFeature('zone_sweeps')?t('acct.row.zones.sub','Check a whole area in one tap.'):t('acct.row.zones.locked','Check+ · check every store near you at once'),"ACCT_RETURN='overview';closeAccount();openZones()")+
-      `<div id="acctScheds"></div>`+
+      row(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,t('acct.row.zones','Zones'),hasFeature('zone_sweeps')?t('acct.row.zones.sub','Check a whole area in one tap.'):t('acct.row.zones.locked','Check+ · check every store near you at once'),"ACCT_RETURN='overview';closeAccount();openZones()")+
       caps+
       // 4A: Sign out at the FOOT of the sheet, below RUN A CHECK (owner 07-11 comp) — small underlined
       // grey text with real bottom clearance so the slide-up edge never clips it.
       `<button onclick="doSignOut()" style="display:block;margin:18px auto 0;padding:0 0 32px;background:none;border:0;font-size:13px;font-weight:600;color:#7A7A86;text-decoration:underline;text-underline-offset:3px;cursor:pointer">${t('acct.signout','Sign out')}</button>`;
-    renderAcctScheds(); if(!(window.SCHEDS&&window.SCHEDS.length)) try{ loadSchedules(); }catch(_){ }
+    try{ loadSchedules(); }catch(_){ } // repaints the Auto-checks row's own line the moment the list lands
     return;
   }
   const hist=histList().filter(e=>e.cid&&e.ts);
@@ -7932,6 +7966,267 @@ async function alertMute(id,muted){
   const r=await appApi('/app/alerts/mute',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,muted:!!muted})});
   if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); toast(muted?t('alerts.mutedpill','Muted. Unmute any time.'):t('alerts.unmutedpill',"Back on. We'll ping you."),'neutral'); }
   else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
+// ---- AUTO-CHECKS: their own row, their own list, and the record of every run ------------------
+// Owner 08-05/08-19. Auto-checks are their OWN section beside Alerts, never merged with it. The list
+// copies the Alerts list piece for piece (same sheet, same store row, same switch, same pause-all);
+// the report copies the Activity tab's week bars and the zone report's unfold, so nothing here is a
+// new shape the customer has to learn. Every run is its own record: a check that ran, or a day it
+// could not run and why.
+const AUTO_ICO=(c,sz)=>`<svg width="${sz||16}" height="${sz||16}" viewBox="0 0 24 24" fill="none" style="stroke:${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.4-7.06"/><path d="M21 3v6h-6"/><path d="M12 7.5V12l3 1.8"/></svg>`;
+function autoCountLbl(n){ return !n?t('acct.row.auto.none','Set one up and we call for you'):(n===1?t('acct.row.auto.one','1 store on a schedule'):tf('acct.row.auto.sub','{n} stores on a schedule',{n:n})); }
+function autoRowSync(){ try{ const el=$('acctAutoSub'); if(el) el.innerHTML=autoCountLbl((window.SCHEDS||[]).length); }catch(_){ } }
+// "Tue, Fri" (or the store's own shipment day when they picked none) and "10:00 AM".
+function autoDaysLbl(s){ const set=String(s.daysOfWeek||'').split(',').filter(Boolean); return set.length?set.map(d=>DOWSHORT[d]).join(', '):t('sched.shipday','shipment day'); }
+function autoTimeLbl(s){ const hm=String(s.timeLocal||'10:00').split(':'); const h=Number(hm[0])||0, m=hm[1]||'00';
+  if(LANG==='es') return (h<10?'0':'')+h+':'+m;
+  const ap=h<12?'AM':'PM', h12=(h%12)||12; return h12+':'+m+' '+ap; }
+function autoStoreName(s){ const nm=splitStoreName(s.storeFull||s.store||''); return [nm.base,nm.branch].filter(Boolean).join(' ')||t('alerts.thatstore','that store'); }
+function autoStoreObj(s){ const cached=(window.STORES||[]).find(x=>x.id===s.retailerId);
+  return { id:s.retailerId, storeId:s.retailerId, name:autoStoreName(s),
+    location:s.storeLocation||(cached&&cached.location)||'',
+    logoUrl:s.logoUrl||(cached&&cached.logoUrl)||null,
+    logoWide:s.logoWide!=null?s.logoWide:(cached&&cached.logoWide),
+    logoDark:s.logoDark!=null?s.logoDark:(cached&&cached.logoDark),
+    logoPct:s.logoPct!=null?s.logoPct:(cached&&cached.logoPct),
+    storeType:s.storeType||(cached&&cached.storeType)||'' }; }
+function autoById(id){ try{ return (window.SCHEDS||[]).find(x=>x.id===id)||null; }catch(_){ return null; } }
+function closeAutoChecks(){ const o=$('autoOv'); if(o) o.classList.remove('on'); }
+// THE LIST. Same sheet as Alerts: pause-all on top, one store row each, its own switch, edit, delete.
+async function openAutoChecks(){
+  const ov=sheetShell('autoOv');
+  const shell=inner=>`<div class="modal" style="text-align:left">
+    <div style="display:flex;justify-content:center;margin-bottom:6px">${AUTO_ICO(AC1(),28)}</div>
+    <h3 style="margin:2px 0 4px;text-align:center">${t('auto.title','Auto-checks')}</h3>
+    <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('auto.sub','Delete, pause or edit your auto-checks.'))}</div>
+    <div id="autoList">${inner}</div></div>`;
+  const paint=list=>{ if(!$('autoList')) return; list=Array.isArray(list)?list:[]; AUTO_ME=list;
+    const paused=!!(list[0]&&list[0].paused);
+    const master=list.length?`<div class="alpause" style="margin-bottom:12px"><span style="font-size:14.5px;font-weight:800;color:#fff">${t('auto.pauseall','Pause all')}</span>
+      <div class="ho-toggle alsw" style="width:170px;flex:0 0 auto"><button class="${!paused?'on':''}" onclick="autoPauseAll(0)">${t('auto.on','On')}</button><button class="${paused?'on':''}" onclick="autoPauseAll(1)">${t('auto.paused','Paused')}</button></div></div>`:'';
+    const rows=list.length? list.map(s=>{ const so=autoStoreObj(s), off=!s.active;
+      const nx=(s.nextDow!=null&&s.active&&!paused)?`<span style="color:#4ADE80">${s.nextToday?t('auto.nexttoday','Next check today'):tf('auto.next','Next check {d}',{d:dowName(s.nextDow)})}</span>`:'';
+      return `<div class="store alrow${off||paused?' alrow-off':''}" style="margin-top:10px;cursor:pointer" onclick="openAutoReport(${s.id})">
+        <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
+        <div class="altxt"><div class="nm">${esc(so.name)}</div><div class="lo">${esc(autoDaysLbl(s))} · ${autoTimeLbl(s)}${nx?' · '+nx:''}</div></div>
+        <div class="alctl" onclick="event.stopPropagation()">
+          <div class="ho-toggle alsw" style="width:104px;flex:0 0 auto"><button class="${!off?'on':''}" onclick="autoSetOn(${s.id},1)">${t('auto.rowon','On')}</button><button class="${off?'on':''}" onclick="autoSetOn(${s.id},0)">${t('auto.rowoff','Off')}</button></div>
+          <button class="alrm" style="background:rgba(74,222,128,.12);color:#4ADE80" onclick="openAutoEdit(${s.id})" aria-label="${t('auto.edit','Edit')}">${Z_ICO_PEN}</button>
+          <button class="alrm" onclick="autoDeleteAsk(${s.id})" aria-label="${t('auto.delete','Delete')}">${Z_ICO_TRASH}</button>
+        </div></div>`;}).join('')
+      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('auto.none',"You don't have any auto-checks yet. Run a check on a store and turn one on from the result."))}</span></div>`;
+    $('autoList').innerHTML=master+rows; };
+  window.__autoPaint=paint;
+  ov.innerHTML=shell(AUTO_ME?'':`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
+  if(AUTO_ME) paint(AUTO_ME);
+  ov.classList.add('on'); sheetPush('auto');
+  const r=await appApi('/app/schedules');
+  if(Array.isArray(r)){ window.SCHEDS=r; try{ autoRowSync(); }catch(_){ } paint(r); }
+  else if(!AUTO_ME) paint([]);
+}
+// The switch, the master pause and the delete all answer with the whole list, so one round trip
+// repaints the screen (the Alerts list works exactly this way).
+function autoTake(r){ if(!r||r.error){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return false; }
+  window.SCHEDS=Array.isArray(r.schedules)?r.schedules:(window.SCHEDS||[]); try{ autoRowSync(); }catch(_){ }
+  if(window.__autoPaint) window.__autoPaint(window.SCHEDS); return true; }
+async function autoSetOn(id,on){
+  const r=await appApi('/app/schedules/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({active:!!on})});
+  if(autoTake(r)) toast(on?t('auto.onpill',"Back on. We'll keep checking."):t('auto.offpill','Paused. No checks until you turn it back on.'),'neutral'); }
+async function autoPauseAll(paused){
+  const r=await appApi('/app/schedules/pause-all',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({paused:!!paused})});
+  if(autoTake(r)) toast(paused?t('auto.allpaused','All paused. Nothing will be checked.'):t('auto.allon',"All back on. We'll keep checking."),'neutral'); }
+function autoDeleteAsk(id){ const s=autoById(id); const nm=(s&&s.store)||t('alerts.thatstore','that store');
+  zPop(`<h3 style="margin:4px 0 16px;text-align:center">${tf('auto.del.q','Delete the auto-check for {s}?',{s:esc(nm)})}</h3>
+  <div class="meta" style="text-align:center;margin:-8px 0 16px">${sentLines(t('auto.del.note','What it already found stays in Check history.'))}</div>
+  <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();autoDelete(${id})"><span style="color:#FF8A8A">${t('auto.del.yes','Delete it')}</span></button>
+  <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('auto.del.no','Keep it')}</button>`); }
+async function autoDelete(id){
+  const r=await appApi('/app/schedules/'+id,{method:'DELETE'});
+  if(autoTake(r)){ track('schedule_cancel',{id:id}); toast(t('auto.deleted','Auto-check deleted'),'neutral'); } }
+// THE RECORD OF ONE AUTO-CHECK (owner 08-19: "each auto check is its own transaction and needs a
+// record and somebody needs to be able to see what happened with that record"). The week of day bars
+// is the Activity tab's own chart, the rows are that day's runs, and a row unfolds into the real
+// check page with the conversation, the way a store unfolds inside a zone report.
+let AUTO_ME=null, AUTO_REPORT=null;
+const dowName=d=>{ try{ return new Date(2024,0,7+Number(d)).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'long'}); }catch(_){ return ''; } };
+function autoDaysWords(s){ const set=String(s.daysOfWeek||'').split(',').filter(Boolean);
+  if(!set.length) return t('sched.shipday','shipment day');
+  const names=set.map(d=>LANG==='es'?dowName(d):dowName(d)+'s');
+  if(names.length===1) return names[0];
+  const last=names.pop(); return names.join(', ')+(LANG==='es'?' y ':' and ')+last; }
+function autoSkipLine(k){ return k.reason==='no_checks'
+  ? t('auto.skip.nochecks',"We couldn't call. You were out of checks that day.")
+  : t('auto.skip.storeoff',"We couldn't call. The store was off the website that day."); }
+const AUTO_DOT=(tone)=>{ const col=tone==='in'?'#4ADE80':tone==='out'?'#FF8080':tone==='soon'?'#F5B301':tone==='skip'?'#8A8A96':'#9CA3AF';
+  const mark=tone==='in'?'<path d="M8 12.5l2.6 2.6L16 9.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+    :tone==='out'?'<path d="M9 9l6 6M15 9l-6 6" stroke="#2B0F0F" stroke-width="2.6" stroke-linecap="round"/>'
+    :tone==='skip'?'<path d="M10 9v6M14 9v6" stroke="#1B1B20" stroke-width="2.6" stroke-linecap="round"/>'
+    :'<path d="M12 8v5" stroke="#1B1B20" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="16.2" r="1.3" fill="#1B1B20"/>';
+  return `<svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="${col}"/>${mark}</svg>`; };
+function closeAutoReport(){ const o=$('autoRepOv'); if(o) o.classList.remove('on'); }
+async function openAutoReport(id){
+  const ov=sheetShell('autoRepOv');
+  const keep=(AUTO_REPORT&&AUTO_REPORT.id===id)?AUTO_REPORT.data:null;
+  AUTO_REPORT={id:id, woff:0, day:undefined, data:keep, loading:!keep};
+  renderAutoReport(); ov.classList.add('on'); sheetPush('autorep');
+  const r=await appApi('/app/schedules/'+id+'/runs');
+  if(AUTO_REPORT&&AUTO_REPORT.id===id){ AUTO_REPORT.loading=false;
+    if(r&&!r.error) AUTO_REPORT.data=r;
+    renderAutoReport(); }
+}
+function autoRepPick(i){ if(!AUTO_REPORT) return; AUTO_REPORT.day=(AUTO_REPORT.day===i?null:i); renderAutoReport(); }
+function autoRepWeek(d){ if(!AUTO_REPORT) return; AUTO_REPORT.woff=Math.max(0,AUTO_REPORT.woff+d); AUTO_REPORT.day=undefined; renderAutoReport(); }
+function renderAutoReport(){
+  const ov=$('autoRepOv'); if(!ov||!AUTO_REPORT) return;
+  const R=AUTO_REPORT, d=R.data, s=(d&&d.schedule)||autoById(R.id)||{};
+  const so=autoStoreObj(s);
+  const checks=((d&&d.checks)||[]).map(c=>({...c, kind:'check'}));
+  const skips=((d&&d.skips)||[]).map(k=>({...k, kind:'skip', ts:k.ts||Date.parse(k.day+'T12:00:00')}));
+  const items=checks.concat(skips).filter(x=>x.ts).sort((a,b)=>b.ts-a.ts);
+  const day0=new Date(); day0.setHours(0,0,0,0); day0.setDate(day0.getDate()-day0.getDay()-R.woff*7);
+  const dayTs=Array.from({length:7},(_,i)=>day0.getTime()+i*86400000);
+  const perDay=dayTs.map(t0=>items.filter(e=>e.ts>=t0&&e.ts<t0+86400000));
+  const mx=Math.max(1,...perDay.map(a=>a.length));
+  const dws=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
+  // Land on the newest day of this week that has something on it, so the list under the chart is
+  // never empty on arrival (the Activity tab lands on today the same way). Tapping that day again
+  // clears it and the whole week shows.
+  if(R.day===undefined||R.day===null){ let last=-1; perDay.forEach((a,i)=>{ if(a.length) last=i; }); R.day=(last>=0?last:null); }
+  const sel=(R.day!=null)?R.day:-1;
+  const bars=perDay.map((a,i)=>{ const bh=a.length?Math.max(14,Math.round(a.length/mx*64)):6; const cur=i===sel;
+    const anyIn=a.some(e=>e.kind==='check'&&railTone(e)==='in');
+    const fill=cur?'linear-gradient(180deg,#5BEA93,#34C268);box-shadow:0 0 14px rgba(74,222,128,.4)':(a.length?(anyIn?'rgba(74,222,128,.45)':'rgba(255,255,255,.22)'):'rgba(255,255,255,.10)');
+    return `<div onclick="autoRepPick(${i})" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer">
+      <div style="width:100%;height:${bh}px;border-radius:4px 4px 0 0;align-self:flex-end;background:${fill}"></div>
+      <span style="font-size:9.5px;font-weight:700;color:${cur?'#4ADE80':'#7C7C88'}">${dws[i]}</span>
+      <span style="font-size:9px;font-weight:600;color:#66666F;margin-top:-3px">${new Date(dayTs[i]).getMonth()+1}/${new Date(dayTs[i]).getDate()}</span>
+    </div>`; }).join('');
+  const wkLbl=(()=>{ const f=x=>new Date(x).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'});
+    return LANG==='es'?`${f(dayTs[0])} al ${f(dayTs[6])}`:`${f(dayTs[0])} to ${f(dayTs[6])}`; })();
+  const arrow=(dir,dis)=>`<button ${dis?'disabled':''} onclick="autoRepWeek(${dir})" style="flex:0 0 auto;width:26px;height:26px;border:0;border-radius:9px;background:${dis?'rgba(255,255,255,.04)':'linear-gradient(180deg,#31313A 0%,#26262C 100%)'};color:${dis?'#4A4A52':'#CDCDD8'};display:flex;align-items:center;justify-content:center;cursor:${dis?'default':'pointer'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${dir>0?'M15 18l-6-6 6-6':'M9 18l6-6-6-6'}"/></svg></button>`;
+  const scope=(sel>=0)?perDay[sel]:items.filter(e=>e.ts>=dayTs[0]&&e.ts<dayTs[6]+86400000);
+  const dayHead=(sel>=0)?new Date(dayTs[sel]).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'long',month:'long',day:'numeric'}):(R.woff===0?t('auto.rep.week','This week'):wkLbl);
+  const timeOf=e=>{ try{ return new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}); }catch(_){ return ''; } };
+  const rowsHtml=scope.length? scope.map(e=>{
+    if(e.kind==='skip') return `<div style="margin-top:10px;display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);opacity:.75">
+      ${AUTO_DOT('skip')}<div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:800">${t('auto.rep.norun','No check this day')}</div><div style="margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96;line-height:1.4">${sentLines(autoSkipLine(e))}</div></div></div>`;
+    const tn=railTone(e);
+    const lbl=tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear');
+    return `<div style="margin-top:10px;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)">
+      <button class="autorow" onclick="autoExpand('${esc(e.cid)}',this)" style="display:flex;align-items:center;gap:11px;width:100%;border:0;background:transparent;padding:12px 14px;color:#FFF;cursor:pointer;text-align:left">
+        ${AUTO_DOT(tn)}<span style="flex:1;min-width:0"><span style="display:block;font-size:14.5px;font-weight:800">${esc(lbl)}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${esc(timeOf(e))}</span></span>
+        <span class="autochev" style="transition:transform .18s;display:inline-flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+      </button><div style="display:none"></div></div>`; }).join('')
+    : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(items.length?t('auto.rep.noneweek','Nothing this week.'):(s.nextDow!=null?tf('auto.rep.first','Nothing yet. The first check runs {d}.',{d:s.nextToday?t('auto.today','today'):dowName(s.nextDow)}):t('auto.rep.nonext','Nothing yet.')))}</span></div>`;
+  const prod=esc(s.specificProduct||s.category||'');
+  ov.innerHTML=`<div class="modal" style="text-align:left">
+    <div style="display:flex;justify-content:center;margin-bottom:6px">${AUTO_ICO(AC1(),28)}</div>
+    <h3 style="margin:2px 0 4px;text-align:center">${esc(so.name)}</h3>
+    <div class="meta" style="margin-bottom:14px;text-align:center">${prod?prod+' · ':''}${esc(autoDaysWords(s))}</div>
+    <div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        ${arrow(1,false)}
+        <span style="font-size:13px;font-weight:800;color:#fff">${esc(wkLbl)}</span>
+        ${arrow(-1,R.woff<=0)}
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:flex-end;gap:5px;height:92px">${bars}</div>
+    </div>
+    <div style="margin-top:18px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(dayHead)}</div>
+    <div id="autoRepRows">${R.loading?`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`:rowsHtml}</div>
+    <button class="capsW" style="margin-top:18px" onclick="closeAutoReport();openAutoEdit(${R.id})"><span>${t('auto.rep.edit','Change days or time')}</span></button>
+  </div>`;
+}
+// One run unfolds into the real check page, the same pieces the zone report uses.
+async function autoExpand(cid,btn){ if(!cid) return; const body=btn.nextElementSibling; if(!body) return;
+  const chev=btn.querySelector('.autochev');
+  if(body.style.display!=='none'){ body.style.display='none'; btn.classList.remove('open'); if(chev) chev.style.transform=''; return; }
+  body.style.display='block'; btn.classList.add('open'); if(chev) chev.style.transform='rotate(180deg)';
+  const row=(((AUTO_REPORT&&AUTO_REPORT.data&&AUTO_REPORT.data.checks)||[]).find(x=>x.cid===cid))||{};
+  const paint=o=>{
+    const lbl=(row.category)||(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||(BRAND&&BRAND.category)||'';
+    const nm=splitStoreName(row.storeName||''); const sh=[nm.base,nm.branch].filter(Boolean).join(' ');
+    if(!o.cats||!o.cats.length) o.cats=lbl?[lbl]:[];
+    if(!o.storeName) o.storeName=sh||row.storeName||''; // the headline says "Target Woodland Hills", the way every other screen writes a store
+    const v=deriveVerdict(o, lbl, sh);
+    const vT=String(v.title).replace(/[\s!?.:：]+$/,'');
+    const when=o.ts?`${new Date(o.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'})} · ${new Date(o.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}`:'';
+    const _nm=(o.statusKey&&RSTATUSES[o.statusKey]&&vT)?vT:'';
+    const term = v.cls==='pend'?t('term.getting','Getting result…'):_nm?_nm:v.cls==='in'?t('term.in','In stock.'):v.cls==='out'?t('term.out','Not in stock'):v.cls==='soon'?t('term.soon2','Restock confirmed'):t('term.unk','No clear answer');
+    const used = o.charged===true?t('res.used','1 check used'):'';
+    const tx=o.transcript||'';
+    body.innerHTML=`<div style="background:#1B1B20;padding:14px 14px 4px;text-align:left;overflow:hidden">
+      <div class="rverdict ${v.cls}">
+        <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
+        ${when?`<div class="rwhen">${esc(when)}</div>`:''}
+        <div class="rtitle2">${esc(vT)}</div>
+        ${v.note?`<div class="rsub">${sentLines(fillP(v.note,o,v.cls))}</div>`:''}
+      </div>
+      <div style="margin-top:16px">${combinedTimelineHTML((Array.isArray(o.steps)&&o.steps.length)?o.steps:deriveSteps(tx), tx, (typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null, {cls:v.cls, title:vT, term:term, ts:o.ts, used:used, store:{name:row.storeName||'',logoUrl:row.logoUrl||null,logoWide:!!row.logoWide,logoDark:!!row.logoDark}})}</div>
+    </div>`;
+    fitSub(body);
+  };
+  const cached=resultCacheGet(cid);
+  if(cached){ try{ paint(cached); }catch(_){ } }
+  else body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 14px"><span></span><span></span><span></span></div>`;
+  try{ const o=await appApi('/pub/result/'+encodeURIComponent(cid));
+    if(o&&!o.error&&o.status!=='in_progress'){ resultCacheSet(cid,o); if(!resultSame(o,cached)) paint(o); }
+    else if(!cached){ paint({status:row.status||'no_answer', statusKey:row.statusKey||null, confirmed:row.confirmed, transcript:'', summary:'', ts:row.ts||null}); }
+  }catch(_){ if(!cached) body.innerHTML=`<div class="lo" style="padding:8px 14px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }
+}
+// CHANGING ONE (owner 08-19: "you should be able to edit an auto check switch to a different day or
+// time"). Same form the set-up sheet uses, so nothing new is invented; when we start learning a
+// store's own pattern the suggested time drops into this same screen.
+let AUTO_EDIT=null;
+function closeAutoEdit(){ const o=$('autoEditOv'); if(o) o.classList.remove('on'); }
+function openAutoEdit(id){
+  const s=autoById(id); if(!s){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  AUTO_EDIT={id:id, days:new Set(String(s.daysOfWeek||'').split(',').filter(Boolean))};
+  const ov=sheetShell('autoEditOv');
+  ov.innerHTML=`<div class="modal" style="text-align:left">
+    <div style="display:flex;justify-content:center;margin-bottom:6px">${AUTO_ICO(AC1(),28)}</div>
+    <h3 style="margin:2px 0 4px;text-align:center">${t('auto.edit.title','Change this auto-check')}</h3>
+    <div class="meta" style="margin-bottom:14px;text-align:center">${esc(autoStoreName(s))}</div>
+    <label class="klbl">${t('sch.days','Which days?')}</label>
+    <div id="ae_days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px">${DOWLBL.map(x=>`<div class="chip${AUTO_EDIT.days.has(x[0])?' sel':''}" data-d="${x[0]}" onclick="autoEditDay('${x[0]}',this)" style="cursor:pointer;text-align:center;padding:9px 0;font-size:13px">${x[1]}</div>`).join('')}</div>
+    <label class="klbl">${t('sch.time','Earliest call time')}</label>
+    <input id="ae_time" type="time" value="${esc(s.timeLocal||'10:00')}" class="kin">
+    <button class="cta" id="ae_btn" onclick="saveAutoEdit()" style="margin-top:12px;width:100%">${t('auto.edit.save','Save changes')}</button>
+  </div>`;
+  ov.classList.add('on'); sheetPush('autoedit');
+}
+function autoEditDay(v,el){ if(!AUTO_EDIT) return; if(AUTO_EDIT.days.has(v)){ AUTO_EDIT.days.delete(v); el.classList.remove('sel'); } else { AUTO_EDIT.days.add(v); el.classList.add('sel'); } }
+async function saveAutoEdit(){
+  if(!AUTO_EDIT) return; const btn=$('ae_btn'); if(btn){ btn.disabled=true; btn.textContent=t('auto.edit.saving','Saving…'); }
+  const body={ daysOfWeek:[...AUTO_EDIT.days].join(','), timeLocal:($('ae_time')&&$('ae_time').value)||'10:00' };
+  const r=await appApi('/app/schedules/'+AUTO_EDIT.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(btn){ btn.disabled=false; btn.textContent=t('auto.edit.save','Save changes'); }
+  if(!autoTake(r)) return;
+  const id=AUTO_EDIT.id; closeAutoEdit();
+  if(AUTO_REPORT&&AUTO_REPORT.id===id&&$('autoRepOv')&&$('autoRepOv').classList.contains('on')) renderAutoReport();
+  toast(t('auto.edit.done','Saved. We call on the new days now.'),'neutral');
+}
+// THE SAVED SCREEN (owner 08-06: do not close the window — flip it in place, and put a button on it
+// that jumps straight into the auto-checks list where their first one is waiting).
+async function showScheduleSaved(id){
+  try{ await loadSchedules(); }catch(_){ }
+  const s=autoById(id)||{}; const so=autoStoreObj(s);
+  const line=(lb,val,col)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.07)"><span style="font-size:14px;font-weight:600;color:#CDCDD8">${lb}</span><span style="font-size:14px;font-weight:800;color:${col||'#FFF'};text-align:right">${val}</span></div>`;
+  const nx=(s.nextDow!=null)?(s.nextToday?t('auto.todaycap','Today'):dowName(s.nextDow)):t('sched.shipday','shipment day');
+  const card=`<div style="margin-top:16px;text-align:left;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
+    <div style="display:flex;align-items:center;gap:11px;padding-bottom:12px">
+      ${storeTile(so)}
+      <span style="flex:1;min-width:0"><span style="display:block;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(so.name)}</span>${(s.specificProduct||s.category)?`<span style="display:block;margin-top:2px;font-size:12.5px;font-weight:600;color:#8A8A96">${esc(s.specificProduct||s.category)}</span>`:''}</span>
+    </div>
+    ${line(t('auto.saved.days','Days'),esc(autoDaysLbl(s)))}
+    ${line(t('auto.saved.from','From'),esc(autoTimeLbl(s)))}
+    ${line(t('auto.saved.next','Next check'),esc(nx),'#4ADE80')}
+  </div>`;
+  const dn=$('sch_done'); if(dn) dn.innerHTML=`<div style="display:flex;justify-content:center;margin-bottom:10px">${AUTO_ICO(AC1(),28)}</div>
+    <h3 style="margin:2px 0 4px;text-align:center">${t('auto.saved.title','Auto-check is on.')}</h3>
+    <div class="meta" style="text-align:center">${sentLines(t('auto.saved.sub','We check for you and send the result.'))}</div>
+    ${card}
+    <button class="cta" style="margin-top:16px;width:100%" onclick="closeSchedule();openAutoChecks()">${t('auto.saved.cta','See my auto-checks')} →</button>`;
+  const fm=$('sch_form'); if(fm) fm.style.display='none'; if(dn) dn.style.display='';
+}
 const Z_ROWBTN='display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:15px;font-weight:700;cursor:pointer;text-align:left';
 const Z_ICO_PEN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
 const Z_ICO_TRASH='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B7B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
@@ -9561,6 +9856,7 @@ function openSchedule(){
   if(!hasFeature('scheduled_checks')){ openBuy('premium'); return; } // auto-checks = a per-tier perk
   if(!SEL_STORE||!SEL_STORE.id){ toast(t('err.pickstore','Pick a store first')); return; }
   SCH_DAYS=new Set();
+  { const fm=$('sch_form'), dn=$('sch_done'); if(fm)fm.style.display=''; if(dn)dn.style.display='none'; } // reset to the form, never a leftover saved screen
   $('sch_err').textContent='';
   $('sch_store').textContent=findStoreName(); $('sch_cat').textContent=findProductLabel();
   const cw=$('sch_contact'); if(cw){ cw.value=''; cw.placeholder=smsAlertsOn()?t('ph.schednum','Enter number'):t('em.ph','you@email.com'); } // keep the contact OUT of the box (grey placeholder); we default to the account contact on submit
@@ -9583,10 +9879,11 @@ async function submitSchedule(){
   if(r&&r.error==='members_only'){ closeSchedule(); openBuy('out'); return; }
   if(!r||r.error){ $('sch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('schedule_set',{retailerId:SEL_STORE.id,days:[...SCH_DAYS].join(',')||'auto'});
-  closeSchedule(); loadSchedules();
-  alertSetToast((SEL_STORE&&SEL_STORE.name),'alerts.type.auto','Auto Check');
+  // No pill and no closing: the sheet stays open and flips to the saved screen (owner 08-06). The old
+  // pill also pointed at "My Checks > Alerts", and auto-checks have their own row now.
+  showScheduleSaved(r.schedule&&r.schedule.id);
 }
 boot();
 </script>
-<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a27410002b77c105',t:'MTc4NjA4MjQ0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2db979cef60efe7',t:'MTc4NzE2ODAzMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

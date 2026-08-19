@@ -3,9 +3,7 @@
 > The consumer web app `public/checkit.html` + consumer routes in `src/server.ts`, design and ALL copy.
 > Charter: `handoff.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines. History is in git.
 
-## 08-19 — AUTO-CHECKS ARE BUILT (branch `claude/webbie-site-checkpoint-p7ziw5`, NOT merged: his order
-was build locally, he says when it goes to staging). Every screen driven on a local rig; nothing pushed
-to staging while Echo tests.
+## 08-19 — AUTO-CHECKS ARE BUILT AND ON STAGING (@312c4151, verify-live LIVE; he looks next).
 - **The list** `openAutoChecks` copies the Alerts sheet piece for piece (`alrow`/`alsw`/`alpause`) plus
   an edit pen; the row opens that store's report. **The My Checks row** sits between Check history and
   Alerts (`AUTO_ICO`); `#acctScheds` + `renderAcctScheds` are DELETED into the sheet. **Manage Zones →
@@ -26,7 +24,8 @@ to staging while Echo tests.
 - **Two faults found on the rig:** `loadSchedules` demanded `subscription==='active'`, so a comp account
   could save an auto-check and never see it; and the tick read `isComp(email)` where the save endpoint
   reads `isCompAccount`, so a phone-first comp account had every day written off as "out of checks".
-  `test-schedules.ts` covers edit, pause-all, skips (16 pass). LEFT: verify-live + snapshot-truth at merge.
+  `test-schedules.ts` covers edit, pause-all, skips (16 pass). Driving STAGING found a third: a failed
+  list fetch emptied the row and the screen, so only an ARRAY answer now overwrites `window.SCHEDS`.
 
 ## Verify recipe (07-26, refined 08-19)
 A local rig needs NO Railway secrets: `STAGING=1 COMP_PHONES=<e164> ELEVENLABS_API_KEY=x
