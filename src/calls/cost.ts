@@ -120,6 +120,22 @@ export function costCall(inp: CostInput, rates: Rates = MEASURED_RATES): CallCos
 // 8b reader is decommissioned by Groq on 08-16; the 70b scored 8 of 8 on the robot conversations
 // where the 8b scored 7 (scripts/reader-eval.ts), so the dearer read buys fewer "couldn't tell"s.
 export const STATUS_READ_USD = Math.round(0.000626 * USD);
+/** …AND WHAT THE READER THAT REALLY ANSWERED COSTS (owner, 08-18 night). Our Groq key does not
+ *  carry llama-3.3-70b at all, so every read has quietly been answered by OpenAI's gpt-4o-mini
+ *  while the record printed the Groq name and the Groq price. The record has to name the worker
+ *  who did the job and charge what that worker charges. Same read shape as the figure above (about
+ *  900 tokens in, 120 out); gpt-4o-mini is $0.15 in and $0.60 out per million, so a read is
+ *  0.000135 + 0.000072. A model nobody has priced here falls back to the figure above rather than
+ *  claiming a check cost nothing. */
+const READ_USD_BY_MODEL: Record<string, number> = {
+  "gpt-4o-mini": 0.000207,
+  "groq:llama-3.3-70b-versatile": 0.000626,
+};
+export function readCostUsd(model: string | null | undefined): number {
+  const key = String(model || "").trim();
+  const known = READ_USD_BY_MODEL[key] ?? READ_USD_BY_MODEL[key.replace(/^groq[:/]/, "")];
+  return known != null ? Math.round(known * USD) : STATUS_READ_USD;
+}
 
 /** ONE COST, FIVE BUCKETS, HIS NAMES (owner ruling 08-04, renamed 08-07): Bravo (Menu Nav) ·
  *  Foxtrot (Phone Line) · Echo (Ears) · Charlie (Voice) · Status (Verification). His law is that

@@ -139,7 +139,7 @@ import { activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { callTuning } from "./tuning";
-import { STATUS_READ_USD } from "./cost";
+import { STATUS_READ_USD, readCostUsd } from "./cost";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
@@ -1424,6 +1424,8 @@ export async function ingestPending(): Promise<number> {
     let restockDayHeard: string | null = null;
     let restockTimeHeard: string | null = null;
     let secondUsed = false;
+    // WHO REALLY READ IT, carried out of the block so the record can name the worker (08-18 night).
+    let secondReadBy: string | null = null;
     if (outcome.status === "completed") {
       // THE READER RULE (owner 07-29), one shared implementation — see consensusFor in
       // src/voice/verdict.ts. This used to run the second read for EXTRACTION ONLY on a decisive
@@ -1437,6 +1439,7 @@ export async function ingestPending(): Promise<number> {
       finalStatusKey = consensus.statusKey;
       definitive = consensus.definitive;
       secondUsed = !!second;
+      secondReadBy = second?.readBy ?? null;
       productDetail = productDetailLabel(second);
       restockDayHeard = second?.restockDay ?? null; // restock day staff VOLUNTEERED — captured even unprompted
       restockTimeHeard = second?.restockTime ?? null;
@@ -1491,7 +1494,7 @@ export async function ingestPending(): Promise<number> {
     const decidedBy = lastClerkLine(outcome.transcript);
     console.log(`[finalize] check ${row.id}: writing the verdict tail (read=${secondUsed ? "yes" : "no"}, charged=${willCharge})`);
     void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0,
-      { secondReadModel: secondUsed ? VERDICT_MODEL : null, secondReadUsd: secondUsed ? STATUS_READ_USD : 0, decidedBy, charged: willCharge });
+      { secondReadModel: secondUsed ? (secondReadBy ?? VERDICT_MODEL) : null, secondReadUsd: secondUsed ? readCostUsd(secondReadBy) : 0, decidedBy, charged: willCharge });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // The old direct path's thin receipt closes here — this is the only moment it learns the call is
     // over, since nothing streams to us on that lane. A bridged call closed its own long ago and

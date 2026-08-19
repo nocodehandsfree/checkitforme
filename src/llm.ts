@@ -59,21 +59,34 @@ function isAnthropic(model: string): boolean { return model.startsWith("claude")
 // a cheap OpenAI model, so live calls keep understanding people no matter which vendor hiccups.
 const LLM_FALLBACK = process.env.GEMINI_FALLBACK_MODEL || "gpt-4o-mini";
 async function withOpenAIFallback(vendor: string, primary: () => Promise<string>, messages: LlmMsg[], opts: LlmOpts): Promise<string> {
-  try { return await primary(); }
+  return (await withOpenAIFallbackNamed(vendor, primary, messages, opts)).text;
+}
+/** …and the same fallback, saying WHICH model actually answered (owner, 08-18 night). The record
+ *  used to print the model we ASKED for, and when that model refused — our Groq key has not carried
+ *  llama-3.3-70b at all — every check still claimed it, and priced it, while a different reader did
+ *  the work. A receipt that names the wrong worker is a receipt that lies. */
+async function withOpenAIFallbackNamed(vendor: string, primary: () => Promise<string>, messages: LlmMsg[], opts: LlmOpts, asked?: string): Promise<{ text: string; model: string }> {
+  try { return { text: await primary(), model: asked ?? vendor }; }
   catch (e) {
     console.error(`[llm] ${vendor} failed (${String((e as Error)?.message || e).slice(0, 140)}) -> fallback ${LLM_FALLBACK} [job=${opts.job || "?"}]`);
     if (!config.openaiKey) throw e;
-    return openaiCall(LLM_FALLBACK, messages, opts);
+    return { text: await openaiCall(LLM_FALLBACK, messages, opts), model: LLM_FALLBACK };
   }
 }
 
 /** One call, any model, always through Helicone. Returns the text (or JSON string when json:true). */
 export async function llm(model: string, input: string | LlmMsg[], opts: LlmOpts = {}): Promise<string> {
+  return (await llmNamed(model, input, opts)).text;
+}
+/** The same call, and the NAME OF THE MODEL THAT REALLY ANSWERED — which is not always the one we
+ *  asked for, because a refused vendor falls back to OpenAI. Anything that writes a model onto a
+ *  customer's record or prices a read must use this one (owner, 08-18 night). */
+export async function llmNamed(model: string, input: string | LlmMsg[], opts: LlmOpts = {}): Promise<{ text: string; model: string }> {
   const messages: LlmMsg[] = typeof input === "string" ? [{ role: "user", content: input }] : input;
-  if (isGemini(model)) return withOpenAIFallback(`gemini ${model}`, () => geminiCall(model, messages, opts), messages, opts);
-  if (isGroq(model)) return withOpenAIFallback(`groq ${model}`, () => groqCall(model.replace(/^groq[:/]/, ""), messages, opts), messages, opts);
-  if (isAnthropic(model)) return anthropicCall(model, messages, opts);
-  return openaiCall(model, messages, opts);
+  if (isGemini(model)) return withOpenAIFallbackNamed(`gemini ${model}`, () => geminiCall(model, messages, opts), messages, opts, model);
+  if (isGroq(model)) return withOpenAIFallbackNamed(`groq ${model}`, () => groqCall(model.replace(/^groq[:/]/, ""), messages, opts), messages, opts, model);
+  if (isAnthropic(model)) return { text: await anthropicCall(model, messages, opts), model };
+  return { text: await openaiCall(model, messages, opts), model };
 }
 
 async function openaiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {

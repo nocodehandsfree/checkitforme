@@ -23,7 +23,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
-import { costBuckets, STATUS_READ_USD } from "./calls/cost";
+import { costBuckets, STATUS_READ_USD, readCostUsd } from "./calls/cost";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, settleChecksLostToARestart, setActiveVoice, statusFromTheRecord, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
@@ -3747,7 +3747,7 @@ app.get("/pub/result/:cid", async (c) => {
     // the owner watches. Same recorder, same three rows, whichever door wins the race (the recorder
     // itself never writes a second verdict onto a check that has one).
     void recordVerdict(row.id, settledKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
-      { secondReadModel: second ? VERDICT_MODEL : null, secondReadUsd: second ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: charged1 });
+      { secondReadModel: second ? (second.readBy ?? VERDICT_MODEL) : null, secondReadUsd: second ? readCostUsd(second.readBy) : 0, decidedBy: lastClerkLine(o.transcript), charged: charged1 });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // This on-demand settle used to be the ONE finalize path that never sent the alerts, so a check
     // the customer watched to the end produced no in-stock email (owner 07-30). Same notifier as the
@@ -7783,6 +7783,8 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let definitive = o.confirmed === true || o.confirmed === false;
       let productDetail: string | null = null;
       let restockDayHeard: string | null = null;
+      // WHO REALLY READ IT (08-18 night): carried out of the block so the record names the worker.
+      let secondReadBy: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
         // THE READER RULE (owner 07-29), one shared implementation — consensusFor in
@@ -7792,6 +7794,7 @@ app.post("/webhooks/elevenlabs", async (c) => {
           o.transcript, label || "the product", undefined, row?.room,
         );
         confirmed = consensus.confirmed; definitive = consensus.definitive;
+        secondReadBy = second?.readBy ?? null;
         // THE RECORD'S FACTS DECIDE OVER THE READER at the webhook door too (law 11, check 390).
         statusKey = await statusFromTheRecord(row?.room, consensus.confirmed, consensus.statusKey, o.transcript);
         productDetail = productDetailLabel(second);
@@ -7812,7 +7815,7 @@ app.post("/webhooks/elevenlabs", async (c) => {
       await notifyAfterVerdict(o.callId);
       // …and the same verdict tail as every other door (law 11).
       void recordVerdict(o.callId, statusKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
-        { secondReadModel: o.status === "completed" ? VERDICT_MODEL : null, secondReadUsd: o.status === "completed" ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: !!(row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) });
+        { secondReadModel: o.status === "completed" ? (secondReadBy ?? VERDICT_MODEL) : null, secondReadUsd: o.status === "completed" ? readCostUsd(secondReadBy) : 0, decidedBy: lastClerkLine(o.transcript), charged: !!(row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) });
     }
     return c.json({ ok: true });
   } catch (e) {

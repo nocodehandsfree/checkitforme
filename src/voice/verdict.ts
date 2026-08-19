@@ -4,7 +4,7 @@
 // conflict (one says yes, the other no) drops to an honest "couldn't get a clear answer" and the
 // finder is NOT charged. The same pass also captures the product form/set the clerk named
 // ("3-pack blister", "Surging Sparks ETB") — kept even when the exact set is unknown.
-import { llm } from "../llm";
+import { llm, llmNamed } from "../llm";
 import { liveReadFor } from "./live-read";
 
 // Cheapest brain that reliably reads a short transcript. Same model the navigator hands off on.
@@ -37,6 +37,9 @@ export interface ClerkVerdict {
   set: string | null;                // named set, if the clerk knew it
   confidence: number;                // 0..1 — how sure the model is about inStock
   reason: string;                    // one short clause, for the call log
+  /** WHO REALLY READ IT. Not always the model we asked for: a vendor that refuses falls back to
+   *  OpenAI, and the record used to print the one we asked for either way (owner, 08-18 night). */
+  readBy?: string;
 }
 
 const clean = (s: unknown): string | null => {
@@ -89,7 +92,7 @@ export async function classifyVerdict(
     `Reserve "unclear" for GENUINE uncertainty only — no real answer, or hedging with no commitment. A clearly positive answer phrased unusually is YES, not unclear.\n` +
     `Reply with STRICT JSON only: {"inStock":"yes|no|unclear","restockDay":string|null,"restockTime":string|null,"productForm":string|null,"set":string|null,"confidence":0..1,"reason":"short"}`;
   try {
-    const raw = await llm(
+    const { text: raw, model: readBy } = await llmNamed(
       model || VERDICT_MODEL,
       [{ role: "system", content: sys }, { role: "user", content: t.slice(0, 6000) }],
       { job: "verdict", json: true, temperature: 0, maxTokens: 220 },
@@ -106,6 +109,7 @@ export async function classifyVerdict(
       set: clean(d.set),
       confidence: Number.isFinite(confRaw) ? Math.max(0, Math.min(1, confRaw)) : 0.5,
       reason: String(d.reason ?? "").slice(0, 140),
+      readBy,
     };
   } catch {
     return null; // no second opinion → caller keeps the ElevenLabs read as-is
