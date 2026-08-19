@@ -595,7 +595,21 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
     // the end of the call, not the meter stopping for the wait.
     if (leave < 0 || (end >= 0 && leave > end)) return row(false, `${who} at ${at}s. Charlie NOT dropped, meter kept running through the wait.`);
     if (end < 0) continue; // held to the end of the call — closing was the whole job
-    if (nextOf(end, "charlie_join") < 0) return row(false, `Charlie dropped at ${at}s. Never reconnected when Staff returned at ${Number(tl[end].atSec ?? 0)}s.`);
+    // HIS SESSION NOW STARTS OPENING BEFORE THE WAIT'S ROW IS WRITTEN (owner's FIX 3, 08-19): it
+    // starts on the FIRST SOUND of a voice coming back, and the wait only ends once words prove a
+    // person, seconds later. Reading only the rows BELOW the ending row called check 415 "never
+    // reconnected" while he was already on the line answering them. He is back if he is on the line
+    // when the wait ends, or joins after it.
+    const backOnTheLine = (() => {
+      if (nextOf(end, "charlie_join") >= 0) return true;
+      let on = false;
+      for (let i = leave + 1; i < end; i++) {
+        if (tl[i].kind === "charlie_join") on = true;
+        else if (tl[i].kind === "charlie_leave") on = false;
+      }
+      return on;
+    })();
+    if (!backOnTheLine) return row(false, `Charlie dropped at ${at}s. Never reconnected when Staff returned at ${Number(tl[end].atSec ?? 0)}s.`);
   }
   const parts = Number(sums.charlieSegments ?? 0);
   const who = anyTransfer ? "The hand-over" : "The staff";

@@ -168,6 +168,25 @@ head("METER STOPPED ON HOLD");
   ok("a judge-proven recording with no live hold PASSES the row", at(advertProved).pass === true, at(advertProved).why);
   ok("…and the why names the proof and the fair grading", /recording the store played/.test(at(advertProved).why) && /as if the hold had been caught/.test(at(advertProved).why), at(advertProved).why);
   ok("without the proof the same shape stays null, exactly as before", at(advertProved.filter((e) => (e.detail || {}).step !== "played_at_us")).pass === null);
+  // CHECK 415: his session starts opening on the FIRST SOUND of the voice coming back (FIX 3), so
+  // the reconnect row is drawn ABOVE the wait's own ending row and the old reading called a check he
+  // answered "never reconnected". He is back if he is on the line when the wait ends.
+  const earlyBack: BehavedEvent[] = [
+    ev("dialed", 0, { plan: [] }), ev("human_detected", 9), ev("charlie_join", 9, { segment: 1 }),
+    ev("hold_start", 10, { reason: "music" }), ev("charlie_leave", 11, { strategy: "reopen" }),
+    ev("charlie_join", 35, { segment: 2 }), ev("hold_end", 38, { gapSec: 28 }),
+    ev("verdict", 55), ev("hangup", 56),
+  ];
+  ok("a reconnect that started before the wait's ending row still passes", at(earlyBack, { charlieSegments: 2 }).pass === true, at(earlyBack).why);
+  // AND THE FALSE START DOES NOT COUNT. The advert's own voice opens a session too, and it is
+  // dropped again seconds later; if nobody ever comes back after that, he never reconnected.
+  const falseStartOnly: BehavedEvent[] = [
+    ev("dialed", 0, { plan: [] }), ev("human_detected", 9), ev("charlie_join", 9, { segment: 1 }),
+    ev("hold_start", 10, { reason: "music" }), ev("charlie_leave", 11, { strategy: "reopen" }),
+    ev("charlie_join", 17, { segment: 2 }), ev("charlie_leave", 21, { strategy: "reopen" }),
+    ev("hold_end", 38, { gapSec: 28 }), ev("hangup", 40),
+  ];
+  ok("…but a false start that was dropped again, with nobody ever back, still fails", at(falseStartOnly).pass === false, at(falseStartOnly).why);
 }
 
 head("THE WORDS OFF A FINISHED ROW");
