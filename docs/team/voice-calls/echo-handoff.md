@@ -405,6 +405,33 @@ and dropping him at `music_heard` is exactly that change. It needs the owner's w
   second or two. Fixing it properly means the sentence reading the CLAMPED moment, which lives in
   events.ts.
 
+## CHECK 415 (scene 22, commit bb5750e4): TEST FAILED, and the two reds are named
+Cost 7.4¢ (413 was 10.4¢). Meter 26s on the record, 22s graded — under the 31 line either way.
+Status in_stock, right. Charlie spoke his own set question ("No worries, take your time!") and his
+own goodbye ("Perfect, thank you so much, have a good one!"): both live, no clip rows for either.
+- **THE ROW ORDER IS FIXED AND PROVEN LIVE.** hold_start drew at 10448, hold_end at 38918, and the
+  sentence says "Staff back after 28s" — 28.47s apart, so the sentence and its own rows agree to
+  the second. ears_back and the hand-over row draw AFTER the ending row now, never above it (413
+  had them above). Rig scene CHECKS 398 TO 405 pins both, delta-clip 386.
+- **RED ONE, awake on hold 7 seconds against 3 green and red from 6.** True seconds: 17208→20871
+  (3.7s, the advert's own voice started a reconnect and the reader's answer dropped him again) plus
+  35302→38918 (3.6s, the real return, waiting for words to prove a person). **This is FIX 2 and FIX
+  3 pulling against each other and it is the owner's call**: the head start he ordered costs about
+  3.6 awake seconds on its own, before any advert false start, so a clean check lands at yellow and
+  one false start lands at red. Nothing here is adjustable without adjusting the number, which he
+  banned. Either the bands move or the head start goes.
+- **RED TWO, the return to speaking gap is 7.8 seconds, against his 5.** Their voice starts 34723,
+  Charlie speaks 42537. It breaks down as 0.3s (sound to the session opening — the head start works,
+  and the session came up in 0.3s here, not the usual 4.5), 3.6s waiting for Echo to write the words
+  that prove a person, then 3.6s of Charlie's own thinking before his first audio. 413 was 8.4s. The
+  two 3.6s halves are the transcriber's lag and the voice provider's own latency: neither is ours to
+  cut inside this order, and the own-brain work (task THREE) is where they get cut.
+- **A FALSE RED FOUND AND FIXED (commit d5b8cce1)**: "Meter stopped" said "never reconnected when
+  Staff returned at 39s" on a check he answered. The row only looked for a reconnect BELOW the wait's
+  ending row, and FIX 3 draws it above. He now counts as back if he is on the line when the wait
+  ends; a false start dropped again with nobody ever back still fails. behaved 107.
+- The one harness red is the 08-07 screen fault, pre-existing, not the card's.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
