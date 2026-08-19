@@ -49,8 +49,9 @@ STAGING: its env from Railway, CONSUMER = `/r`, a local TLS pipe carrying `wss:/
 ## THE OPEN LIST, 08-19 (auto-checks moved OFF it; nothing below is built)
 - **NEXT: `docs/specs/location-follow/README.md`** (HIS pick of three pending): he sat 300 miles from
   home seeing home stores; the follow and the slider's re-check both need `granted`.
-- `site-history-day-list.md` — a day tap opens the newest check, not that day's list. Also: the alerts
-  row switch wraps to a second line on a long store name (08-05, no task file).
+- `site-history-day-list.md` — a day tap opens the newest check, not that day's list. Also: the alerts row switch wraps to a second line on a long store name (08-05, no task file).
+- **Translate shows on an English check when a name has an accent** (owner 08-19, "Larry Vásquez"):
+  `looksForeign` treats ONE accented letter as proof. `docs/tasks/site-translate-on-accented-name.md`.
 - **The customer result screen said In stock against a not_in_stock record** — a red on every test day
   since 08-07 (voice-calls checkpoint, checks 301 and 366), never on this list until now.
 - `go-live-site-audit.md`: prod has never sent one email · prod misses five settings · two engine
