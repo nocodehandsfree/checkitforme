@@ -120,6 +120,11 @@ export interface BridgeContext {
    *  thought up mid check, at 2 to 7 metered seconds a turn. */
   setAskClip?: { audio: Buffer; ms: number; text: string };
   holdAckClipEs?: { audio: Buffer; ms: number; text: string };
+  /** THE GOODBYE AS A RECORDING (owner's order, 08-19): his sign-off is the owner's ruled short
+   *  line, one recording per voice with its Spanish beside it, played by our own system the moment
+   *  the check is complete, with his own generated goodbye dropped behind it. No name in it. */
+  goodbyeClip?: { audio: Buffer; ms: number; text: string };
+  goodbyeClipEs?: { audio: Buffer; ms: number; text: string };
   // The agent that joins a conversation ALREADY IN PROGRESS: configured once, empty greeting,
   // standing instruction to wait silently for the answer. A DEDICATED AGENT, deliberately, because
   // overriding the prompt or the first message per call once hung calls up — the whole design would
@@ -892,6 +897,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (ended || warmWrapSaid || wrapRecorded || !eleven || !ready) return;
       if (Date.now() < agentPlayingUntil) { armTheWarmWrapUp(); return; }   // he is still speaking
       warmWrapSaid = true;
+      // THE GOODBYE IS THE ENGINE'S TO SAY (owner's order, 08-19): the line has gone quiet with the
+      // answer in hand, which is a moment the engine knows, so the recorded goodbye plays instead
+      // of asking the outside voice service to think one up. No clip → today's note, unchanged.
+      if (sayTheRecordedGoodbye()) {
+        emit(room, "unknown", "Nothing more was said, so the recorded goodbye closed the check",
+          { step: "warm_wrap_up", afterMs: WARM_WRAP_UP_MS, goodbyeClip: true });
+        log("warm wrap-up: the line went quiet with the answer in hand — the recorded goodbye owns the close");
+        return;
+      }
       emit(room, "unknown", "Nothing more was said, so Charlie was told to say goodbye rather than wait",
         { step: "warm_wrap_up", afterMs: WARM_WRAP_UP_MS });
       log("warm wrap-up: the answer is in hand and the line has gone quiet — telling him to close");
@@ -1705,6 +1719,56 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     return true;
   }
 
+  /** THE GOODBYE AS A RECORDING (owner's order, 08-19). His sign-off is the owner's ruled short
+   *  line — "Thanks so much, have a good one!", no name in it, its Spanish beside it — played by
+   *  our own system at the moment the check is complete, exactly like the opening question, the
+   *  hold reply and the set question before it, with his own generated goodbye dropped behind it
+   *  the same way the set question's is (`ackPlayingUntil`). The check then ends through the same
+   *  door his spoken goodbye always used (`hangUpAfterGoodbye`), waiting for the clip's own sound.
+   *
+   *  Returns true when the goodbye is OURS to say: played now, or armed to play the moment his
+   *  in-flight sound finishes (talking over him would put two voices on the line; and if the line
+   *  he was finishing WAS his own goodbye, `wrapRecorded` stops a second one). False = no clip or
+   *  no line to play it on, and the caller falls back to today's behaviour, his own generation. */
+  let goodbyeClipPlayed = false;
+  let goodbyeRetryTimer: NodeJS.Timeout | null = null;
+  function sayTheRecordedGoodbye(): boolean {
+    if (goodbyeClipPlayed || ended || onHold || wrapRecorded) return false;
+    const es = !!ctx?.goodbyeClipEs && staffSpokeSpanish(theirFirstLine);
+    const clip = es ? ctx?.goodbyeClipEs : ctx?.goodbyeClip;
+    if (!clip || twilio.readyState !== 1 || !streamSid || !charlieGateOpen) return false;
+    if (Date.now() < agentPlayingUntil) {
+      if (!goodbyeRetryTimer) goodbyeRetryTimer = setTimeout(() => {
+        goodbyeRetryTimer = null;
+        sayTheRecordedGoodbye();
+      }, Math.max(120, agentPlayingUntil - Date.now() + 300));
+      return true;
+    }
+    goodbyeClipPlayed = true;
+    for (const f of toMediaFrames(clip.audio)) {
+      twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: f } }));
+      fanout(room, f, "agent");
+    }
+    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
+    ackPlayingUntil = Date.now() + clip.ms + 6000;
+    hisVoiceOutAtMs = Date.now();   // the goodbye's own sound, so the hang-up waits for all of it
+    addMs(room, "speakingMs", clip.ms); charlieSpokenMs += clip.ms;
+    spokeThisSession = true;
+    wrapRecorded = true;
+    recordLine(room, "Agent", clip.text, undefined, undefined, undefined, Date.now() + clip.ms);
+    try { relayLine?.(room, "Agent", clip.text); } catch { /* the screen is best-effort */ }
+    emit(room, "unknown", "Charlie's goodbye played as a recording",
+      { step: "wrap_up", usedName: false, goodbyeClip: true, ms: clip.ms, language: es ? "es" : "en" });
+    try {
+      eleven?.send(JSON.stringify({ type: "contextual_update", text:
+        `[A recording in your own voice has JUST thanked Staff and said goodbye. The check is over: `
+        + `say NOTHING more, and never repeat the goodbye in any wording.]` }));
+    } catch { /* best effort — the recording already said it */ }
+    log(`goodbye: our recording played (${clip.ms}ms, ${es ? "es" : "en"}), the check is closing`);
+    hangUpAfterGoodbye(Date.now());
+    return true;
+  }
+
   /** Every Staff line already given to Charlie, by either pipe, so nothing is ever answered twice. */
   const hisAlready = new Set<string>();
   const keyOf = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -1753,8 +1817,32 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // callers that do, and hung AGAIN from the start handler for the carrier's way in.
   const hangSignoffDoor = () => { if (room) { signoffDoors.set(room, signoffDoor); staffDoors.set(room, staffSaid); pieceDoors.set(room, staffPiece); } };
   const signoffDoor = (answer: string, held?: { set?: string | null; productForm?: string | null; restockDay?: string | null; restockTime?: string | null }) => {
-    if (signoffNudged || ended || onHold || !eleven || !ready) {
-      log(`signoff: knock for ${room.slice(0, 8)} (${answer}) not deliverable: ${signoffNudged ? "already told" : ended ? "the check is over" : onHold ? "Staff are away" : !eleven ? "Charlie is not open" : "his session is not ready"}`);
+    if (ended || onHold || !eleven || !ready) {
+      log(`signoff: knock for ${room.slice(0, 8)} (${answer}) not deliverable: ${ended ? "the check is over" : onHold ? "Staff are away" : !eleven ? "Charlie is not open" : "his session is not ready"}`);
+      return;
+    }
+    // THE GOODBYE IS THE ENGINE'S TO SAY (owner's order, 08-19). The reader re-reads on every Staff
+    // line and knocks again as the follow-up answers land, so the knock that says NOTHING is
+    // missing — the first one or a later one — is the moment the check is complete, and the
+    // recorded goodbye goes down the line right there instead of being thought up. Only the NOTE
+    // below stays once-only. No clip, or no line to play it on → today's path, his own generation.
+    {
+      const missingNow = answer === "in stock"
+        ? [held?.set ? "" : "set", held?.productForm ? "" : "form"].filter(Boolean)
+        : [held?.restockDay ? "" : "day", held?.restockTime ? "" : "time"].filter(Boolean);
+      if (missingNow.length === 0 && sayTheRecordedGoodbye()) {
+        if (!signoffNudged) {
+          signoffNudged = true;
+          emit(room, "unknown", `Charlie understood the product was ${answer} and everything the check needs was already said, so he was told to wrap up`,
+            { step: "signoff", answer, followUp: "and everything the check needs was already said, so he was told to wrap up", missing: [] });
+        }
+        log(`signoff: the answer is complete (${answer}); the recorded goodbye owns the close`);
+        armTheWarmWrapUp();   // the backstop, should the clip's play be deferred and then lost
+        return;
+      }
+    }
+    if (signoffNudged) {
+      log(`signoff: knock for ${room.slice(0, 8)} (${answer}) not deliverable: already told`);
       return;
     }
     signoffNudged = true;
@@ -2499,6 +2587,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           emit(room, "unknown", "Charlie started to say a note to himself, so it was silenced and never played",
             { step: "note_silenced", text: String(txt).slice(0, 200) });
           log(`note silenced: he began "${String(txt).slice(0, 60)}" and the store heard nothing`);
+          return;
+        }
+        // HIS OWN GOODBYE, COVERED BY THE RECORDING (owner's order, 08-19). The recorded sign-off
+        // has already played and his frames are being dropped behind it (`ackPlayingUntil`, the set
+        // question's own rule), so the words of a goodbye Staff never heard are not a line either.
+        if (txt && goodbyeClipPlayed && Date.now() < ackPlayingUntil && wrappedUp(String(txt))) {
+          emit(room, "unknown", "Charlie's own goodbye was covered by the recording and never played",
+            { step: "goodbye_covered", text: String(txt).slice(0, 200) });
+          log(`goodbye: his own version ("${String(txt).slice(0, 50)}") was covered by the recording`);
           return;
         }
         // HE HAS ASKED TO BE PUT THROUGH. From here the next wait that ends is a hand-over, whether or

@@ -44,6 +44,12 @@ export interface CharlieSetupInput {
 export const HOLD_ACK_LINE = "No worries, take your time!";
 export const HOLD_ACK_LINE_ES = "No se preocupe, tómese su tiempo.";
 
+/** THE GOODBYE'S WORDS — the owner's ruled short sign-off (08-19), word for word, with its Spanish
+ *  beside it like every spoken string. NO NAME in it, ever: the recording is one line for every
+ *  store, and a name would make it wrong on most of them. */
+export const GOODBYE_LINE = "Thanks so much, have a good one!";
+export const GOODBYE_LINE_ES = "Muchas gracias, que le vaya bien.";
+
 /** THE OPENING SHAVE (fix 4, owner box 08-16, off check 368: line answered at 3, greeting done near
  *  6.5, the question at 8). The last stretch is the person test waiting `personWaitMs` of quiet to
  *  be sure a person stopped for us rather than a recording pausing for breath. On a chain whose own
@@ -60,7 +66,7 @@ export function personWaitForStore(baseMs: number, directPickup: boolean): numbe
 export type CharlieShared = Pick<BridgeContext,
   | "agentId" | "apiKey" | "dynamicVars" | "onConversationId" | "openingClip" | "openingClipEs" | "midCallAgentId"
   | "departmentName" | "ourBrain" | "ourBrainAgentId" | "holdStrategy" | "tuning" | "timeLimitSec"
-  | "holdAckClip" | "holdAckClipEs" | "setAskClip"
+  | "holdAckClip" | "holdAckClipEs" | "setAskClip" | "goodbyeClip" | "goodbyeClipEs"
   | "giveUpSeconds" | "earFromSec" | "voiceId" | "voiceTuning">;
 
 export type CharlieSetup =
@@ -97,6 +103,8 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
   let holdAckClip: BridgeContext["holdAckClip"];
   let holdAckClipEs: BridgeContext["holdAckClipEs"];
   let setAskClip: BridgeContext["setAskClip"];
+  let goodbyeClip: BridgeContext["goodbyeClip"];
+  let goodbyeClipEs: BridgeContext["goodbyeClipEs"];
   let clipFailed = false;
   const question = input.dynamicVars.opening_line || "";
   // DELTA SWITCHED OFF ON PURPOSE (owner 08-07, the Delta: failed card). Nothing could ever make the
@@ -148,6 +156,15 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       const sc = await phoneClip(input.voiceId, setAsk, input.voiceTuning || {}, input.apiKey).catch(() => null);
       if (sc) setAskClip = { audio: sc.audio, ms: sc.ms, text: sc.text };
       else console.log("[charlie] no recording of the set question for this check, so Charlie asks it himself");
+      // THE GOODBYE, RECORDED BESIDE THE REST (owner's order, 08-19). His sign-off is the owner's
+      // ruled short line, one recording per voice with its Spanish beside it, cached exactly like
+      // the opening question, played by our own system at the moment the check is complete. No name
+      // in it. Best effort: with no recording Charlie says his own goodbye, as every check did.
+      const bye = await phoneClip(input.voiceId, GOODBYE_LINE, input.voiceTuning || {}, input.apiKey).catch(() => null);
+      if (bye) goodbyeClip = { audio: bye.audio, ms: bye.ms, text: bye.text };
+      else console.log("[charlie] no recording of the goodbye for this check, so Charlie says his own");
+      const byeEs = await phoneClip(input.voiceId, GOODBYE_LINE_ES, input.voiceTuning || {}, input.apiKey).catch(() => null);
+      if (byeEs) goodbyeClipEs = { audio: byeEs.audio, ms: byeEs.ms, text: byeEs.text };
     }
   }
 
@@ -162,6 +179,8 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       holdAckClip,
       holdAckClipEs,
       setAskClip,
+      goodbyeClip,
+      goodbyeClipEs,
       midCallAgentId: config.voice.midCallAgentId,
       departmentName: input.departmentName,
       ourBrain: !!pol.flags?.ourBrain,

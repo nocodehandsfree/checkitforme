@@ -416,6 +416,17 @@ console.log("▶ the set question the RECORDING asks is the same sentence his di
   ok(!/[\u2014\u2013]/.test(SET_ASK_LINE), "no dash in it (they read strangely through ElevenLabs)");
 }
 
+console.log("\u25b6 the goodbye the RECORDING says is the owner's ruled sign-off, no name in it (08-19)");
+{
+  const { GOODBYE_LINE, GOODBYE_LINE_ES } = await import("../src/calls/charlie-setup");
+  ok(GOODBYE_LINE === "Thanks so much, have a good one!",
+    "the recorded goodbye is his ruled sentence, word for word");
+  ok(!/\{\{?|\bname\b/i.test(GOODBYE_LINE), "no name and no variable in it: one line for every store");
+  ok(!!GOODBYE_LINE_ES && !/\{\{?/.test(GOODBYE_LINE_ES), "its Spanish ships beside it, no variable in it");
+  ok(!/[\u2014\u2013]/.test(GOODBYE_LINE) && !/[\u2014\u2013]/.test(GOODBYE_LINE_ES),
+    "no dash in either (they read strangely through ElevenLabs)");
+}
+
 console.log("▶ his 08-19 rulings are in section 12, word for word");
 {
   says("Music, a recorded voice, an in-store announcement or an advert are all waiting, never Staff talking to you.",
