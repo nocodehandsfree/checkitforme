@@ -1,9 +1,25 @@
 # Voice agent report — the music box (2026-08-18 night, owner said start now)
 
-## STATUS: built and proven on the bench and on the real recordings. NOTHING DIALED YET — two
-## Railway builds have sat in BUILDING for 12+ minutes with a third queued. Per the owner's law I
-## have not cancelled or re-queued either one. Staging still serves 0ffd889d. The dials (box items
-## 3 and 4) run the moment /api/health shows the new commit.
+## STATUS: DIALED AND DONE. Scene 21 PASSED (check 393). Scene 20's new meter floor is 32 to 34
+## seconds (checks 394, 395), down from 39 and 43, still over his 31 line by 1 to 3 seconds, and
+## what is left there is the voice provider's reply time, not the music. The sheet now names the
+## reader that really answered and its real price (proven on 393, 394, 395). Handoff for a fresh
+## chat: docs/team/voice-calls/echo-handoff.md.
+
+## THE DIALS, every one by its number
+- **392** scene 21, first dial on the new engine: card PASS, drop row 3s GREEN, meter 37s red, so
+  the pill said failed. The 37 was the tail after the answer, not the music.
+- **393** scene 21, re-dial: **THE PILL SAYS TEST PASSED.** Meter 27s yellow, drop row 3s green,
+  answer gap 2s green, handover 1s green, profit 71%. His item 1 for tonight is met: Charlie
+  dropped 3 seconds after Staff walked off, graded green.
+- **394** scene 20: "Echo recognised hold music" ON THE RECORD at 1200ms, dated to the music's own
+  first note; hold declared the same second; Charlie dropped 3s later, drop row 3s GREEN (it read
+  6s red on every classic dial before this). Meter 32s, profit 66%, card PASS.
+- **395** scene 20 again, for a floor and not a single point: same stamp at 1200ms, same 3s green
+  drop row, meter 34s, profit 65%, card PASS. Answer gap 7s red — the provider was slow that dial.
+- One dial was LOST to my own mistake: I pushed the reader fix and dialed before staging had
+  restarted, so the harness timed out on the Check button and no check was placed. No money burned
+  beyond the run. Push, wait for /api/health, then dial.
 
 ## What is built, in his order
 
@@ -50,18 +66,20 @@ line on the record.
   recording. It caught check 383's advert ("Thanks for holding. Did you know we price match...")
   and check 376's Spanish hold announcement, which a word list can never read.
 
-## A REAL FINDING FOR THE PM, outside this box, not fixed
+## THE READER FIX IS SHIPPED (tonight's item 3), the finding below is now closed
 **Every check's second read has been silently falling back to a different model than the record
 claims.** `VERDICT_MODEL` is `groq:llama-3.3-70b-versatile`; staging's own GROQ key 404s on that
 model (its model list has no llama-3.3 at all — only gpt-oss and prompt-guard), so every read falls
 back to gpt-4o-mini while the record stamps "The answer was double checked · groq:llama-3.3-70b-
 versatile" and prices it at the groq rate. The reads themselves are landing, so no check is wrong
-because of it, but the record and the cost line both say something untrue. Whose lane that is, the
-PM decides.
+because of it, but the record and the cost line both said something untrue. FIXED: `llmNamed`
+reports which model actually answered after a refused vendor falls back, the reader carries it up
+as `readBy`, `readCostUsd` prices what really ran (gpt-4o-mini at 0.000207, not Groq's 0.000626),
+and all three settle doors stamp it, so the whole family went in one commit. Proven live: checks
+393, 394 and 395 all read `gpt-4o-mini` / 207 where 392 and everything before it read
+`groq:llama-3.3-70b-versatile` / 626. The owner ruled the OpenAI reader stays for now.
 
-## Next, the moment staging serves the new commit
-Dial scene 21 (the growing music test) to done, then scene 20 (the loud classic) and report its new
-meter floor. Expected from 384's own record: the 3s music clock saves exactly 3 seconds of Charlie's
-meter and turns its drop row green at 3; the meter should land near 36s, still over the 31 line,
-and the rest is the voice provider's 2 to 7 seconds of thinking per reply, which is his own-brain
-plan and outside this box.
+## NEXT, for whoever picks this up
+Scene 22 (the advert in the music) has not been re-dialed: the judge is proven on its saved record
+but has never met a fresh dial of it. Everything else, and every trap that bit me, is written in
+docs/team/voice-calls/echo-handoff.md so a fresh chat can boot on it.
