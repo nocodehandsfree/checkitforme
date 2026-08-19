@@ -862,6 +862,25 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  dropped again, and those seconds are counted and graded as awake on hold, which is exactly
    *  where the owner ruled the cost of guessing early should land. */
   let reconnectingEarly = false;
+  let earlyReconnectTimer: NodeJS.Timeout | null = null;
+  /** How long his early session may stay up before the words have proved a person. Kept under the
+   *  owner's own awake-on-hold bands (green to 3, red from 6), because those seconds are graded. */
+  const EARLY_RECONNECT_MS = 4000;
+  /** Put the early session back down. Called when the words say the store played that at us, and by
+   *  the backstop when no words prove anybody at all (check 413: the advert's own voice started the
+   *  reconnect, the reader never answered, and he sat up for 22 graded seconds). */
+  function dropTheEarlySession(why: string): void {
+    if (earlyReconnectTimer) { clearTimeout(earlyReconnectTimer); earlyReconnectTimer = null; }
+    if (!reconnectingEarly) return;
+    reconnectingEarly = false;
+    if (ended || !onHold || !eleven) return;
+    closeSegment(room);
+    markNow(room, "charlieCloseMs");
+    emit(room, "charlie_leave", "Charlie dropped", { reason: "music", strategy: "reopen", notASound: true, why });
+    try { eleven?.close(); } catch { /* torn down */ }
+    eleven = null; ready = false; connecting = false;
+    log(`reconnect: ${why} — his session goes back down`);
+  }
   /** How long the sound half stays good for: a person's words reach us through Echo a moment after
    *  their voice, so the two halves are allowed to land a few seconds apart. */
   const WAKE_TOGETHER_MS = 6000;
@@ -945,15 +964,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // …AND IF HIS SESSION WAS ALREADY OPENING ON THE SOUND, IT GOES BACK DOWN (fix 3). The
         // seconds it was up are counted and graded as awake on hold: that is the price of starting
         // early, and the owner ruled it should be visible rather than hidden.
-        if (reconnectingEarly && onHold && eleven) {
-          reconnectingEarly = false;
-          closeSegment(room);
-          markNow(room, "charlieCloseMs");
-          emit(room, "charlie_leave", "Charlie dropped", { reason: "music", strategy: "reopen", notASound: true });
-          try { eleven?.close(); } catch { /* torn down */ }
-          eleven = null; ready = false; connecting = false;
-          log("reconnect: the words say it was the store's recording, so his session goes back down");
-        }
+        dropTheEarlySession("the words say the store played that at us");
         return;
       }
       if (read.announcesWait) return;   // a person, telling us they are stepping away again
@@ -1659,8 +1670,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     onHold = false; holdReason = null; everCameBack = true;
     musicRecognisedHold = false;
     reconnectingEarly = false;
-    openCharliesEars("the wait ended and somebody came back", backAtMs);
-    holdStartedAtMs = 0;
+    if (earlyReconnectTimer) { clearTimeout(earlyReconnectTimer); earlyReconnectTimer = null; }
+    // HIS EARS COME BACK ON BELOW, AFTER THIS WAIT'S OWN ROW IS WRITTEN (owner, 08-19 night). Opening
+    // them hands him what he missed, which writes its own row, and doing that first pushed the
+    // wait's own ending BELOW the hand-over on check 413's sheet: rows out of order, and the
+    // sentence measured against the wrong one.
     holdProvedWordless = false; pendingComeback = null;
     // THE ANNOUNCEMENT IS SPENT (check 369). "Let me check, I'll put you on hold" announces ONE
     // wait, and this is that wait ending. It used to stay armed until Staff's next WRITTEN line
@@ -1700,6 +1714,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`,
       { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) },
       backAtMs);
+    // HIS EARS COME BACK ONLY NOW, AFTER THE WAIT'S OWN ROW (owner, 08-19 night). Opening them hands
+    // him what he missed, which writes its own row, so doing it first pushed the wait's ending BELOW
+    // the hand-over on check 413's sheet: rows out of order, and the sentence measured off the wrong
+    // one. The row is written, so the sentence and the rows now read the same second.
+    openCharliesEars("the wait ended and somebody came back", backAtMs);
     // DELTA PLAYS THE RECORDING AGAIN AFTER A TRANSFER (owner 08-04: "Echo absolutely needs to
     // build this"). Whoever picks up the next department never heard the question, and Charlie
     // re-asking it himself is exactly the expensive way: the recording asks for free, in the same
@@ -2924,6 +2943,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
               { step: "reconnect_early", spokeMs, notASound: true });
             log("reconnect: starting his session on the sound, his turn waits for the words");
             void connectEleven("a voice came back and the words are being read");
+            if (earlyReconnectTimer) clearTimeout(earlyReconnectTimer);
+            earlyReconnectTimer = setTimeout(() => {
+              earlyReconnectTimer = null;
+              dropTheEarlySession("no words proved a person");
+            }, EARLY_RECONNECT_MS);
           }
         },
         // THE LINE IS GONE. A dropped leg stops sending audio entirely, which is an absence no

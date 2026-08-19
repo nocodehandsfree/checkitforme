@@ -570,7 +570,16 @@ console.log("\n▶ the clerk walks off: the agent stops being fed and cannot be 
   ok(f.chunks.length >= during, "…and when they come back the agent hears them again");
   const ev = (getReceipt("room-hold")?.events || []).find((e) => e.kind === "hold_end");
   ok(!!ev, "the receipt records them coming back");
-  ok(typeof ev?.detail?.gapSec === "number" && (ev.detail.gapSec as number) >= 6, `and how long they were gone (${ev?.detail?.gapSec}s)`);
+  // AND THE SENTENCE READS ITS OWN ROWS (owner, 08-19 night): "Staff back after N seconds" is the
+  // distance between the wait's two rows, never a second number measured on the ear's own clock.
+  // On check 413 the two disagreed on the sheet. This scene feeds a whole wait's worth of frames in
+  // a blink, so its rows really are a blink apart — and the sentence has to say that, not 6.
+  {
+    const started = (getReceipt("room-hold")?.events || []).find((e) => e.kind === "hold_start");
+    const drawn = Math.round((((ev?.atMs ?? 0) - (started?.atMs ?? 0))) / 1000);
+    ok(typeof ev?.detail?.gapSec === "number" && (ev.detail.gapSec as number) === drawn,
+      `and how long they were gone is what its own rows say (${ev?.detail?.gapSec}s)`, { drawn });
+  }
   ok(rollup(getReceipt("room-hold")!).holdSeconds !== null, "hold seconds are a real measured number now, not null forever");
   restore(); tw.close(); f.close();
 }
@@ -3135,6 +3144,19 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
     const drawn = Math.round((((end?.atMs ?? 0) - (start?.atMs ?? 0))) / 1000);
     ok(said >= 0 && Math.abs(said - drawn) <= 1,
       "the wait says it lasted what its own two rows say it lasted", { said, drawn });
+  }
+  // CHECK 413: the wait's ending was DRAWN BELOW the hand-over row it caused, because opening his
+  // ears hands him what he missed and that writes its own row first. The sentence then measured
+  // itself against a row that sat above it. The wait's own row is written first, always.
+  {
+    const rows = evs();
+    const endAt = rows.findIndex((e) => e.kind === "hold_end");
+    const backAt = rows.findIndex((e) => (e.detail as { step?: string } | null)?.step === "ears_back");
+    ok(endAt >= 0 && backAt > endAt,
+      "the wait's own ending is drawn ABOVE the row for handing him what he missed", { endAt, backAt });
+    ok((rows[endAt]?.atMs ?? 0) <= (rows[backAt]?.atMs ?? 0),
+      "…and its second is no later than that row's second either",
+      { end: rows[endAt]?.atMs, back: rows[backAt]?.atMs });
   }
   await sleep(500);   // his session takes a moment to open again, exactly as on a real check
   ok(evs().some((e) => e.kind === "charlie_join" && ((e.detail as { segment?: number } | null)?.segment ?? 0) > 1),
