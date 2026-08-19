@@ -19,7 +19,7 @@ import { toMediaFrames } from "../calls/clip-cache";
 // The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
-import { heardWrongDepartment, isPrivateNote, askedToBePutThrough, saysNobodyToTransfer, saidGoingToCheck, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
+import { heardWrongDepartment, isPrivateNote, askedToBePutThrough, saysNobodyToTransfer, saidGoingToCheck, looksLikeAMenu, staffName, wrappedUp, usedTheirName, asksUsBack } from "./prompts";
 import { guessLanguage } from "../calls/mapgraph";
 // WHAT LANGUAGE THE PERSON WHO PICKED UP IS SPEAKING, off the words of their first line. A separate
 // judge from `guessLanguage` on purpose: that one reads a MENU and its markers are menu words, so it
@@ -1709,6 +1709,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  AND HIS MOUTH IS SHUT BEHIND IT, the same two ways the opening question already does it: his
    *  own generated version is dropped while the recording covers it (`ackPlayingUntil`, the hold
    *  reply's own door), so Staff can never hear the question twice. */
+  /** When OUR recording asked the set question. From that moment the engine owns the exchange: the
+   *  next fresh Staff line that is not a walk-away and not a question back at us IS the answer,
+   *  and the recorded goodbye closes the check on it (owner's order 08-19, off check 404, where
+   *  his own generated goodbye beat the reader's re-knock and the recording never rode). */
+  let setAskClipAtMs = 0;
   function playSetAsk(): boolean {
     if (ended || twilio.readyState !== 1 || !streamSid || !charlieGateOpen || onHold) return false;
     const clip = ctx?.setAskClip;
@@ -1725,6 +1730,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     try { relayLine?.(room, "Agent", clip.text); } catch { /* the screen is best-effort */ }
     emit(room, "unknown", "The set question played as a recording", { step: "set_ask_clip", ms: clip.ms });
     log(`set ask: our recording played (${clip.ms}ms), no wait on the outside voice service`);
+    setAskClipAtMs = Date.now();
     return true;
   }
 
@@ -2033,6 +2039,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       else if (!announcedNow) ackPlayingUntil = 0;
       waitAnnounced = announcedNow;
       if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
+      // THE ANSWER TO THE RECORDING'S QUESTION CLOSES THE CHECK (owner's order 08-19, off check
+      // 404: Staff's answer landed, Charlie heard it with his own ears and generated his own
+      // goodbye before the reader's re-read could knock, so the recording never rode). The set
+      // question was asked by OUR recording, so the next fresh Staff line after it is a moment the
+      // engine already knows: the recorded goodbye plays right here and the reader settles the
+      // verdict off the record after the call, exactly as it always has. Never on a walk-away
+      // announce (they are stepping away, not answering) and never on a question back at us (a
+      // goodbye over "sorry, which set?" hangs up on a person mid-conversation) — those stay
+      // Charlie's to handle, and the reader's own knock still closes the check behind them.
+      if (setAskClipAtMs > 0 && !announcedNow && !asksUsBack(txt) && Date.now() > setAskClipAtMs) {
+        sayTheRecordedGoodbye();
+      }
     }
     // THE JOINED LINE REPLACES ITS PIECES (owner task 08-15). Any tail piece not yet handed goes
     // first, then the whole line is recognized as exactly the pieces already fed and marked his —
@@ -2598,13 +2616,21 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           log(`note silenced: he began "${String(txt).slice(0, 60)}" and the store heard nothing`);
           return;
         }
-        // HIS OWN GOODBYE, COVERED BY THE RECORDING (owner's order, 08-19). The recorded sign-off
-        // has already played and his frames are being dropped behind it (`ackPlayingUntil`, the set
-        // question's own rule), so the words of a goodbye Staff never heard are not a line either.
-        if (txt && goodbyeClipPlayed && Date.now() < ackPlayingUntil && wrappedUp(String(txt))) {
-          emit(room, "unknown", "Charlie's own goodbye was covered by the recording and never played",
-            { step: "goodbye_covered", text: String(txt).slice(0, 200) });
-          log(`goodbye: his own version ("${String(txt).slice(0, 50)}") was covered by the recording`);
+        // HIS OWN VERSION, COVERED BY A RECORDING OF OURS (owner's order, 08-19). While a recording
+        // covers the line (`ackPlayingUntil`), his frames are dropped at the audio door — so the
+        // words of a line Staff never heard are not a line either: not recorded, not relayed, and
+        // the rest of the turn's sound silenced with them (check 404 wrote his re-worded set
+        // question down as if Staff had heard it, and its straddling tail could leak past the
+        // window). A genuine reply can never land here, because any fresh real Staff line clears
+        // the window before he answers it.
+        if (txt && Date.now() < ackPlayingUntil) {
+          noteTurnSilenced = true;
+          const hisGoodbye = goodbyeClipPlayed && wrappedUp(String(txt));
+          emit(room, "unknown", hisGoodbye
+            ? "Charlie's own goodbye was covered by the recording and never played"
+            : "Charlie's own version was covered by the recording and never played",
+            { step: hisGoodbye ? "goodbye_covered" : "covered_by_recording", text: String(txt).slice(0, 200) });
+          log(`covered: his own version ("${String(txt).slice(0, 50)}") never played, the recording owns the line`);
           return;
         }
         // HE HAS ASKED TO BE PUT THROUGH. From here the next wait that ends is a hand-over, whether or

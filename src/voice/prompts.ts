@@ -402,6 +402,17 @@ const WRAP_UP = new RegExp([
 export function wrappedUp(line: string): boolean {
   return WRAP_UP.test(String(line || ""));
 }
+
+/** THEIR LINE IS A QUESTION BACK AT US, not an answer (the recorded goodbye's guard, owner's order
+ *  08-19). After OUR recording asks the set question, the next fresh Staff line closes the check —
+ *  unless they are asking us something, because a goodbye played over "sorry, which set?" hangs up
+ *  on a person mid-conversation. Words only, pure, tested both ways. */
+export function asksUsBack(line: string): boolean {
+  const t = String(line || "").trim();
+  if (!t) return false;
+  if (/\?\s*$/.test(t)) return true;
+  return /^(?:what|which|who|when|sorry|pardon|huh|hm+|say (?:that )?again|come again|can you|could you|do you|are you|wait,? (?:what|which))\b/i.test(t);
+}
 /**
  * HIS LAST WORDS, judged as an ending. A wrap-up in the MIDDLE of a conversation needs a goodbye
  * beside it (that is `wrappedUp` above, and it is what the live check records). But the LAST thing he

@@ -3147,6 +3147,93 @@ console.log("▶ CHECK 403'S SHAPE: the goodbye waits for REAL quiet, so the set
   restore(); tw.close(); f.close();
 }
 
+console.log("▶ CHECK 404'S SHAPE: the answer to the recording's question closes the check, so his generated goodbye never wins the race");
+{
+  // On 404 Staff's answer landed, Charlie heard it with his own ears and generated his own goodbye
+  // before the reader's re-read could knock — so the recording never rode, and his re-worded set
+  // question was written down though the store never heard it. The set question was asked by OUR
+  // recording, so the fresh Staff line after it is the engine's own moment: goodbye, right there.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-goodbye-answer";
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "a", apiKey: "k", dynamicVars: {}, midCallAgentId: "mid",
+    setAskClip: { audio: Buffer.alloc(320, 0x40), ms: 400, text: "oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?" },
+    goodbyeClip: { audio: Buffer.alloc(320, 0x40), ms: 400, text: "Thanks so much, have a good one!" },
+  } as never);
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_bye5", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  nudgeSignoff(room, "in stock", { set: null, productForm: null });
+  await sleep(250);
+  ok(evs().some((e) => (e.detail as { step?: string } | null)?.step === "set_ask_clip"), "the set question's recording asked it");
+  // His re-worded duplicate inside the cover window: never played AND never written (check 404
+  // wrote it down as a line the store never heard).
+  const ws = f.sockets[f.sockets.length - 1];
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Any idea on the set name or the type?" } }));
+  await sleep(120);
+  ok(!(getReceipt(room)?.transcript || []).some((l) => l.who === "Agent" && /any idea on the set/i.test(l.text)),
+    "his re-worded set question, covered by the recording, is never written down");
+  ok(evs().some((e) => (e.detail as { step?: string } | null)?.step === "covered_by_recording"),
+    "…and the cover is on the record instead");
+  // Staff answer the recording's question: THAT is the close. (The play defers a beat when the set
+  // clip's own sound is still going out — never two sounds at once — so the wait covers it.)
+  echoHeardStaff(room, "Pitch black the booster boxes.");
+  await sleep(600);
+  const wrap = evs().find((e) => (e.detail as { step?: string } | null)?.step === "wrap_up");
+  ok(!!wrap && (wrap?.detail as { goodbyeClip?: boolean } | null)?.goodbyeClip === true,
+    "their answer plays the recorded goodbye at once, no race with his generation");
+  ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Clerk" && /pitch black/i.test(l.text)),
+    "…with their answer safely on the record");
+  await sleep(1400);
+  ok(weEndedCheck(room) === "signed_off", "…and the check ends itself, signed off");
+  restore(); tw.close(); f.close();
+}
+
+console.log("▶ …but a question back at us, or a walk-away, is NEVER answered with a goodbye");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-goodbye-guard";
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "a", apiKey: "k", dynamicVars: {}, midCallAgentId: "mid",
+    setAskClip: { audio: Buffer.alloc(320, 0x40), ms: 400, text: "oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?" },
+    goodbyeClip: { audio: Buffer.alloc(320, 0x40), ms: 400, text: "Thanks so much, have a good one!" },
+  } as never);
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_bye6", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  nudgeSignoff(room, "in stock", { set: null, productForm: null });
+  await sleep(250);
+  echoHeardStaff(room, "Sorry, which set do you mean?");
+  await sleep(200);
+  ok(!evs().some((e) => (e.detail as { step?: string } | null)?.step === "wrap_up"),
+    "a question back at us never gets a goodbye played over it");
+  echoHeardStaff(room, "Hold on, let me go look at the box.");
+  await sleep(200);
+  ok(!evs().some((e) => (e.detail as { step?: string } | null)?.step === "wrap_up"),
+    "…and a walk-away announce never does either");
+  echoHeardStaff(room, "It's the Pitch Black booster boxes.");
+  await sleep(250);
+  ok(evs().some((e) => (e.detail as { step?: string } | null)?.step === "wrap_up"),
+    "the real answer, when it comes, still closes the check");
+  restore(); tw.close(); f.close();
+}
+
 console.log("▶ …and with NO recording, a complete answer still closes the old way: his own goodbye, nothing regressed");
 {
   _reset();

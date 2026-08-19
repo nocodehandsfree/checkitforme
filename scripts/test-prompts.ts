@@ -416,6 +416,26 @@ console.log("▶ the set question the RECORDING asks is the same sentence his di
   ok(!/[\u2014\u2013]/.test(SET_ASK_LINE), "no dash in it (they read strangely through ElevenLabs)");
 }
 
+console.log("\u25b6 asksUsBack: a question back at us is never answered with a goodbye (the recorded goodbye's guard)");
+{
+  const { asksUsBack } = await import("../src/voice/prompts");
+  for (const q of [
+    "Sorry, which set do you mean?",
+    "What do you mean, like the brand?",
+    "Can you say that again?",
+    "Do you want the small packs or the boxes?",
+    "Huh?",
+    "Pardon me, the name of what",
+  ]) ok(asksUsBack(q), `a question back: "${q.slice(0, 44)}"`);
+  for (const a of [
+    "Pitch black the booster boxes.",
+    "Yeah. We've got a few of those.",
+    "It's the booster boxes, the black ones",
+    "Next week, maybe. I'm not certain.",
+    "No, just the packs.",
+  ]) ok(!asksUsBack(a), `an answer, never flagged: "${a.slice(0, 44)}"`);
+}
+
 console.log("\u25b6 the goodbye the RECORDING says is the owner's ruled sign-off, no name in it (08-19)");
 {
   const { GOODBYE_LINE, GOODBYE_LINE_ES } = await import("../src/calls/charlie-setup");
