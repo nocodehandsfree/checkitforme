@@ -71,6 +71,87 @@ export interface MeterInput {
   answerGapWorstSec?: number | null;
   handoverGapWorstSec?: number | null;
   dropGapWorstSec?: number | null;
+  /** THE ADVERT RULING (owner, 08-19): when the after-call reader proved a Staff line was really a
+   *  recording the store played (`played_at_us` on the record), the GRADE treats that stretch as a
+   *  wait — as if the hold had been recognized when the store's recording started. Grading only:
+   *  the record's raw numbers, the real cost and the customer's charge change not at all, and the
+   *  sheet prints the real number beside the graded one. Null = no proven recording, grade as ever. */
+  advert?: { asWaitSec: number; gradedProfitPct?: number | null } | null;
+}
+
+/** What `advertAsWait` measured off the record, all on the call's own millisecond clock. */
+export interface AdvertAsWait {
+  /** When the store's recording started — the `music_heard` stamp when one covers the judged line
+   *  (Echo dates it to the music's own first note), else the judged line's own start. */
+  holdFromMs: number;
+  /** Where Charlie's meter would have switched off: the ruled 3 second drop after the hold. */
+  offFromMs: number;
+  /** Staff's real comeback — the next Clerk line the reader did NOT judge a recording. */
+  toMs: number;
+  /** The seconds of Charlie's real meter inside that window: what the grade forgives. */
+  forgivenMs: number;
+}
+
+/**
+ * THE ADVERT RULING'S MEASURE (owner, 08-19: "grade such calls fairly after the fact"). A recorded
+ * voice is the one sound on a phone line no listening rule can refuse — it IS a voice — so a hold
+ * with an advert in its music is never recognized live (checks 398/399/400). The after-call reader
+ * proves it in words (`played_at_us`, receipt-store.ts), and this turns that proof into the as-if
+ * window the grade uses: hold from the recording's first note, Charlie dropped the ruled 3 seconds
+ * later (`holdMusicMs`, tuning.ts — the owner's ONE drop number), off until Staff really came back.
+ * Pure, reads only the finished record, and returns null whenever the proof or the timed lines are
+ * missing — every other check grades exactly as it always did.
+ */
+export function advertAsWait(
+  timeline: Array<{ kind: string; atMs?: number | null; detail?: Record<string, unknown> | null }>,
+  lines: Array<{ who: string; text: string; atMs: number | null; endMs?: number | null }> | null,
+): AdvertAsWait | null {
+  const played = timeline.find((e) => (e.detail || {}).step === "played_at_us");
+  if (!played || !lines?.length) return null;
+  const norm = (s: string) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 120);
+  const judged = (Array.isArray((played.detail || {}).lines) ? (played.detail!.lines as Array<Record<string, unknown>>) : [])
+    .map((l) => norm(String(l.line ?? ""))).filter(Boolean);
+  if (!judged.length) return null;
+  const clerk = lines.filter((l) => l.who !== "Agent" && l.atMs != null);
+  const isRecording = (t: string) => { const n = norm(t); return judged.some((j) => n.startsWith(j) || j.startsWith(n)); };
+  const rec = clerk.filter((l) => isRecording(l.text));
+  if (!rec.length) return null;   // an old record with no timed lines cannot place the stretch
+  const people = clerk.filter((l) => !isRecording(l.text));
+  const callEndMs = timeline.reduce((m, e) => Math.max(m, e.atMs ?? 0), 0);
+  // Charlie's real meter, as on/off stretches, so only seconds that actually billed are forgiven.
+  const on: Array<[number, number]> = [];
+  let openAt: number | null = null;
+  for (const e of timeline) {
+    if (e.kind === "charlie_join" && e.atMs != null && openAt == null) openAt = e.atMs;
+    if (e.kind === "charlie_leave" && e.atMs != null && openAt != null) { on.push([openAt, e.atMs]); openAt = null; }
+  }
+  if (openAt != null) on.push([openAt, callEndMs]);
+  // One as-if window per judged recording line, merged when they run together.
+  const windows: Array<[number, number]> = [];
+  for (const r of rec) {
+    let from = r.atMs!;
+    // The store's recording did not start at the advert's first word: when Echo already stamped
+    // the music (`music_heard`, dated to the music's own first note) and no real person spoke
+    // between that note and the judged line, the recording started at the note.
+    for (const e of timeline) {
+      if ((e.detail || {}).step !== "music_heard" || e.atMs == null) continue;
+      if (e.atMs <= from && !people.some((p) => p.atMs! > e.atMs! && p.atMs! < r.atMs!)) from = Math.min(from, e.atMs);
+    }
+    const comeback = people.filter((p) => p.atMs! > r.atMs!).reduce((m, p) => Math.min(m, p.atMs!), callEndMs);
+    const off = from + 3000;   // the ruled drop: one number, 3 seconds, music the same as silence
+    if (comeback > off) windows.push([off, comeback]);
+  }
+  windows.sort((a, b) => a[0] - b[0]);
+  const merged: Array<[number, number]> = [];
+  for (const w of windows) {
+    const last = merged[merged.length - 1];
+    if (last && w[0] <= last[1]) last[1] = Math.max(last[1], w[1]);
+    else merged.push([...w] as [number, number]);
+  }
+  let forgivenMs = 0;
+  for (const [a, b] of merged) for (const [x, y] of on) forgivenMs += Math.max(0, Math.min(b, y) - Math.max(a, x));
+  if (forgivenMs <= 0) return null;
+  return { holdFromMs: merged[0][0] - 3000, offFromMs: merged[0][0], toMs: merged[merged.length - 1][1], forgivenMs };
 }
 
 /** The owner's gap bands (his box, 08-16 late): Charlie's answer gap green to 2, yellow to 6, red
@@ -120,27 +201,45 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
   if (cap != null && redFrom != null) toPass.push(cap === METER_GOAL_SEC
     ? `Charlie on the meter ${cap} seconds or less (yellow to ${redFrom - 1})`
     : `Charlie on the meter ${cap} seconds or less`);
+  // THE ADVERT RULING (owner, 08-19): a proven recording's stretch grades as a wait. The graded
+  // clock is what the colors and the pill read; the record's real number stays printed beside it.
+  const asWait = m.advert && m.advert.asWaitSec > 0 ? m.advert.asWaitSec : 0;
   if (m.meterSec != null) {
-    const pass = cap == null || redFrom == null ? null : m.meterSec < redFrom;
-    const inYellow = pass === true && cap != null && m.meterSec > cap;
+    const graded = Math.max(0, m.meterSec - asWait);
+    const pass = cap == null || redFrom == null ? null : graded < redFrom;
+    const inYellow = pass === true && cap != null && graded > cap;
     const waited = (m.speakingSec != null || m.listeningSec != null)
       ? Math.max(0, m.meterSec - (m.speakingSec ?? 0) - (m.listeningSec ?? 0)) : null;
     rows.push({ label: "Charlie on the meter",
       value: cap == null ? `${m.meterSec}s`
+        : asWait > 0 ? `${m.meterSec}s on the record, ${graded}s graded against ${cap}s`
         : inYellow ? `${m.meterSec}s, over the ${cap}s goal but inside your yellow ${redFrom! - 1}s`
         : `${m.meterSec}s against ${cap}s`, pass,
-      say: { pre: "Charlie was on the clock ", num: secWord(m.meterSec), post: ".",
-        tail: cap == null ? undefined : `The goal is ${cap}.` },
-      open: waited != null
+      say: asWait > 0
+        ? { pre: "Charlie's clock grades as ", num: secWord(graded), post: ".",
+            tail: `It ran ${m.meterSec} on the record.${cap == null ? "" : ` The goal is ${cap}.`}` }
+        : { pre: "Charlie was on the clock ", num: secWord(m.meterSec), post: ".",
+            tail: cap == null ? undefined : `The goal is ${cap}.` },
+      open: (waited != null
         ? `Talking, listening and waiting all count while Charlie is on the clock. On this check he spoke for ${secWord(m.speakingSec ?? 0)}, listened for ${secWord(m.listeningSec ?? 0)}, and waited for ${secWord(waited)}.`
-        : "Talking, listening and waiting all count while Charlie is on the clock, and every second bills the same." });
+        : "Talking, listening and waiting all count while Charlie is on the clock, and every second bills the same.")
+        + (asWait > 0 ? ` After the check ended, our reader proved a voice on it was a recording the store played, so ${secWord(asWait)} of his clock grade as waiting — the row under this one says why.` : "") });
     if (pass === false) {
-      fails.push(cap === METER_GOAL_SEC
+      fails.push(asWait > 0
+        ? `Charlie's graded meter ran ${graded} seconds (${m.meterSec} on the record; the store's recording played through ${asWait}), past your yellow line of ${redFrom! - 1}, against the ${cap} second goal.`
+        : cap === METER_GOAL_SEC
         ? `Charlie ran ${m.meterSec} seconds on the meter, past your yellow line of ${redFrom! - 1}, against the ${cap} second goal.`
         : `Charlie ran ${m.meterSec} seconds on the meter against this card's ${cap} second line.`);
-      shortFails.push(`Charlie meter time, ${m.meterSec} seconds`);
+      shortFails.push(asWait > 0 ? `Charlie graded meter time, ${graded} seconds` : `Charlie meter time, ${m.meterSec} seconds`);
     }
     rows[rows.length - 1].tone = pass === false ? "r" : inYellow ? "y" : pass === true ? "g" : undefined;
+    // THE FORGIVENESS IS NEVER SILENT: its own row names the seconds and why they grade as a wait,
+    // so the sheet shows exactly what the grade set aside and the record stays the record.
+    if (asWait > 0) {
+      rows.push({ label: "The store's recording, graded as a wait", value: `${asWait}s`, pass: null,
+        say: { pre: "", num: secWord(asWait), post: " of that was the store's recording playing, so it grades as a wait." },
+        open: "After the check ended, our reader proved that what sounded like Staff talking was really a recording the store played — the check log names the line. A recorded voice is the one sound the live ear can never refuse, so the hold was never caught during the check. The owner ruled these grade fairly after the fact: as if the hold had been caught when the store's recording started, with Charlie dropped 3 seconds in. The record itself, the real cost and what the customer paid are unchanged." });
+    }
     // The waiting slice is the piece of his meter where nobody said anything — the 9 silent
     // seconds of 08-16. Shown whenever it was measured; its own bound is the owner's open
     // decision (spec decision 2), so it is not graded alone yet. It already drags the two graded
@@ -175,19 +274,37 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
   // check, what it really made against the floor, which is the system as it already was.
   if (floor != null) toPass.push(`gross profit ${floor}% or better`);
   if (m.profitPct != null) {
-    const pass = floor == null ? null : m.profitPct >= floor;
+    // THE PROFIT ROW IS A FRIEND OF THE METER ROW (the advert ruling, owner 08-19): the forgiven
+    // seconds are Charlie's billed seconds, so the same as-if prices them out of the GRADE — had
+    // the hold been caught, they would never have cost anything. The real percent stays printed,
+    // and the real cost and the customer's charge are untouched. Every other check keeps the 08-17
+    // ruling exactly: the sheet shows and grades only the real profit.
+    const gradedPct = asWait > 0 && m.advert?.gradedProfitPct != null ? m.advert.gradedProfitPct : null;
+    const gradePct = gradedPct ?? m.profitPct;
+    const pass = floor == null ? null : gradePct >= floor;
     rows.push({ label: "Gross profit",
-      value: floor == null ? `${m.profitPct}%` : `${m.profitPct}% against the ${floor}% floor`,
+      value: gradedPct != null
+        ? (floor == null ? `${m.profitPct}% on the record, graded ${gradedPct}%` : `${m.profitPct}% on the record, graded ${gradedPct}% against the ${floor}% floor`)
+        : floor == null ? `${m.profitPct}%` : `${m.profitPct}% against the ${floor}% floor`,
       pass, tone: pass === false ? "r" : pass === true ? "g" : undefined,
-      say: { pre: "This check made ", num: `${m.profitPct}%`, post: ".",
-        tail: floor == null ? undefined : `The floor is ${floor}.` },
+      say: gradedPct != null
+        ? { pre: "This check grades as ", num: `${gradedPct}%`, post: ".",
+            tail: `It made ${m.profitPct} on the record; the difference is the recording's seconds.${floor == null ? "" : ` The floor is ${floor}.`}` }
+        : { pre: "This check made ", num: `${m.profitPct}%`, post: ".",
+            tail: floor == null ? undefined : `The floor is ${floor}.` },
       // A FLOOR THAT IS NOT THE USUAL ONE ALWAYS SAYS WHY (owner, 08-17 late). The hold tests grade
       // against 56 because their own scene forces the phone line's second billed minute; tapping
       // the row opens that sentence in his own words. Nothing else about a hold test is softened:
       // the meter colors and every gap row are exactly as strict here as on any other card.
       open: "The price of the check, minus what it cost to run, as a share of the price. The Check cost card below says where the money went."
+        + (gradedPct != null ? " The graded percent prices the store's recording seconds out of Charlie's cost, per the owner's advert ruling; the real cost and the customer's charge are unchanged." : "")
         + (b.floorWhy ? ` ${b.floorWhy}` : "") });
-    if (pass === false) { fails.push(`The check made ${m.profitPct}% gross profit against the ${floor}% floor.`); shortFails.push(`profit ${m.profitPct}% under the ${floor}% floor`); }
+    if (pass === false) {
+      fails.push(gradedPct != null
+        ? `The check grades ${gradedPct}% gross profit against the ${floor}% floor (${m.profitPct}% on the record).`
+        : `The check made ${m.profitPct}% gross profit against the ${floor}% floor.`);
+      shortFails.push(`profit ${gradePct}% under the ${floor}% floor`);
+    }
   }
 
   return { pass: fails.length === 0, fails, shortFails, toPass, rows };

@@ -7,7 +7,7 @@
 // check under the 67% floor fails the same way on the cards the owner has not exempted, the
 // 08-16 shape (43 seconds of meter, 9 waiting, every behavior row green) reads FAIL, and an old
 // check that never measured a number is not graded on it — nothing is invented.
-import { meterVerdict, METER_GOAL_SEC, METER_YELLOW_MAX_SEC, PROFIT_FLOOR_PCT } from "../src/calls/meter";
+import { meterVerdict, advertAsWait, METER_GOAL_SEC, METER_YELLOW_MAX_SEC, PROFIT_FLOOR_PCT } from "../src/calls/meter";
 import { TEST_CARDS } from "../src/calls/behaved";
 
 let pass = 0, fail = 0;
@@ -212,6 +212,125 @@ head("THE ROW WORDS ARE THE OWNER'S OWN SENTENCES (08-17), numbers filled in fro
   ok("no sentence speaks the rulebook", !/green|yellow|red|band/i.test(everything), everything);
   ok("every row opens to plain sentences about this call", v.rows.every((r) => !!r.open));
   ok("one second is singular, never 1 seconds", !/\b1 seconds\b/.test(everything));
+}
+
+// THE ADVERT RULING (owner, 08-19): when the after-call reader proved a Staff line was really a
+// recording the store played, the GRADE treats that stretch as a wait — as if the hold had been
+// recognized when the store's recording started. The shapes below are CHECK 398 and CHECK 400 as
+// their real records read them (scene 22, the advert inside the hold music): the strict numbers
+// off staging, not invented ones.
+const ADVERT_LINE = "Thanks for holding. Did you know we price match any local competitor? Ask an associate about our rewards program, and start earning points on every purchase tod";
+const playedStep = { kind: "unknown", atMs: 55241, detail: { step: "played_at_us", lines: [{ line: ADVERT_LINE, why: "advertising store offers and programs", announcesWait: false }] } };
+const check398 = {
+  timeline: [
+    { kind: "unknown", atMs: 11, detail: { step: "named_test", card: "hold_music" } },
+    { kind: "charlie_join", atMs: 9108, detail: null },
+    { kind: "unknown", atMs: 10175, detail: { step: "music_heard" } },
+    { kind: "charlie_leave", atMs: 54985, detail: null },
+    playedStep,
+  ],
+  lines: [
+    { who: "Clerk", text: "Larry Vásquez. How can I help you?", atMs: 1992, endMs: 4622 },
+    { who: "Agent", text: "Heyy, was wondering if you guys have any Pokémon cards in right now?", atMs: 5716, endMs: 9571 },
+    { who: "Clerk", text: "One moment. I'll go and have a look.", atMs: 7642, endMs: 11952 },
+    { who: "Agent", text: "No worries, take your time!", atMs: 13122, endMs: 15073 },
+    { who: "Clerk", text: ADVERT_LINE + "ay.", atMs: 14972, endMs: 23622 },
+    { who: "Clerk", text: "Yeah. We've got a few of those.", atMs: 33332, endMs: 36052 },
+    { who: "Agent", text: "Oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?", atMs: 38160, endMs: null },
+    { who: "Clerk", text: "Pitch black the booster boxes.", atMs: 45112, endMs: 49262 },
+  ],
+};
+
+head("CHECK 398'S SHAPE: the as-if window starts at the music's own first note, drops 3s in, ends at Staff's real comeback");
+{
+  const w = advertAsWait(check398.timeline, check398.lines)!;
+  ok("a window was measured", !!w, w);
+  ok("the hold starts at the music_heard stamp (10175), not the advert's first word", w.holdFromMs === 10175, w.holdFromMs);
+  ok("Charlie's meter would have switched off 3 seconds in (13175)", w.offFromMs === 13175, w.offFromMs);
+  ok("the window ends at Staff's real comeback (33332)", w.toMs === 33332, w.toMs);
+  ok("the forgiven stretch is 20157ms, all inside his real meter", w.forgivenMs === 20157, w.forgivenMs);
+}
+
+head("CHECK 398 GRADED FAIRLY: 46s red on the record grades as 26s and passes; the real number stays printed");
+{
+  const w = advertAsWait(check398.timeline, check398.lines)!;
+  const v = meterVerdict(TEST_CARDS.hold_music, { meterSec: 46, speakingSec: 13, listeningSec: 15, profitPct: 56,
+    answerGapWorstSec: 3, advert: { asWaitSec: Math.round(w.forgivenMs / 1000), gradedProfitPct: 70 } })!;
+  ok("the sheet passes", v.pass === true, v.fails);
+  const meter = v.rows.find((r) => r.label === "Charlie on the meter")!;
+  ok("the meter row's color wears the graded 26", meter.say?.num === "26 seconds" && meter.tone === "y", meter.say);
+  ok("…and the record's own 46 stays printed beside it", /46/.test(`${meter.value} ${meter.say?.tail}`), meter.value);
+  const forgiven = v.rows.find((r) => r.label.includes("recording"))!;
+  ok("the forgiveness has its own row naming the 20 seconds", forgiven?.say?.num === "20 seconds", forgiven?.say);
+  ok("…which is shown, never graded", forgiven?.pass === null);
+  const profit = v.rows.find((r) => r.label === "Gross profit")!;
+  ok("the profit row grades the as-if 70 and prints the real 56", profit.pass === true && /56% on the record.*70%/.test(profit.value), profit.value);
+}
+
+head("CHECK 400'S SHAPE: music at 13182, advert at 18222, comeback 36612 — 49s red grades as 29s and passes");
+{
+  const w = advertAsWait(
+    [
+      { kind: "charlie_join", atMs: 9561, detail: null },
+      { kind: "unknown", atMs: 13182, detail: { step: "music_heard" } },
+      { kind: "charlie_leave", atMs: 58632, detail: null },
+      { kind: "unknown", atMs: 58898, detail: playedStep.detail },
+    ],
+    [
+      { who: "Clerk", text: "One moment. I'll go and have a look.", atMs: 10912, endMs: 15202 },
+      { who: "Clerk", text: ADVERT_LINE + "ay.", atMs: 18222, endMs: 26872 },
+      { who: "Clerk", text: "Yeah. We've got a few of those.", atMs: 36612, endMs: 39302 },
+    ],
+  )!;
+  ok("the window is [16182, 36612] off the music's first note", w.offFromMs === 16182 && w.toMs === 36612, w);
+  ok("the forgiven stretch is 20430ms", w.forgivenMs === 20430, w.forgivenMs);
+  const v = meterVerdict(TEST_CARDS.hold_music, { meterSec: 49, speakingSec: 12, listeningSec: 15, profitPct: 53,
+    answerGapWorstSec: 4, advert: { asWaitSec: 20, gradedProfitPct: 68 } })!;
+  ok("49s red grades as 29s and the sheet passes", v.pass === true, v.fails);
+}
+
+head("THE RULING NEVER LEAKS: no proof on the record = every check grades exactly as it always did");
+{
+  ok("no played_at_us step → no window", advertAsWait(check398.timeline.filter((e) => (e.detail || {}).step !== "played_at_us"), check398.lines) === null);
+  ok("no timed lines (an old record) → no window", advertAsWait(check398.timeline, check398.lines.map((l) => ({ ...l, atMs: null }))) === null);
+  ok("a judged line the record cannot place → no window", advertAsWait(check398.timeline, check398.lines.filter((l) => !l.text.startsWith("Thanks for holding"))) === null);
+  const plain = meterVerdict(clearYes, { meterSec: 46, profitPct: 56 })!;
+  ok("without the advert input the same numbers still fail red", plain.pass === false, plain.fails);
+}
+
+head("A BARE RECORDED ANNOUNCEMENT (check 376's family): no music stamp, so the recording starts at its own line");
+{
+  const w = advertAsWait(
+    [
+      { kind: "charlie_join", atMs: 5000, detail: null },
+      { kind: "charlie_leave", atMs: 50000, detail: null },
+      { kind: "unknown", atMs: 51000, detail: { step: "played_at_us", lines: [{ line: "Un momento por favor, ya lo atienden", why: "an automated hold message", announcesWait: true }] } },
+    ],
+    [
+      { who: "Clerk", text: "Un momento por favor, ya lo atienden.", atMs: 12000, endMs: 15000 },
+      { who: "Clerk", text: "We have them, yes.", atMs: 30000, endMs: 32000 },
+    ],
+  )!;
+  ok("the window starts 3s after the announcement's own start", w.offFromMs === 15000, w.offFromMs);
+  ok("…and runs to the real comeback", w.toMs === 30000 && w.forgivenMs === 15000, w);
+}
+
+head("A PERSON SPOKE BETWEEN THE MUSIC STAMP AND THE JUDGED LINE: the stamp belongs to an earlier stretch, no pullback");
+{
+  const w = advertAsWait(
+    [
+      { kind: "charlie_join", atMs: 1000, detail: null },
+      { kind: "unknown", atMs: 5000, detail: { step: "music_heard" } },
+      { kind: "charlie_leave", atMs: 60000, detail: null },
+      { kind: "unknown", atMs: 61000, detail: { step: "played_at_us", lines: [{ line: "Your call matters to us", why: "hold message", announcesWait: false }] } },
+    ],
+    [
+      { who: "Clerk", text: "Sorry about that, one more minute.", atMs: 10000, endMs: 12000 },
+      { who: "Clerk", text: "Your call matters to us.", atMs: 20000, endMs: 24000 },
+      { who: "Clerk", text: "Okay I'm back.", atMs: 40000, endMs: 42000 },
+    ],
+  )!;
+  ok("the recording starts at its own line, not the older music stamp", w.holdFromMs === 20000 && w.offFromMs === 23000, w);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
