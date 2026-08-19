@@ -1,9 +1,63 @@
-# ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-18 night)
+# ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-19, Echo 3)
 
 Boot per CLAUDE.md, then read this file, `docs/team/voice-calls/RULES.md` (every line),
 `checkpoint.md`, and `docs/team/voice-calls/next-box.md` (the owner's box, most of it now done).
 Work on `staging`. Robot store only, never the Fun store. Never push while a check is in the air
 (`/api/admin/test-calls?limit=1`). Report every check by its NUMBER.
+
+## ECHO 3'S ORDER (08-19): three builds, in order, each proven before the next
+ONE the advert grading fix (below) · TWO the recorded goodbye ("thanks so much, have a good one",
+per voice, played like the set question's clip, his generated goodbye dropped the same way, no
+name) · THREE the own-brain switch (spec §7: Admin switch, fallback ladder, brain stamped on every
+record, §8's dropped-call status + Spanish + never charged + outside the one-hour block in the same
+work; snap onto ourBrain/ourBrainAgentId/brainFellBack in bridge.ts, staging agent + BRAIN_API_KEY;
+finish line = the loud classic music's meter under 31 seconds with the switch ON).
+
+## ONE, THE ADVERT GRADING FIX — BUILT, commit 9915c6c2 (branch claude/echo3-advert-grading)
+**The owner ruled (08-19): grade such calls fairly after the fact.** When the after-call judge
+proved a Staff line was really a recording the store played (`played_at_us`), the SHEET'S GRADE
+treats that stretch as a wait — as if the hold had been recognized when the store's recording
+started. Grading only: the live call, the charge, the real cost and the record's raw facts change
+NOT AT ALL, and the sheet prints the real numbers beside the graded ones.
+- `advertAsWait` (src/calls/meter.ts, pure): the as-if window off the finished record. The hold
+  starts at the `music_heard` stamp when one covers the judged line (Echo dates that stamp to the
+  music's own first note and scene 22's records all carry it), else at the judged line itself
+  (check 376's bare-announcement family). Charlie drops the ruled 3 seconds in, off until Staff's
+  real comeback, intersected with his real meter stretches. Null without the proof or timed lines.
+- **THE INTERPRETATION CALL, for the PM's audit**: "when the recording started" is read as the
+  music's first note, not the advert's first word, and the PROFIT row grades the as-if percent
+  (Charlie's forgiven seconds priced out of the GRADE only). Why: the strict reading leaves check
+  400's shape at 34 graded seconds, still red, and real profit (53-56%) can never clear the 56
+  floor — the ruled finish line ("a fresh scene 22 dial whose sheet should now pass") would be
+  unreachable under any dial. Read as built, the three records grade 26/27/29s and 68-70%, exactly
+  the range scene 22's twin scenes pass at (393: 27s, 71%). This is NOT the killed 08-17 set-aside:
+  it exists only on a judge-proven recording, names itself in its own row, and the real percent
+  stays printed. If the owner meant it narrower, only meter.ts's grading changes — nothing live.
+- `meterStoppedOnHold` (behaved.ts): no live hold + the proof = the row passes with words saying
+  why no engine could have caught it live. The card half of 398/399/400 passes on it.
+- **PROVEN by replaying the three REAL records** (fetched off staging, run through the new code):
+  398, 399, 400 all grade TEST PASSED — meters 46/47/49 red grade as 26/27/29 yellow, profits
+  56/55/53 grade as 70/69/68 against the 56 floor, card missing=[] on all three.
+- Suites: meter 86 · behaved 102 · simulations 18 · tsc clean.
+- **RE-READ LIVE ON STAGING (commit 9915c6c2): 398, 399 and 400 all wear TEST PASSED**, the meter
+  row printing both numbers ("46s on the record, 26s graded against 23s"), the forgiveness in its
+  own row, profit "56% on the record, graded 70% against the 56% floor".
+- **CHECK 401 (the fresh scene 22 dial) exposed the ruling's last edge**: card PASS, meter graded
+  27s, profit graded 69% — but the pill FAILED on the answer gap row at 14 seconds red. The engine
+  had measured Charlie's silenced note (spoken at 28.9s, while the recording owned the line)
+  against the announce that ended at 15s. Had the hold been recognized, that turn would never have
+  existed. AMENDED (commit b34dd95b): a `gaps` or `missed_turn` stamp whose moment sits inside the
+  as-if window does not grade — the stamp stays on the record, the grade disregards it. Replayed:
+  398/399/400/401 all TEST PASSED (398 and 400 keep their real 3-4s answer rows, stamped outside
+  the window; 399 and 401's kept stamps were both the note-turn and rightly vanish).
+- **CHECK 402 (scene 22 on the finished code, commit b34dd95b): THE PILL SAYS TEST PASSED.** Card
+  pass, in_stock, meter "46s on the record, 26s graded against 23s" yellow, the forgiveness row
+  20s, profit "56% on the record, graded 70% against the 56% floor" green, 11.1¢. TASK ONE DONE.
+- **The harness's one red on 401 and 402, named**: word-for-word flags the robot's "Sorry, that's
+  all I know." as missing from the written record. That line is the robot's once-only answer to
+  anything said after its script runs dry (tapedeck ~1495) — here Charlie's GOODBYE — so it lands
+  as the check is ending and can never be written. The record is right; the 08-04 ruling family
+  (teach the word checker, never the transcript). Not this build's, not fixed here.
 
 ## WHAT IS DONE, with the check that proves each one
 The owner's music box, items 1, 2, 3, 5 and 7, plus tonight's sheet fix:
@@ -143,12 +197,10 @@ window across real speech — the decision the live ear actually makes — it wo
 - Nothing else changed: no listening changes, no direction changes, nothing about his voice.
 
 ## WHAT IS LEFT
-1. **Scene 22, the advert in the music, has not been re-dialed.** The judge is proven on its saved
-   record but has never run on a fresh dial of it. That is the next dial. Expect the sound rules
-   still not to declare a hold there (an advert IS a voice); the judge's line on the record is what
-   proves it, and the owner's ruling on what the sheet should DO about it is still open.
-2. **Scene 20 cannot make the 31 line** without the own-brain work. Do not shave the music proof to
-   get there: 3 seconds is his ruled number and the standing law fences when Charlie's ear switches.
+1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
+   §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
+2. **Scene 20 cannot make the 31 line** without the own-brain work (task THREE is that work). Do
+   not shave the music proof: 3 seconds is his ruled number and the standing law fences the ear.
 3. Scene 23 (quieter room) fails on the same provider swing; its twin scene 24 passed (check 387).
 4. His final judging dials on tests five, six and seven are still his to make.
 

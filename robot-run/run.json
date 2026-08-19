@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-19T04:59:04.524Z",
+  "at": "2026-08-19T06:34:26.197Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -63,8 +63,8 @@
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
-          "pass": false,
-          "detail": "1 bounce(s) over 81 looks · header held at 0px"
+          "pass": true,
+          "detail": "0 bounce(s) over 77 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 59 seconds and the line closed at 59 — 0 seconds of nothing"
+          "detail": "the answer was in at 56 seconds and the line closed at 56 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Wed, Aug 19 · 4:57 AM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
+          "detail": " Result Wed, Aug 19 · 6:33 AM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 11.7¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 11.1¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787115431430,
-      "checkId": 400,
-      "cost": 0.117097,
-      "costReadable": "11.7¢",
+      "startedAt": 1787121163477,
+      "checkId": 402,
+      "cost": 0.110926,
+      "costReadable": "11.1¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"
