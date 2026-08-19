@@ -37,6 +37,50 @@ Judging music by how STEADY its loudness is. Per whole line it looked clean; sli
 window across real speech — the decision the live ear actually makes — it would have called 30 of
 106 windows of a real person music and dropped Charlie mid sentence. Measured, then deleted.
 
+## ADDED 08-19 EARLY (this session's second build, before the dials)
+- **The listener that hears Staff say they are stepping away now knows 124 phrasings**
+  (`saidGoingToCheck`, `src/voice/prompts.ts`), in seven groups, pinned by
+  `scripts/test-going-to-check.ts` which is wired into `test-all.sh` so it runs on every build.
+  159 of 159 green. It missed most plain ways of saying it before: "please hold", "putting the
+  phone down for a sec", "bear with me", "I'll be right back", "hang tight", "one moment".
+  THE OTHER HALF OF THAT FILE IS THE SAFETY and matters as much: 35 lines that must never read as
+  walking away, because a false yes means the next quiet drops Charlie while Staff are still
+  standing there thinking (the 08-08 inversion, which costs the answer). Those negatives are what
+  forced every guard in the pattern: "hold on" never matches "hold on TO your receipt", "you hold"
+  never matches "we hold those behind the counter", a bare "second"/"minute" never fires so
+  "they're in the second aisle" and "it's a minute from here" stay quiet, "see" never matches "see
+  you then", and "let me" only fires on a going-to-look verb so "let me know" and "let me tell
+  you" stay quiet. ADD to this file whenever a real check shows a new phrasing; never remove.
+  NOTE FOR THE PM: the simulation agent's own writeup of its 123 lines is NOT committed anywhere
+  in the repo or on any branch (I searched both), so this list was rebuilt from committed sources
+  — `docs/team/voice-calls/how-staff-actually-talk.md`, the robot store's scripts, and the real
+  lines off checks 383, 384, 386, 391, 393. If their exact 123 turn up, paste them straight in.
+- **The owner's wording ruling is in, all three doors in one commit**: Charlie's package question
+  is "and is it a pack or a box?" (`prompts.ts`, both variants), the reconnect list in `bridge.ts`
+  no longer names the tin, and the robot store's own follow-up scripts in `tapedeck.ts` match.
+  The reader that double checks a finished call STILL understands "tin" when Staff say it
+  unprompted, and the "ten"/"tin" mishearing rule is untouched, both on purpose.
+- **Two suite reds are PRE-EXISTING, proven by stashing my work and re-running**: `workflow-truth`
+  ("the restock question is in EVERY live check" — it asserts wording the live prompt has not used
+  for a while) and `test-one-question` (2 failed, red on a clean baseline since 08-06). Neither is
+  mine; both were red before this session.
+
+## THE DIALS OF 08-19 EARLY (every one by its number)
+- **396, scene 23 (phone on the counter, quieter room): THE PILL SAYS PASSED.** Meter 27s yellow,
+  drop row 3s green, handover 1s green, profit 70%. Its announce, "Hold on. Let me go look.", is
+  one the listener now knows. It had failed at 35s and 45s on earlier dials.
+- **397, scene 24 (louder room): THE PILL SAYS PASSED.** Meter 30s yellow, drop 3s green, profit
+  68%. Its announce is "Let me put this down a sec and go check.", the exact line that was missed
+  on check 386. Test six is green on both halves now.
+- **Both dials carry the owner's new sentence on the record**: "and is it a pack or a box".
+- **398, scene 22 (the advert inside the music): the after-call reader MET A LIVE CALL and was
+  right.** The record reads "One thing Staff seemed to say was really a recording the store played"
+  and names the advert line. Echo also stamped "recognised hold music" at 1200ms. THE CARD STILL
+  FAILS, exactly as predicted: no hold was ever declared (the advert is a voice, so no listening
+  rule can refuse it and its mix never runs 3 unbroken seconds), Charlie ran 46 metered seconds and
+  answered the advert. The reader NAMES it; nothing acts on it, because his box said report only,
+  never stop a live call. **What the engine should DO with that line is the owner's open ruling.**
+
 ## WHAT IS LEFT
 1. **Scene 22, the advert in the music, has not been re-dialed.** The judge is proven on its saved
    record but has never run on a fresh dial of it. That is the next dial. Expect the sound rules

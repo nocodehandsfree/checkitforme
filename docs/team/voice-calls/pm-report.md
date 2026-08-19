@@ -1,4 +1,20 @@
-# Voice agent report — the music box (2026-08-18 night, owner said start now)
+# Voice agent report — the music box, then the listener + the wording (2026-08-18/19)
+
+## 08-19 EARLY, SECOND BUILD AND FOUR DIALS. The listener that hears Staff say they are stepping
+## away now knows 124 phrasings in seven groups, with 35 lines pinned that must NEVER read as
+## walking away (a false yes drops Charlie while Staff are still thinking). 159 of 159 green, and
+## the suite runs on every build via test-all.sh. The owner's wording ruling is in at all three
+## doors in one commit, and the reader still understands "tin" when Staff say it. DIALS: **396
+## scene 23 PASSED** (meter 27s, drop 3s green, profit 70%) · **397 scene 24 PASSED** (meter 30s,
+## drop 3s green, profit 68%), so test six is green on both halves, and both records carry his new
+## sentence "and is it a pack or a box" · **398 scene 22: the after-call reader met a live call and
+## named the advert on the record**, and the card still fails as predicted (no hold declared, 46
+## metered seconds, Charlie answered the advert). What the engine should do about that line is his
+## open ruling. TWO SUITE REDS ARE PRE-EXISTING, proven by stashing my work: workflow-truth's
+## restock-wording assertion and test-one-question's 2. NOTE: the simulation agent's own writeup of
+## its 123 lines is not committed anywhere, so the list was rebuilt from committed sources and every
+## line is marked with where it came from; paste their exact 123 in if they turn up, it only grows.
+
 
 ## STATUS: DIALED AND DONE. Scene 21 PASSED (check 393). Scene 20's new meter floor is 32 to 34
 ## seconds (checks 394, 395), down from 39 and 43, still over his 31 line by 1 to 3 seconds, and
