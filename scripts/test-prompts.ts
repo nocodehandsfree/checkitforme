@@ -370,6 +370,35 @@ console.log("\n▶ THE DRIFT ALARM: the joining Charlie gets the same words, plu
   ok(!/[—–]/.test(JOINING_RULE), "no dashes in what he is told (they read strangely through ElevenLabs)");
 }
 
+console.log("▶ the set question the RECORDING asks is the same sentence his directions carry");
+{
+  // The set question is a recording now (owner, 08-19), so two copies of one sentence exist: the
+  // one Charlie is told to ask and the one our own file says out loud. They can never be allowed to
+  // drift, because a store would hear the recording ask one thing while his directions expect
+  // another. ONE source, asserted both ways.
+  const { SET_ASK_LINE, setAskLine } = await import("../src/voice/prompts");
+  ok(RESTOCK_PROMPT.includes(SET_ASK_LINE.replace("{set_example}", "{{set_example}}")),
+    "his own instructions carry the recorded sentence word for word");
+  ok(setAskLine("Pitch Black") === "oh nice, do you know the name of the set, like Pitch Black, and is it a pack or a box?",
+    "…and the category's own set name goes into it");
+  ok(setAskLine("") === setAskLine(SET_EXAMPLE), "…with the catalog's set name when a check names none");
+  ok(!/[\u2014\u2013]/.test(SET_ASK_LINE), "no dash in it (they read strangely through ElevenLabs)");
+}
+
+console.log("▶ his 08-19 rulings are in section 12, word for word");
+{
+  says("Music, a recorded voice, an in-store announcement or an advert are all waiting, never Staff talking to you.",
+    "12. a recording is waiting, never Staff talking to him");
+  says("If you are not sure a real person just spoke to you, use skip_turn and wait.",
+    "12. unsure it was a person, he waits in silence");
+  says("Never say a note about the call out loud, never describe what you are hearing, and never speak words inside brackets.",
+    "12. and he never says a note out loud (check 398: he announced the advert)");
+  says("Confirm in two or three words, like \"oh nice\" or \"got it\", never a sentence repeating what they said.",
+    "12. confirmations are two or three words");
+  says("Thank them once, not twice.", "12. one thank you");
+  says("Warm and short beats warm and long every time.", "12. warm and short beats warm and long");
+}
+
 console.log("▶ every way the robot store announces a wait really reads as one (check 386)");
 {
   // Check 386, test six: "Let me put this down a sec and go check." announced the phone going down

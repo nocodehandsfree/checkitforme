@@ -16,6 +16,7 @@ import { getPolicy } from "../policy";
 import { callTuning } from "./tuning";
 import { warnIfCapTooLow } from "./check-life";
 import { phoneClip } from "./clip-cache";
+import { setAskLine } from "../voice/prompts";
 import { DEFAULT_OPENER_ES } from "./service";
 import type { BridgeContext } from "../voice/bridge";
 
@@ -59,7 +60,7 @@ export function personWaitForStore(baseMs: number, directPickup: boolean): numbe
 export type CharlieShared = Pick<BridgeContext,
   | "agentId" | "apiKey" | "dynamicVars" | "onConversationId" | "openingClip" | "openingClipEs" | "midCallAgentId"
   | "departmentName" | "ourBrain" | "ourBrainAgentId" | "holdStrategy" | "tuning" | "timeLimitSec"
-  | "holdAckClip" | "holdAckClipEs"
+  | "holdAckClip" | "holdAckClipEs" | "setAskClip"
   | "giveUpSeconds" | "earFromSec" | "voiceId" | "voiceTuning">;
 
 export type CharlieSetup =
@@ -95,6 +96,7 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
   let openingClipEs: BridgeContext["openingClipEs"];
   let holdAckClip: BridgeContext["holdAckClip"];
   let holdAckClipEs: BridgeContext["holdAckClipEs"];
+  let setAskClip: BridgeContext["setAskClip"];
   let clipFailed = false;
   const question = input.dynamicVars.opening_line || "";
   // DELTA SWITCHED OFF ON PURPOSE (owner 08-07, the Delta: failed card). Nothing could ever make the
@@ -136,6 +138,16 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       if (ack) holdAckClip = { audio: ack.audio, ms: ack.ms, text: ack.text };
       const ackEs = await phoneClip(input.voiceId, HOLD_ACK_LINE_ES, input.voiceTuning || {}, input.apiKey).catch(() => null);
       if (ackEs) holdAckClipEs = { audio: ackEs.audio, ms: ackEs.ms, text: ackEs.text };
+      // THE SET QUESTION, RECORDED TOO (owner, 08-19). It is the only line left that the outside
+      // voice service still thought up mid check, and thinking it up costs 2 to 7 metered seconds
+      // every time. Recorded ONCE per voice and per category's set example, cached exactly like the
+      // opening question, and played by our own system the instant the engine knows both pieces are
+      // still missing. Best effort, and never a reason to fail a check: with no recording Charlie
+      // asks it himself, which is what every check does today.
+      const setAsk = setAskLine(input.dynamicVars.set_example);
+      const sc = await phoneClip(input.voiceId, setAsk, input.voiceTuning || {}, input.apiKey).catch(() => null);
+      if (sc) setAskClip = { audio: sc.audio, ms: sc.ms, text: sc.text };
+      else console.log("[charlie] no recording of the set question for this check, so Charlie asks it himself");
     }
   }
 
@@ -149,6 +161,7 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       openingClipEs,
       holdAckClip,
       holdAckClipEs,
+      setAskClip,
       midCallAgentId: config.voice.midCallAgentId,
       departmentName: input.departmentName,
       ourBrain: !!pol.flags?.ourBrain,

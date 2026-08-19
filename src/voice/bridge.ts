@@ -114,6 +114,11 @@ export interface BridgeContext {
    *  question does — no waiting on the outside voice service to think one up. Both languages ride,
    *  picked at play time the same way the opening clip is. */
   holdAckClip?: { audio: Buffer; ms: number; text: string };
+  /** THE SET QUESTION AS A RECORDING (owner, 08-19). Recorded before the dial in Charlie's own
+   *  voice, with this category's set example already in it, and played the instant the engine knows
+   *  both the set name and the package are still missing. It is the last line he was still having
+   *  thought up mid check, at 2 to 7 metered seconds a turn. */
+  setAskClip?: { audio: Buffer; ms: number; text: string };
   holdAckClipEs?: { audio: Buffer; ms: number; text: string };
   // The agent that joins a conversation ALREADY IN PROGRESS: configured once, empty greeting,
   // standing instruction to wait silently for the answer. A DEDICATED AGENT, deliberately, because
@@ -1662,6 +1667,38 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     log(`hold ack: our recording played (${clip.ms}ms), no wait on the outside voice service`);
   }
 
+  /** THE SET QUESTION AS A RECORDING (owner, 08-19). The same machinery as the hold reply above and
+   *  the opening question before it: our own file, down the line, at the moment the engine already
+   *  knows what to ask. It was the last line still being thought up mid check by the outside voice
+   *  service, which costs 2 to 7 metered seconds every time.
+   *
+   *  IT IS PLAYED ONLY WHEN THE ENGINE IS SURE: the reader has settled that the product is in stock
+   *  and that BOTH the set name and the package are still missing, which is exactly the sentence
+   *  this recording holds. One piece missing is still Charlie's to ask, because the recording would
+   *  ask for something Staff already gave, and that is the check 376 fault.
+   *
+   *  AND HIS MOUTH IS SHUT BEHIND IT, the same two ways the opening question already does it: his
+   *  own generated version is dropped while the recording covers it (`ackPlayingUntil`, the hold
+   *  reply's own door), so Staff can never hear the question twice. */
+  function playSetAsk(): boolean {
+    if (ended || twilio.readyState !== 1 || !streamSid || !charlieGateOpen || onHold) return false;
+    const clip = ctx?.setAskClip;
+    if (!clip) return false;
+    for (const f of toMediaFrames(clip.audio)) {
+      twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: f } }));
+      fanout(room, f, "agent");
+    }
+    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
+    ackPlayingUntil = Date.now() + clip.ms + 4000;
+    addMs(room, "speakingMs", clip.ms); charlieSpokenMs += clip.ms;
+    spokeThisSession = true;
+    recordLine(room, "Agent", clip.text, undefined, undefined, undefined, Date.now() + clip.ms);
+    try { relayLine?.(room, "Agent", clip.text); } catch { /* the screen is best-effort */ }
+    emit(room, "unknown", "The set question played as a recording", { step: "set_ask_clip", ms: clip.ms });
+    log(`set ask: our recording played (${clip.ms}ms), no wait on the outside voice service`);
+    return true;
+  }
+
   /** Every Staff line already given to Charlie, by either pipe, so nothing is ever answered twice. */
   const hisAlready = new Set<string>();
   const keyOf = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -1738,9 +1775,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     emit(room, "unknown", `Charlie understood the product was ${answer} and ${followUp}`,
       { step: "signoff", answer, followUp, missing });
     log(`signoff: the answer is in hand (${answer}); still missing: ${missing.join(", ") || "nothing"}`);
+    // THE RECORDING ASKS IT, WHEN IT IS THE SENTENCE THE RECORDING HOLDS (owner, 08-19). Both pieces
+    // missing on an in-stock answer IS the recorded sentence, word for word, so it goes down the
+    // line now instead of being thought up. Anything else is still his to ask.
+    const askedByTheRecording = answer === "in stock" && missing.length === 2 && playSetAsk();
     try {
       eleven.send(JSON.stringify({ type: "contextual_update", text:
-        (missing.length === 0
+        (askedByTheRecording
+          ? `[A recording in your own voice has JUST asked Staff for the set name and whether it is a pack or a box. They heard it. Do NOT ask it again in any wording, and say nothing until they answer. When they answer, take whatever they give you, thank them and end the check with end_call. `
+          : missing.length === 0
           ? `[The answer is in hand and Staff have already told you everything this check needs. Ask NOTHING else. `
           : `[The answer is in hand. Staff have already given you everything except ${missing.join(" and ")}: ask ONCE, only for that, and only if it fits naturally. `)
         + `Then wrap up: thank them warmly, by name if they gave one, and end the check with end_call. `

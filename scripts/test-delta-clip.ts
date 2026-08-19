@@ -2939,5 +2939,82 @@ console.log("\n▶ CHECK 380'S SHAPE: a rejoin that writes no words is the music
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ THE SET QUESTION IS A RECORDING NOW (owner, 08-19): our own file asks it, not the voice service");
+{
+  // It was the last line Charlie still had thought up mid check, at 2 to 7 metered seconds a turn.
+  // The engine already knows the moment to ask it: the reader settles that the product is in stock
+  // and that BOTH the set name and the package are still missing, which IS the recorded sentence.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-set-ask-clip";
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "a", apiKey: "k", dynamicVars: {}, midCallAgentId: "mid",
+    setAskClip: { audio: Buffer.alloc(320, 0x40), ms: 3200, text: "oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?" },
+  } as never);
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_setask", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(evs().some((e) => e.kind === "charlie_join"), "his session is up");
+  const framesBefore = tw.sent.filter((m) => m.event === "media").length;
+  // The reader settles it: in stock, and nobody has said the set name or the package.
+  nudgeSignoff(room, "in stock", { set: null, productForm: null });
+  await sleep(250);
+  const step = evs().find((e) => (e.detail as { step?: string } | null)?.step === "set_ask_clip");
+  ok(!!step, "the set question went down the line as OUR recording");
+  ok(tw.sent.filter((m) => m.event === "media").length > framesBefore, "…as real audio the store hears");
+  const said = (getReceipt(room)?.transcript || []).filter((l) => l.who === "Agent" && /name of the set/i.test(l.text));
+  ok(said.length === 1, `…written on the record once, as his own line (${said.length})`);
+  // …AND HIS MOUTH IS SHUT BEHIND IT. The store must never hear the question twice, the exact fault
+  // the opening question had on 08-06, so his own generated version is dropped while ours covers it.
+  const ws = f.sockets[f.sockets.length - 1];
+  const beforeHis = tw.sent.filter((m) => m.event === "media").length;
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x30)) } }));
+  await sleep(120);
+  ok(tw.sent.filter((m) => m.event === "media").length === beforeHis,
+    "his own version of the question is dropped, so Staff never hear it twice");
+  const note = f.raw.filter((m) => m.includes("contextual_update")).pop() || "";
+  ok(note.includes("has JUST asked Staff for the set name") && note.includes("Do NOT ask it again"),
+    "…and he is told the recording already asked, so he waits for the answer");
+  restore(); tw.close(); f.close();
+}
+
+console.log("▶ …and when only ONE piece is missing, the recording stays silent and it is his to ask");
+{
+  // The recorded sentence asks for BOTH. On a check where Staff already named the set, playing it
+  // would ask for something they just gave, which is check 376's fault. So it never plays.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-set-ask-one";
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "a", apiKey: "k", dynamicVars: {}, midCallAgentId: "mid",
+    setAskClip: { audio: Buffer.alloc(320, 0x40), ms: 3200, text: "oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?" },
+  } as never);
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_setask1", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(400);
+  nudgeSignoff(room, "in stock", { set: "Pitch Black", productForm: null });
+  await sleep(250);
+  const evs2 = getReceipt(room)?.events || [];
+  ok(!evs2.some((e) => (e.detail as { step?: string } | null)?.step === "set_ask_clip"),
+    "the recording never plays when Staff already gave one of the two pieces");
+  const note2 = f.raw.filter((m) => m.includes("contextual_update")).pop() || "";
+  ok(note2.includes("whether it is a pack or a box") && !note2.includes("has JUST asked"),
+    "…and he is told to ask only for the piece still missing, as he always was");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);
