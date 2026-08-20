@@ -1,6 +1,52 @@
 # ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-20, Echo 4)
 
-## WHERE ECHO 4 GOT TO — FOUR FIXES BUILT, DIALLED, AND CHECK 428 PASSED (08-20 evening)
+## WHERE ECHO 4 GOT TO — FOUR FIXES DIALLED (CHECK 428 PASSED), THEN HIS THREE RECORD FAULTS FIXED
+
+## THE THREE RECORD FAULTS HE FOUND ON 428 (owner, 08-20 late; commit 2b4467dd on staging)
+None of them was the call itself. All three are about what the record SAYS about it.
+
+**ONE, THE FIRST COST ROW.** Only a check that really worked a menu may show one. `costBuckets`
+takes `menuWalkedBy` now — "alpha" when a key was pressed, "bravo" when a menu word was said, read
+off the check's own record in `v2For` — and with NEITHER the share is 0, so `navLine` and `navFork`
+are 0, the row drops out through the existing `usd > 0` filter, and the phone line row and the Echo
+row each get ALL of their own seconds back. Same total either way. It was also hard-labelled Bravo
+whichever model had walked it; it names the real one now. `public/app.html` ~2484's cost card says
+"Phone line and Echo" on a check with no menu, because that number is the line plus the listening.
+
+**TWO, STAFF'S ANSWER LOST ITS TIME.** On 428 "Pitch black the booster boxes." came back stamped
+45420 to 45420 — a line with no length, at the very instant Charlie's question starts. It carried its
+own start and end on 425, 426 and 427. Fixed AT THE STAMP, never by reordering afterwards, in two
+halves that are really one fault:
+- **(a) A whole sentence Echo measured keeps its own two moments.** Echo does not stamp a line when
+  the words arrive: `firstFrameAtEpochMs + line.atAudioMs` and `+ line.forMs` (server.ts ~8118) read
+  the moment off the audio stream's own clock. So a line that comes back with BOTH a start and an end
+  is a sentence measured from its first sound to its last, and losing it because the transcriber was
+  a beat slower than his reply is the fault. `recordLine` (events.ts) keeps it.
+  **THE GUARD, and it is the whole reason this is safe: it may only step back over a line its own
+  SOUND FINISHED BEFORE.** Check 372's fault was a stamp with no end at all claiming to precede a
+  question it really answered; that line can never satisfy this. Pinned BOTH ways in call-events.
+- **(b) A line of his files where the store really HEARS it.** The provider writes his next reply
+  while the previous one is still playing out at the carrier, so "now" is a moment the store has not
+  reached: 428's goodbye filed at 48.194s while his own question's sound ran to 49.947s. With no turn
+  start left to spend, his line files at `agentPlayingUntil`. Rig scene CHECK 428'S OTHER FAULT —
+  and note its ORDER: frames FIRST, then the words, which is how a real hosted turn arrives. A scene
+  written words-first proves nothing about this and passed on the broken code.
+- **AND THE END THAT COULD NEVER LAND, found beside it:** `hisEndWaitingForWords` was set to 0 on the
+  line ABOVE the `if (hisEndWaitingForWords > 0)` that reads it, so every line of his written after
+  its own sound had started kept no end at all. One local, fixed.
+
+**THREE, ONE CHECK WITH TWO ANSWERS.** `/pub/result/bridge:<room>` read in_stock with the product and
+`/pub/result/ours:<room>` read completed, confirmed null, empty summary — the same check 428. A check
+is named three ways over its life (`bridge:<room>`, the provider's conversation id, `ours:<room>`) and
+the row is repointed as it goes, so a lookup by one name finds nothing whenever the row is filed under
+another, and the door then answers off the raw record instead of the settled verdict. **This is the
+"intermittent" result-screen fault the handoff kept calling known.** `findCheckRow` / `roomOfCheckId`
+(receipt-store) are the ONE door: the room is the key every check really has, and both names resolve
+through it. Pinned in dropped-call.
+
+Suites after these: call-events 153 · delta-clip 436 · dropped-call 45 · meter 96 · behaved 109 ·
+ourbrain 36 · bridge 13 · tsc clean.
+
 
 ### THE DIAL: CHECK 428, "Hold: music with advert" — THE PILL SAYS TEST PASSED
 Card's five needed rows all true (handed_to_charlie · question_recorded · meter_stopped_on_hold ·
