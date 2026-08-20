@@ -3616,7 +3616,12 @@ app.get("/pub/result/:cid", async (c) => {
     const convId = bridgeConversationId(room);
     if (convId) cid = convId;
     else {
-      const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+      // THE ROOM IS THE KEY (the receipt's own first rule). A row is repointed at the provider's
+      // conversation id the moment one exists, so looking only for the room-shaped id missed the very
+      // rows that need this door — the ones our own brain ran, which never get a conversation of
+      // theirs at all. Either id finds the same one check.
+      const row = (await db.select().from(callResults)
+        .where(or(eq(callResults.providerCallId, cid), eq(callResults.room, room))))[0];
       if (row && row.status !== "dialing" && row.status !== "in_progress" && row.status !== "queued") {
         // ts rides EVERY result branch — the verdict page shows the call's date/time on all statuses (owner 07-16).
         return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "", ts: (row.startedAt || 0) * 1000 });
