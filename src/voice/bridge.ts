@@ -1887,8 +1887,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // From the true end of their voice, the same anchor his answer gap counts from, so the
           // handing and his own thinking add up to the whole silence Staff stood in (owner 08-17).
           sinceVoiceStopMs: ((): number | undefined => {
+            // A PIECE IS NOT ON THE RECORD YET (owner, 08-19 night, off check 423). Handing him
+            // their first written piece happens BEFORE Echo joins the sentence, so the newest Staff
+            // line on the record is still the store's advert from twelve seconds earlier — and this
+            // row read 12 seconds for a hand that came 1.2 seconds after they spoke. When the hand
+            // is a piece, the anchor is the ear's own word that their voice came back.
+            const early = !!earlyTurn && earlyTurn.fed.length > 0;
             const theirEnd = lastLineEndEpoch(room, "Clerk");
-            const from = theirEnd != null && theirEnd > lastHoldEndAtMs ? theirEnd : lastTheirVoiceStopAtMs;
+            const fromLine = theirEnd != null && theirEnd > lastHoldEndAtMs ? theirEnd : lastTheirVoiceStopAtMs;
+            const from = early ? Math.max(personSoundAtMs, fromLine) : fromLine;
             return from > 0 ? Math.max(0, Date.now() - from) : undefined;
           })() });
       // AND THE QUIET AFTER IT IS HIM THINKING, NEVER A DROP, until he has answered this turn (the

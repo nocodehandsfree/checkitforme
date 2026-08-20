@@ -437,6 +437,39 @@ own goodbye ("Perfect, thank you so much, have a good one!"): both live, no clip
   It reads the ending row now. It is a grey row either way and failed nothing.
 - The one harness red is the 08-07 screen fault, pre-existing, not the card's.
 
+## THE OVERLAP (owner's order, 08-19 night): checks 416 to 423, FAILED on two rows
+The build: every piece Echo writes is handed to Charlie the moment it exists, the wake check reads
+that same piece instead of the joined sentence, and his sound is HELD (not dropped) until the wake
+check says person — binned with his session if it says recording. Proven on the workbench
+(hold-wake 22: the advert's first piece is refused on that piece alone, a person's is accepted, and
+the answer is about the piece handed in, never the advert above it on the record) and pinned in the
+rig (delta-clip 401).
+- **CHECK 423, the reading**: TEST FAILED. Meter 29s on the record, 28s graded — under the 31 line.
+  Awake on hold 4s, YELLOW (green at 3, red from 6), down from 415's 7s red. Card verdict PASS, all
+  five rows green, status right. Cost 9.5¢. Charlie spoke his own set question and goodbye, live.
+  Asked nothing twice.
+- **THE TWO REDS**: his answer gap, worst turn 7s (green 2, red 7), and Echo's handover gap 12s.
+  The 12s was a false red and is FIXED (commit below): a piece is not on the record yet, so the
+  newest Staff line when the early hand happens is still the advert from twelve seconds earlier.
+  It is measured from the returning voice itself now.
+- **THE COMEBACK IS 7.6 SECONDS, against his 4.** It breaks down as 0.3s from their voice to his
+  session opening, 1.4s for the wake check to prove a person off their first written piece (it was
+  3.6s on 415 — this is what the overlap bought), then 5.9s of the voice company generating his
+  reply before one sound of it exists. **The remaining gap is entirely the voice company's own
+  latency.** No wake rule, no earlier hand and no cheaper proof can touch it; only running our own
+  brain can (task THREE), which is blocked on his voice-clone ruling.
+- **THREE FAULTS THE DIALS FOUND, each fixed and pinned**: 416, the wordless-rejoin guard re-armed
+  on a comeback words had just proved and dropped him mid reply (84s, 11.3¢). 417 and 419, his
+  session — opened on the sound of a voice — answered the line BEFORE theirs with the very hold
+  reply our recording had already played; a repeat of it is now silenced and never recorded, and a
+  reply he began before their words reached him is thrown away rather than held. 423, the handover
+  gap above.
+- **418 was a store-side abort**: the practice store hung up at 29 seconds before playing its answer
+  line. Nothing of ours was on the line. Re-dialled.
+- **STILL OPEN, his to rule**: on 423 Staff answered over the tail of Charlie's own question (his
+  ran 44.9 to 55.4 seconds, their "Pitch black the booster boxes" started at 54.0). That is Staff
+  interrupting him, not us interrupting them, and no rule of ours decides it.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).

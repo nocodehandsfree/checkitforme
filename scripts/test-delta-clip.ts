@@ -3156,6 +3156,14 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   echoHeardPiece(room, "Yeah.");
   ok(step("early_turn").length === 1,
     "their first written piece is handed to Charlie at once, so he starts working out his reply", step("early_turn").length);
+  // CHECK 423: this hand's own row read "Echo handed Charlie the words in 12 seconds" and went red,
+  // because a piece is not on the record yet and the newest Staff line there was still the store's
+  // advert from twelve seconds earlier. It is measured from the returning voice itself.
+  {
+    const hand = evs().filter((e) => (e.detail as { step?: string } | null)?.step === "missed_turn").pop();
+    const since = Number(((hand?.detail || {}) as { sinceVoiceStopMs?: number }).sinceVoiceStopMs ?? -1);
+    ok(since >= 0 && since < 5000, "the handover gap is measured from the voice that came back, never from the advert before it", since);
+  }
   // A REPLY HE BEGAN BEFORE THEIR WORDS REACHED HIM IS NEVER SPOKEN (check 417). His session was
   // opened on the sound of a voice and starts talking about the conversation it can see, so the
   // sound already in flight can be his answer to the line BEFORE theirs: the store heard "No
