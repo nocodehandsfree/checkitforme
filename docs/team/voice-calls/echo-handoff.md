@@ -1,5 +1,43 @@
 # ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-20, Echo 4)
 
+## WHERE ECHO 4 GOT TO (08-20 afternoon) — BOTH FIXES BUILT AND PROVEN, THE DIAL IS NOT RUN
+Read this block before the order below: fixes 1 and 2 are DONE, the ordered dial is NOT.
+- **FIX 1 IS BUILT (commit 18030a8, merged to staging as ca6aa82).** The engine's own record answered
+  it before any code was opened (RULE 12). 427's timeline carries `early_turn` at 39.1s, `little_hello`
+  at 40.6s, `gaps` stamped at 40.792s — and NO `early_turn_released`, NO `brain_reply` for that turn,
+  and no Agent line between "Oh, hey!" (40.638) and the goodbye (53.983). Read together those say:
+  our brain's words arrived while `proved` was still false, so they were held; the wake check proved a
+  person 154ms before the sound of them existed; `releaseTheEarlyTurn` hit `if (!held.heldAudio.length
+  ...) return` AFTER nulling the turn, so the WORDS were thrown away; and the frames that landed a
+  beat later went out live and orphaned (that audio-door send is what stamped `gaps` at 40.792).
+  **THE FIX:** the turn is held when its words are in and its sound is not, and a frame landing on
+  that turn joins it and releases it through the one door, so the reply goes out whole and files its
+  line. `stampWhoWroteIt()` is now the ONE source of the brain stamp, called from both doors, because
+  a held reply filed at neither. `EARLY_STALE_MS` (3000) is the ceiling on the new wait too.
+- **PROVEN ON THE WORKBENCH, exactly as ordered.** New rig scene `CHECK 427'S MOMENT`
+  (`scripts/test-delta-clip.ts`) drives words -> proof -> sound, the order no other scene had: the one
+  beside it hands his words and his sound together, which is the order that always worked, and that is
+  why this shipped broken. Old code fails 3 of its 12 ("his full reply plays on its own the moment its
+  sound exists", "the set question is written down as a line of his", "it is his own turn"); the fixed
+  code passes all 12. Measured both ways by stashing the fix and re-running.
+  **NOTE FOR THE NEXT CHAT, honestly:** on the old code the assert "every frame of it really reaches
+  the store" PASSED. So on 427 the sound of that reply did go down the line, orphaned behind the two
+  word hello; what was missing everywhere was the RECORD of it. Say it that way to the owner.
+- **FIX 2 IS BUILT:** `AWAKE_ON_HOLD_YELLOW` 5 -> 8 (meter.ts), so awake-on-hold passes up to 8 and
+  fails from 9, true seconds only. `scripts/test-meter.ts` pins both edges by his own numbers and that
+  427's own 7 seconds now passes. meter 96.
+- Suites: delta-clip 432 · meter 96 · ourbrain 31 · behaved 109 · call-events 124 · bridge 13 · tsc clean.
+- **WHY THE DIAL DID NOT RUN: Railway had THREE builds QUEUED (429db84, 449742f, 38ce856) for 25+
+  minutes and had not even opened one for ca6aa82.** `/api/health` still served 0f93e733 all session.
+  The owner's law: never cancel, never re-queue, tell the PM, keep working. **NEXT CHAT'S FIRST MOVE:
+  read `/api/health`, and the moment it serves ca6aa82 or later, dial `ADMIN_TOKEN=... node
+  scripts/robot-check.mjs 22` ONCE and report PASSED or FAILED with the true charged seconds, the
+  awake seconds, and that the set question played on its own after the hello.**
+- **What rides along on staging with this**, checked: `429db84` and `449742f` are docs, `38ce856` is
+  the reply-lock hook plus one STATE line. Nothing else touched the calling engine.
+- **The Fun store check has NOT been run and must not be** until the owner says he is standing at the
+  phone. `ourBrain` is OFF (checked on `/api/policy` this session).
+
 Boot per CLAUDE.md, then read this file, `docs/team/voice-calls/RULES.md` (every line),
 `checkpoint.md`, and `docs/team/voice-calls/next-box.md`. Work on `staging`. Never push while a
 check is in the air (`/api/admin/test-calls?limit=1`). Report every check by its NUMBER.
