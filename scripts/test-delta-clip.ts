@@ -3221,6 +3221,15 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   // reader judged the store PLAYED at us is struck out of that pocket.
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("price match")),
     "…and the advert's words never ride that hand-over either");
+  // CHECK 416: the wordless-rejoin guard re-armed on a comeback that WORDS had just proved, and
+  // demanded a second set of them inside four seconds. He was dropped mid reply at 43 seconds, the
+  // store asked "Hello?", and the check ran 84 seconds at 11.3 cents. Words that proved the
+  // comeback spend that window: they are the very thing it exists to wait for.
+  await sleep(4300);
+  ok(step("wordless_rejoin").length === 0,
+    "the words that proved the comeback spend the wordless window, so he is never dropped mid reply", step("wordless_rejoin").length);
+  ok(evs().filter((e) => e.kind === "hold_start").length === 1,
+    "…and no second wait starts on top of the answer he is giving", evs().filter((e) => e.kind === "hold_start").length);
   globalThis.fetch = beforeStub;
   restore(); tw.close(); f.close();
 }

@@ -1145,7 +1145,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   }
   /** THE REOPEN ITSELF, exactly as it has always run: the note he is owed, the reconnect feed, and
    *  his session. Called the moment Staff's voice comes back, never a moment later. */
-  function openHimForTheComeback(secs: number, newPerson: boolean, handedOn: boolean): void {
+  function openHimForTheComeback(secs: number, newPerson: boolean, handedOn: boolean, provedByWords = false): void {
     if (ended) return;
     // HIS SESSION MAY ALREADY BE UP (fix 3, 08-19 night): the first sound of a voice coming back
     // starts it while the words are still being read. Everything below still runs — the note about
@@ -1165,9 +1165,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       charlieMaySpeak = false;
       // The wordless-rejoin window opens with his ears: written words spend it, and a rejoin that
       // reaches the far side with nothing written was the music (owner 08-18, check 380).
-      heardWordsSinceEarsBack = false;
+      // …EXCEPT WHEN WORDS ARE WHAT PROVED THE COMEBACK (owner, 08-19 night, off check 416). The
+      // wake check reads what Echo wrote and says a person: those words are the very thing this
+      // window exists to wait for, so demanding a SECOND set of them inside four seconds dropped a
+      // person who had already answered us. He went quiet mid reply at 43 seconds, the store asked
+      // "Hello?", and the check ran 84 seconds and cost 11.3 cents.
+      heardWordsSinceEarsBack = provedByWords;
       if (wordlessRejoinTimer) clearTimeout(wordlessRejoinTimer);
-      wordlessRejoinTimer = setTimeout(() => {
+      if (!provedByWords) wordlessRejoinTimer = setTimeout(() => {
         wordlessRejoinTimer = null;
         if (ended || onHold || heardWordsSinceEarsBack) return;
         holdProvedWordless = true;
@@ -1795,7 +1800,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // opening, so nobody was there to hear it. Never missing an answer is worth those 3 seconds,
       // and the standing law from here is that no cost trimming may change WHEN his ear switches
       // on or off. Savings of that kind wait for the rebuild after the twenty tests.
-      openHimForTheComeback(secs, newPerson, handedOn);
+      openHimForTheComeback(secs, newPerson, handedOn, cameBackEarly);
       return;
     }
     // He stayed open through the wait, so he has been fed nothing and believes no time has passed.
