@@ -19,6 +19,37 @@ import type {
 } from "./provider";
 import { SOFT_TIMEOUT_FALLBACK, kioskNote, departmentNote, SET_EXAMPLE } from "./prompts";
 import { assertCallsEnabled } from "../config";
+import { getReceipt, transcriptOf, rollup } from "../calls/events";
+
+/**
+ * THE OUTCOME OF A CHECK OUR OWN BRAIN RAN, read off our own record (owner's go, 08-20).
+ *
+ * The id is `ours:<room>`, because there is no conversation at the voice provider to ask about: we
+ * ran the conversation ourselves. Everything a settling door needs is already on the record — Echo
+ * wrote every word live, the receipt holds the clock — and the verdict itself is left NULL on
+ * purpose, so the same second reader that decides every other check decides this one from the words.
+ */
+function ourOwnRecord(providerCallId: string): CallOutcome | null {
+  const room = providerCallId.slice("ours:".length);
+  const r = getReceipt(room);
+  if (!r) return null;                       // the record has gone: a later door will settle it
+  const words = transcriptOf(r);
+  const sums = rollup(r);
+  return {
+    callId: r.callId ?? 0,
+    providerCallId,
+    confirmed: null,                          // the reader decides, off the words below
+    categoryResults: {},
+    shipmentDay: null,
+    summary: "",
+    transcript: words,
+    durationSecs: sums.callSecs,
+    navSecs: sums.navSeconds,
+    // NOT FINISHED UNTIL THE LINE IS DOWN. A door asking mid call must be told the check is still
+    // running, exactly as it is on a hosted one, or it would settle a conversation in progress.
+    status: r.closed ? "completed" : "closed",
+  };
+}
 
 export interface ElevenLabsConfig {
   apiKey: string;
@@ -84,6 +115,13 @@ export class ElevenLabsProvider implements VoiceProvider {
   }
 
   async getConversation(providerCallId: string): Promise<CallOutcome | null> {
+    // A CHECK OUR OWN BRAIN RAN HAS NO CONVERSATION HERE TO ASK ABOUT (owner's go, 08-20). There was
+    // no session of theirs on it at all — we ran the conversation and their plain speech service
+    // only said the lines — so the id names OUR OWN RECORD instead. Every door that settles a check
+    // asks this one question, so answering it from the record is what lets all three keep working
+    // untouched: the words are ours, written live by Echo, and the reader decides from them exactly
+    // as it does on a hosted check.
+    if (providerCallId.startsWith("ours:")) return ourOwnRecord(providerCallId);
     const res = await fetch(`${BASE}/conversations/${providerCallId}`, { headers: this.headers() });
     if (!res.ok) return null;
     const d = (await res.json()) as ElevenLabsConversation;

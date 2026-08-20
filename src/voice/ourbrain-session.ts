@@ -38,6 +38,10 @@ export interface OurBrainOpts {
    *  to answer it. The same standing rule the provider's joining agent is configured with, so this
    *  lane cannot greet them or ask the question a second time either. */
   joining?: boolean;
+  /** This check's own name. It becomes the conversation id, because there is no conversation at the
+   *  voice provider to name: every door that settles a check asks them for the outcome, and on this
+   *  lane that question is answered off our own record instead. */
+  room: string;
   /** OUR SIDE STUMBLED MID CALL. The runtime hands the call back to the provider's hosted agent in
    *  the same voice and the person never notices — the fallback is law (spec §7, rung two). */
   onStumble: (why: string) => void;
@@ -84,7 +88,7 @@ export class OurBrainSession extends EventEmitter {
     setTimeout(() => {
       if (this.closed) return;
       this.emit("open");
-      this.say({ type: "conversation_initiation_metadata", conversation_initiation_metadata_event: { conversation_id: `ours-${Date.now().toString(36)}` } });
+      this.say({ type: "conversation_initiation_metadata", conversation_initiation_metadata_event: { conversation_id: `ours:${this.o.room}` } });
     }, 0);
   }
 
@@ -128,7 +132,12 @@ export class OurBrainSession extends EventEmitter {
       this.turns.push({ role: "user", content: said });
       const reply = await brainReply(this.system, this.turns, MOST_REPLY_TOKENS);
       if (this.closed) return;
-      const text = reply.text.replace(/\s+/g, " ").trim();
+      // WHAT HE SAYS OUT LOUD, AND NOTHING ELSE (check 426: the store heard "have a good one!
+      // end_call"). His instructions name the tools the hosted agent is given, and a model writing
+      // the words instead of using the tool would otherwise read the tool's name at a person.
+      const text = reply.text
+        .replace(/\b(end_call|transfer_to_number|transfer_to_agent|skip_turn)\b/gi, "")
+        .replace(/\s+/g, " ").trim();
       this.brainModelUsed = reply.model;
       this.lastThinkMs = reply.ms;
       if (!text) { this.o.onStumble("our brain answered with nothing"); return; }

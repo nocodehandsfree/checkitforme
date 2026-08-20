@@ -1930,7 +1930,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       .filter((s) => !theirFirstLine || keyOf(s) !== keyOf(theirFirstLine))
       // WHAT THE STORE PLAYED AT US IS NOT WHAT STAFF SAID (check 409). The reader's answer during
       // the wait decides it, and a line it judged a recording never rides this door.
-      .filter((s) => !playedAtUs.has(keyOf(s)));
+      .filter((s) => !playedAtUs.has(keyOf(s)))
+      // AND "LET ME GO AND HAVE A LOOK" IS NOT A TURN TO ANSWER (check 426). That sentence is what
+      // STARTED the wait; handing it over once they are back has him answer the walking-away line
+      // instead of the answer they came back with — on 426 he replied "no worries, take your time"
+      // to "we've got a few of those" and his real answer never happened.
+      .filter((s) => !saidGoingToCheck(s));
     handTheirTurn(said, "said while he was off");
     return said.length > 0;
   }
@@ -2579,7 +2584,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       };
       ourBrain = openOurBrainSession({
         dynamicVars: joining && clipText ? { ...c.dynamicVars, opening_line: clipText } : c.dynamicVars,
-        voiceId: c.voiceId!, voiceTuning: c.voiceTuning, apiKey: c.apiKey, joining, log, onStumble: stumble,
+        voiceId: c.voiceId!, voiceTuning: c.voiceTuning, apiKey: c.apiKey, joining, room, log, onStumble: stumble,
       });
       // It answers `on`, `emit`, `send`, `close` and `readyState` — every member this file touches on
       // a session — so from here the two lanes are the same code.

@@ -63,6 +63,7 @@ function sessionUnderTest(onStumble?: (why: string) => void) {
   const s: OurBrainSession = openOurBrainSession({
     dynamicVars: { category: "Pokémon cards", personality: "warm", set_example: "Chaos Rising" },
     voiceId: "voice_test",
+    room: "room-under-test",
     log: () => { /* quiet */ },
     onStumble: (why) => { stumbles.push(why); onStumble?.(why); },
   });
@@ -77,6 +78,15 @@ console.log("▶ A FULL TURN, END TO END: their words in, his voice out");
   const { s, of, stumbles } = sessionUnderTest();
   await sleep(20);
   ok(of("conversation_initiation_metadata").length === 1, "the session comes up on its own: there is nothing to dial");
+  // THE ID NAMES OUR OWN RECORD, because there is no conversation at the voice provider to name.
+  // Every door that settles a check asks them for the outcome; on this lane that question is
+  // answered off the record instead, and this is the string that routes it there.
+  {
+    const md = of("conversation_initiation_metadata")[0] as { conversation_initiation_metadata_event?: { conversation_id?: string } };
+    ok(md?.conversation_initiation_metadata_event?.conversation_id === "ours:room-under-test",
+      "…and it names our own record, so every settling door can still read an outcome",
+      md?.conversation_initiation_metadata_event?.conversation_id);
+  }
   const started = Date.now();
   s.send(JSON.stringify({ type: "user_message", text: "Yeah, we've got a few of those." }));
   await sleep(300);
@@ -93,6 +103,22 @@ console.log("▶ A FULL TURN, END TO END: their words in, his voice out");
     "…and the speech service was asked for the SAME words he is recorded as saying", world.counts().spokenText);
   ok(stumbles.length === 0, "…with nothing stumbling");
   ok(Date.now() - started < 1500, "…and the whole turn took well under a second and a half of real time", Date.now() - started);
+  s.close();
+  world.restore();
+}
+
+console.log("\n▶ HE NEVER READS A TOOL'S NAME AT A PERSON");
+{
+  // CHECK 426: the store heard "…have a good one! end_call". His instructions name the tools the
+  // hosted agent is given, and a model writing the word instead of using the tool would read it out.
+  const world = stubTheWorld({ reply: "Perfect, thanks so much, have a good one! end_call", soundMs: 200 });
+  const { s, of } = sessionUnderTest();
+  await sleep(20);
+  s.send(JSON.stringify({ type: "user_message", text: "Sorry, that's all I know." }));
+  await sleep(250);
+  const said = (of("agent_response")[0] as { agent_response_event?: { agent_response?: string } })?.agent_response_event?.agent_response;
+  ok(said === "Perfect, thanks so much, have a good one!", "the tool's name is never part of what he says", said);
+  ok(world.counts().spokenText === said, "…and the speech service is asked for exactly those words", world.counts().spokenText);
   s.close();
   world.restore();
 }
