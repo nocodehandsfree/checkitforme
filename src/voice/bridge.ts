@@ -902,7 +902,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let earlyTurn: { fed: string[]; heldAudio: string[]; heldText: string[]; proved: boolean } | null = null;
   /** If the wake check proves a person before he has begun his reply at all, his mouth is already
    *  open and the ONLY thing still held is a reply he began BEFORE their words reached him. This is
-   *  how long that holds: past it, whatever he says goes out rather than nothing at all. */
+   *  how long that holds: past it, whatever he says goes out rather than nothing at all.
+   *  IT IS ALSO THE CEILING ON THE OTHER WAIT (owner, 08-20, off check 427): his words are in, the
+   *  person is proved, and the sound of that reply is still being made. Past this, a sound that
+   *  never came stops holding him and those words are never his to say. */
   let earlyTurnBackstop: NodeJS.Timeout | null = null;
   const EARLY_STALE_MS = 3000;
   /** A ceiling on what may be held, so a session that generates for ever cannot grow without end.
@@ -2060,6 +2063,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // which is the end-of-turn quiet plus the writing: 3.6 seconds of check 415's 7.8.
     void maybeWakeCharlie(said, true);
   }
+  /** WHICH BRAIN WROTE THE LINE THAT IS ABOUT TO BE WRITTEN DOWN (owner's go, 08-20). ONE source
+   *  for the stamp, called from both doors that file a line of his: the ordinary one where his
+   *  words arrive and go straight out, and the release door where a reply that waited for the wake
+   *  check is finally spoken. Check 427's held reply filed at neither and the record never said our
+   *  own brain had written it. */
+  function stampWhoWroteIt(): void {
+    if (!ourBrain || eleven !== (ourBrain as unknown as WebSocket)) return;
+    emit(room, "unknown", "Our own brain wrote that reply and the plain speech service said it in his voice",
+      { step: "brain_reply", brain: "ours", model: ourBrain.brainModelUsed,
+        thinkMs: ourBrain.lastThinkMs, speakMs: ourBrain.lastSpeakMs, notASound: true });
+  }
   /** THE WAKE CHECK SAID PERSON. Everything he thought while it was proving goes out now, in order,
    *  and his words are written down because the store really hears them. */
   function releaseTheEarlyTurn(): void {
@@ -2082,9 +2096,26 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       }, EARLY_STALE_MS);
       return;
     }
+    // HIS WORDS ARE IN AND HIS SOUND IS STILL BEING MADE (owner, 08-20, off check 427). The wake
+    // check proved a person while the reply he had already written for their words was still being
+    // turned into sound, and that race was the whole silence fault. The turn was thrown away right
+    // here, his words with it: no line on the sheet, no line on the customer's page, and nothing
+    // naming the brain that wrote it. On our own brain lane that reply IS his whole answer to the
+    // comeback, which is why on 427 the set question never landed as his and Staff volunteered the
+    // set name instead. It stays held until the first frame of its sound arrives, and then it goes
+    // out whole and writes its line through this same door, in this same order.
+    if (!held.heldAudio.length) {
+      held.proved = true;
+      if (earlyTurnBackstop) clearTimeout(earlyTurnBackstop);
+      earlyTurnBackstop = setTimeout(() => {
+        earlyTurnBackstop = null;
+        if (earlyTurn === held) { earlyTurn = null; log("early turn: the sound of his reply never came, so those words were never his to say"); }
+      }, EARLY_STALE_MS);
+      return;
+    }
     earlyTurn = null;
     if (earlyTurnBackstop) { clearTimeout(earlyTurnBackstop); earlyTurnBackstop = null; }
-    if (!held.heldAudio.length || twilio.readyState !== 1) return;
+    if (twilio.readyState !== 1) return;
     // HIS TURN STARTS HERE, because this is the first sound of it Staff ever hear, and the answer
     // gap counts from the end of their voice to exactly this moment (the same anchor as always).
     if (!hisTurnOpen) {
@@ -2102,6 +2133,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       }
     }
     if (helloOwed) { maybeSayTheLittleHello("his own reply is about to go out"); binTheLittleHello(); }
+    // WHICH BRAIN WROTE THIS ONE, at the door that really speaks it (owner, 08-20, off check 427).
+    // A held reply files from here rather than from its words arriving, so the stamp is made here
+    // too — otherwise every reply that waited for the wake check lost the name of the brain that
+    // wrote it, which is exactly what 427's record is missing.
+    stampWhoWroteIt();
     let ms = 0;
     for (const b64 of held.heldAudio) {
       twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
@@ -2797,6 +2833,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         else if (b64 && earlyTurn && earlyTurn.fed.length && !earlyTurn.proved) {
           if (earlyTurn.heldAudio.length < MOST_HELD_CHUNKS) earlyTurn.heldAudio.push(b64);
         }
+        // THE WAKE CHECK ALREADY SAID PERSON AND THIS IS THE SOUND IT WAS WAITING FOR (owner, 08-20,
+        // off check 427). His words came in first and the person was proved while the sound of them
+        // was still being made, so this frame is the front of the reply he owes them. It joins the
+        // turn it belongs to and that turn goes out through the ONE release door, so his line files
+        // at his own first frame and the sheet reads the same order it always has. The frames behind
+        // it land on a turn already released and go out live, back to back, in order.
+        else if (b64 && earlyTurn && earlyTurn.fed.length && earlyTurn.heldText.length) {
+          if (earlyTurn.heldAudio.length < MOST_HELD_CHUNKS) earlyTurn.heldAudio.push(b64);
+          releaseTheEarlyTurn();
+        }
         else if (b64 && !charlieMaySpeak && reconnectFeed && hisEarsBackAtMs > 0
                  && Date.now() - hisEarsBackAtMs >= HEARD_ENOUGH_MS) {
           emit(room, "unknown", "Charlie answered what he heard himself, without waiting for the words to be written down",
@@ -3170,11 +3216,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // WHICH BRAIN WROTE THIS ONE (owner's go, 08-20). Stamped on the reply itself, not just on
         // the stretch, so the record answers "who wrote each line" line by line, with what it cost
         // in time on both halves: writing the words, and making the sound of them.
-        if (txt && ourBrain && eleven === (ourBrain as unknown as WebSocket)) {
-          emit(room, "unknown", "Our own brain wrote that reply and the plain speech service said it in his voice",
-            { step: "brain_reply", brain: "ours", model: ourBrain.brainModelUsed,
-              thinkMs: ourBrain.lastThinkMs, speakMs: ourBrain.lastSpeakMs, notASound: true });
-        }
+        if (txt) stampWhoWroteIt();
         if (txt && recordLine(room, "Agent", String(txt), hisStart)) {
           hisTurnLineWritten = true;
           hisEndWaitingForWords = 0;

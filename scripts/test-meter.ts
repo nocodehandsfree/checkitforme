@@ -333,17 +333,27 @@ head("A PERSON SPOKE BETWEEN THE MUSIC STAMP AND THE JUDGED LINE: the stamp belo
   ok("the recording starts at its own line, not the older music stamp", w.holdFromMs === 20000 && w.offFromMs === 23000, w);
 }
 
-console.log("\n▶ THE WASTE FAILS THE CHECK (owner's ruling, 08-19 night): green to 3, yellow to 5, red from 6");
+console.log("\n▶ THE WASTE FAILS THE CHECK (owner's ruling, 08-19 night, widened 08-20): green to 3, yellow to 8, red from 9");
 {
-  const clean = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71, awakeOnHoldSec: 3 })!;
+  const at = (sec: number) => meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71, awakeOnHoldSec: sec })!;
+  const clean = at(3);
   ok("3 seconds awake on hold is green and passes", clean.pass === true && clean.rows.some((r) => r.label.includes("Awake") && r.tone === "g"), clean.rows.find((r) => r.label.includes("Awake")));
-  const yellow = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71, awakeOnHoldSec: 5 })!;
+  const yellow = at(5);
   ok("5 seconds is yellow and still passes", yellow.pass === true && yellow.rows.some((r) => r.label.includes("Awake") && r.tone === "y"));
-  const red = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71, awakeOnHoldSec: 6 })!;
-  ok("6 seconds is red and FAILS the whole check", red.pass === false, red.fails);
+  // HIS OWN NUMBERS, 08-20, ON THE EDGE ITSELF: it passes UP TO 8 and fails FROM 9. The two checks
+  // that sat on the old edge were his head start doing what he ordered it to do (415 at 7s, 427 at
+  // 7s), so both of those now pass, and a check that really did sit there fails from 9.
+  const eight = at(8);
+  ok("8 seconds is the last one that passes", eight.pass === true && eight.rows.some((r) => r.label.includes("Awake") && r.tone === "y"), eight.rows.find((r) => r.label.includes("Awake")));
+  const seven = at(7);
+  ok("…so check 427's own 7 seconds passes where it used to fail", seven.pass === true, seven.shortFails);
+  const red = at(9);
+  ok("9 seconds is red and FAILS the whole check", red.pass === false, red.fails);
   ok("…and the check says which row failed, in plain words",
-    red.fails.some((f) => /awake 6 seconds while the store had us waiting/.test(f)) && red.shortFails.some((f) => /awake on hold, 6 seconds/.test(f)),
+    red.fails.some((f) => /awake 9 seconds while the store had us waiting/.test(f)) && red.shortFails.some((f) => /awake on hold, 9 seconds/.test(f)),
     { fails: red.fails, short: red.shortFails });
+  ok("…and the words it fails in name his own two numbers, 3 green and red from 9",
+    red.fails.some((f) => /against 3 green and red from 9/.test(f)), red.fails);
   ok("…and the row wears the red", red.rows.some((r) => r.label.includes("Awake") && r.tone === "r" && r.pass === false));
   // THE TRUE SECONDS, NEVER AN ADJUSTED NUMBER. The advert ruling forgives seconds elsewhere on the
   // sheet; it may never touch this one, which is the whole point of grading it.

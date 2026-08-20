@@ -3395,6 +3395,98 @@ console.log("\n▶ OUR OWN BRAIN DRIVES A WHOLE CHECK, through the real engine (
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 427'S MOMENT: his words are in, his sound is still being made, and the person is proved");
+{
+  // THE SILENCE FAULT, off check 427's own record. Staff came back at 36.5 seconds, Echo wrote their
+  // first piece, and our own brain wrote his answer to it — the set question, "do you know the name
+  // of the set, like Chaos Rising, and is it a pack or a box?". The wake check proved a person 154
+  // milliseconds before the sound of that answer had been made. The turn was thrown away at that
+  // moment, his words with it: nothing on the sheet, nothing on the customer's page, no row naming
+  // the brain that wrote it, and after his two word hello the store heard nothing he could answer.
+  // 427 only got the set name because Staff volunteered it.
+  //
+  // WHAT THIS SCENE PINS is that exact order — words, then the proof, then the sound — which no
+  // other scene has: the one beside it hands his words and his sound together, which is the order
+  // that always worked. His reply has to survive the gap between the two and go out whole.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-427-moment";
+  echoListening(room, true);
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0 }, "reopen");
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  const step = (n: string) => evs().filter((e) => (e.detail as { step?: string } | null)?.step === n);
+  const heardTheSetQuestion = () => (getReceipt(room)?.transcript || [])
+    .some((l) => l.who === "Agent" && /name of the set/.test(l.text));
+  // THE READER, STUBBED, answering what it answered on 427: a person really is talking to us. It
+  // takes a beat, and that beat is the window the whole fault lives in. Its accuracy on real lines
+  // is the workbench's job (scripts/hold-voice-bench.ts); what this proves is the engine's order.
+  const beforeStub = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    if (!/chat\/completions|\/v1\/messages/.test(url)) return (beforeStub as typeof globalThis.fetch)(input, init);
+    await new Promise((r) => setTimeout(r, 250));
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      lines: [{ n: 1, voice: "person", announcesWait: false, confidence: 0.9, why: "answers our question" }],
+    }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
+  // Staff step away and the music declares the wait, so he is dropped and his ears are shut.
+  echoHeardStaff(room, "One moment. I'll go and have a look.");
+  await sleep(120);
+  for (let i = 0; i < 80; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
+  await sleep(6200);
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the wait, which is where every comeback starts");
+  // THEY COME BACK. The music stops, they talk into the line it left, and his session starts opening
+  // on that sound while the words are still being written.
+  quiet(tw, 130);
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(310);
+  const beforeHisReply = tw.outMedia().length;
+  echoHeardPiece(room, "Yeah.");
+  ok(step("early_turn").length === 1,
+    "their first written piece is handed to him at once, so he starts working out his reply", step("early_turn").length);
+  // HIS WORDS ARRIVE, AND NOTHING ELSE YET. This is the whole of the difference: on this lane our
+  // own brain announces the line it has written and the sound of it is made after, which is the
+  // order the voice provider's plain speech service works in.
+  const ws = f.sockets[f.sockets.length - 1];
+  const SET_ASK = "Oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?";
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: SET_ASK } }));
+  await sleep(40);
+  ok(tw.outMedia().length === beforeHisReply, "his words on their own put nothing on the line", tw.outMedia().length);
+  // THEY STOP TALKING AND THE WAKE CHECK SAYS PERSON — with the sound of his reply still unmade.
+  quiet(tw, 40);
+  await sleep(700);
+  ok(step("little_hello").length === 1, "his two words go out the moment the person is proved", step("little_hello").length);
+  ok(evs().some((e) => e.kind === "hold_end"), "…and the wait ends on that same proof");
+  ok(step("early_turn_released").length === 0,
+    "…and his reply is NOT released, because there is no sound of it yet to release", step("early_turn_released").length);
+  ok(!heardTheSetQuestion(), "…nor written down, because the store has not heard a word of it");
+  ok(step("early_turn_binned").length === 0, "…and it is not thrown away either: it is his answer to what they just said");
+  // NOW THE SOUND OF IT ARRIVES. On 427 this landed 154 milliseconds after the proof.
+  const beforeSound = tw.outMedia().length;
+  for (let i = 0; i < 6; i++) ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(200);
+  ok(step("early_turn_released").length === 1,
+    "his full reply plays on its own the moment its sound exists", step("early_turn_released").length);
+  ok(tw.outMedia().length >= beforeSound + 6,
+    "…and every frame of it really reaches the store, none dropped behind the hello",
+    { before: beforeSound, now: tw.outMedia().length });
+  ok(heardTheSetQuestion(), "…and now that they heard it, the set question is written down as a line of his");
+  // AND HE ASKED IT WITHOUT BEING SPOKEN TO FIRST. On 427 Staff had to talk again before anything
+  // of his landed, which is the owner's own words for this fault.
+  {
+    const t = getReceipt(room)?.transcript || [];
+    const his = t.findIndex((l) => l.who === "Agent" && /name of the set/.test(l.text));
+    const theirsAfter = t.slice(0, his).filter((l) => l.who === "Clerk").length;
+    ok(his >= 0 && theirsAfter <= 2,
+      "…and it is his own turn, not an answer to a second thing Staff had to say", { at: his, clerkLinesBefore: theirsAfter });
+  }
+  globalThis.fetch = beforeStub;
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ CHECK 399'S MOMENT: his private note never reaches the line (owner, 08-19)");
 {
   // 31 seconds into check 399 the store's advert had been handed to him as if Staff had spoken, and

@@ -22,11 +22,16 @@ import type { TestCard } from "./behaved";
 export const METER_GOAL_SEC = 23;
 export const METER_YELLOW_MAX_SEC = 30;
 export const PROFIT_FLOOR_PCT = 67;
-/** THE WASTE'S OWN BANDS (owner's ruling, 08-19 night): the seconds Charlie sits awake while the
- *  store has us waiting are green to 3, yellow to 5, and red from 6, and a red one fails the whole
- *  check. Always the TRUE measured seconds, never a number any forgiveness has touched. */
+/** THE WASTE'S OWN BANDS (owner's ruling, 08-19 night, WIDENED BY HIM 08-20): the seconds Charlie
+ *  sits awake while the store has us waiting are green to 3, yellow to 8, and red from 9, and a red
+ *  one fails the whole check. Always the TRUE measured seconds, never a number any forgiveness has
+ *  touched. Why the yellow moved from 5 to 8: the head start he ordered — his session opening on
+ *  the sound of a voice, before the words have proved who it was — costs about 3.6 awake seconds on
+ *  its own, and an advert's own voice starting a reconnect the reader then refuses costs a few more
+ *  (7s on 415, 4s on 423, 6s on 424, 7s on 427). At 5 a clean check landed yellow and one false
+ *  start landed red, so the band was failing checks for the head start he asked for. */
 export const AWAKE_ON_HOLD_GREEN = 3;
-export const AWAKE_ON_HOLD_YELLOW = 5;
+export const AWAKE_ON_HOLD_YELLOW = 8;
 /** Kept for the one release that imported the old name. The goal is the same 23. */
 export const METER_CAP_SEC = METER_GOAL_SEC;
 
@@ -253,8 +258,10 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     // seconds of 08-16. Shown whenever it was measured; its own bound is the owner's open
     // decision (spec decision 2), so it is not graded alone yet. It already drags the two graded
     // numbers: waited seconds sit inside the meter cap and cost money against the floor.
-    // THE WASTE FAILS THE CHECK NOW (owner's ruling, 08-19 night): green to 3 seconds, yellow to 5,
-    // red from 6, and a red one fails the whole check by name. These are TRUE seconds, measured on
+    // THE WASTE FAILS THE CHECK NOW (owner's ruling, 08-19 night, widened by him 08-20): green to 3
+    // seconds, yellow to 8, red from 9, and a red one fails the whole check by name. He ruled the
+    // wider yellow after 415, 423, 424 and 427 all landed between 4 and 7 on the head start he
+    // himself ordered. These are TRUE seconds, measured on
     // the call itself while his session was open and billing with the store holding us: no
     // forgiveness of any kind is applied to this number, whatever the grade does elsewhere.
     if (m.awakeOnHoldSec != null) {
