@@ -470,6 +470,37 @@ rig (delta-clip 401).
   ran 44.9 to 55.4 seconds, their "Pitch black the booster boxes" started at 54.0). That is Staff
   interrupting him, not us interrupting them, and no rule of ours decides it.
 
+## THE QUICK THANKS AND THE TWO PART COMEBACK (owner, 08-20): check 424, FAILED
+FIX 1 the line played as Staff walk away is `"Sure, thanks!"` (`HOLD_ACK_LINE`, Spanish
+`"Claro, gracias."`). It played on 424 at 16.4s and ran 1.4 seconds; the old "No worries, take your
+time!" ran nearly two. Same rules, same one moment.
+FIX 2 the comeback is split. The instant the words prove a person AND that person pauses, Charlie
+says two words in his own voice (`COMEBACK_HELLO_LINE` = "Oh, hey!"), made FRESH on every check and
+never kept: `phoneClip(..., fresh)` skips the clip store both ways, so it is the one line of ours
+that is not a recording. It starts being made at the reconnect (on the returning voice's sound), it
+is binned untouched with his session when the words say the store played that at us, and it can
+never play over the person (`theirVoiceOn`) or over our own audio (`agentPlayingUntil`). His full
+reply keeps building behind it and the engine always plays the two words first.
+- **CHECK 424, the reading**: TEST FAILED. Meter 37s on the record, 30s graded — under the 31 line,
+  yellow. Card verdict PASS, all five rows, status right. Cost 11.1¢.
+- **HIS FIRST SOUND CAME 3.6 SECONDS AFTER THEY DID**, against the owner's 3. Their line ran 37.377
+  to 39.247; the wait ended on their first written piece at 39.521; "Oh, hey!" played at 41.021.
+  **1.9 of those 3.6 seconds are their own sentence still being spoken**, and the rule that it may
+  never play over them is what holds it there. From their pause it was 1.8 seconds. Before this
+  build his first sound was his whole reply, 7.6 seconds in.
+- **THE TWO REDS**: awake on hold 6s (green 3, red 6) and his answer gap, worst turn, 7s (red 7).
+  The awake seconds are the advert's own voice starting a reconnect that the reader then refuses —
+  4s on 423, 6s here, 7s on 415. It swings with how fast the reader answers and it is the decision
+  already in front of him: his head start costs those seconds by design.
+- **STAFF TALKED OVER HIM**: his set question ran from 45.666 and their "Pitch black the booster
+  boxes" started at the same second, so he missed half of it and asked for the set name again at
+  50.033. Nothing of OURS played over anybody; this is Staff answering into his question.
+- **PROVEN FIRST, both pinned**: workbench (hold-wake 26) measures on the owner's own advert
+  recording that not one sound of ours could play inside it and that the person coming back is
+  reported well inside three seconds; the rig (delta-clip 407) drives the whole thing — nothing
+  plays while they are still talking, the two words land under three seconds from their return, the
+  clip was recorded fresh for that check, and the store really hears it.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
