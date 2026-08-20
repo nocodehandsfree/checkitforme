@@ -595,6 +595,11 @@ def work_product_asked(root, owner_msg, timeout=30):
         return False
     if any(p in msg for p in WP_PHRASES):
         return True
+    # NO MODEL CALL WHEN NO PHRASE MATCHED (owner 08-08, measured: it was costing 7.2s on
+    # every long reply and answering "no" nearly every time). He asks for a piece of work
+    # in plain, unmistakable words, and those words are the list above. No match = no.
+    if not os.environ.get("REPLY_LOCK_WP_MODEL"):
+        return False
     prompt = (
         "Below is one message from the owner to a working agent. Did he ask the agent to "
         "HAND HIM A PIECE OF WORK in the chat itself, rather than just answer him? A work "
@@ -732,9 +737,26 @@ if "--check-file" in sys.argv:
     # adding anything, so it can soften a clever word but can never fill in what "the
     # four gaps" were. One bounce per session, then the reply proceeds with the judge's
     # notes handed to the writer, so a chat can never argue itself silent.
+    # THE JUDGE AND THE WRITER RUN AT THE SAME TIME (owner 08-08, he needs to work
+    # quicker). They were back to back, about 8 seconds then about 10, and they read the
+    # same draft, so the second wait bought nothing. Started together the pair costs the
+    # slower of the two. If the judge then bounces to the agent, the writer's answer is
+    # thrown away, which is cheap: it is the rare path and it cost the owner nothing.
+    import threading
+    _w = {}
+
+    def _run_writer():
+        try:
+            _w["out"] = render(root, owner_msg, draft, uncapped=uncapped)
+        except Exception as e:
+            _w["err"] = e
+
+    tick("judge and writer start together")
+    _t = threading.Thread(target=_run_writer, daemon=True)
+    _t.start()
+
     judge_notes = ""
     try:
-        tick("judge reads the draft")
         j_passes, j_breaks = judge_reply(root, owner_msg, draft)
         tick("judge done (passes=%s, %d breaks)" % (j_passes, len(j_breaks)))
         if not j_passes and j_breaks:
@@ -755,12 +777,22 @@ if "--check-file" in sys.argv:
     except Exception as ex:
         log_error(root, ex)  # a broken judge never blocks a reply
 
-    tick("start render")
+    _t.join(timeout=180)
+    tick("writer done")
     try:
-        final = render(root, owner_msg, draft, notes=judge_notes, uncapped=uncapped)
+        if judge_notes:
+            # The judge found wording faults but has already spent its one bounce, so the
+            # writer must be told. That rewrite is the only one that cannot run early.
+            final = render(root, owner_msg, draft, notes=judge_notes, uncapped=uncapped)
+            tick("rewrite with judge notes done")
+        elif "err" in _w:
+            raise _w["err"]
+        elif "out" in _w:
+            final = _w["out"]
+        else:
+            final = render(root, owner_msg, draft, uncapped=uncapped)
     except Exception as ex:
         log_error(root, ex); fail_open("error")
-    tick("render done")
     def hard_faults(rendered):
         # Every mechanical gate, in one place, so the retry is judged exactly as hard
         # as the first pass. Before 08-06 the retry only got two of these and a whole
