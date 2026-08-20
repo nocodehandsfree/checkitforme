@@ -6733,7 +6733,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // because there is no call_results row to stamp and the event set is a closed sixteen.
   const tail = parse(rows[rows.length - 1]?.detail ?? null);
   let seconds = (tail?.seconds ?? null) as Rollup | null;
-  let cost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; sttUsd?: number; avoidableUsd: number } | null;
+  let cost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; clipsUsd?: number; brainUsd?: number; sttUsd?: number; avoidableUsd: number } | null;
   // …but an ATTACHED call stamps them on the ROW instead, and this route only ever looked at the
   // tail — so the same finished call came back complete by call id and with the seconds and the cost
   // NULL by room. One envelope, two answers (owner 07-28). Now the row is the second place we look,
@@ -6753,6 +6753,11 @@ app.get("/api/admin/receipt/:room", async (c) => {
         lineUsd: attached.costLineUsd ?? 0, forkUsd: attached.costForkUsd ?? 0,
         // Echo's words, stamped from 08-07. A check from before it has none and pays for none.
         sttUsd: attached.costSttUsd ?? 0,
+        // …AND THE TWO CHARLIE IS BILLED BY THE PIECE FOR (owner's order, 08-20, fix 3): ElevenLabs
+        // saying his words by the character, and Anthropic writing them by the token. Reading them
+        // back as nought is what made his line on a finished check say 0.0¢ in the first place.
+        clipsUsd: attached.costClipsUsd ?? 0,
+        brainUsd: attached.costBrainUsd ?? 0,
         avoidableUsd: attached.costAvoidableUsd ?? 0,
       };
     }
