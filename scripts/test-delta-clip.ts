@@ -3138,6 +3138,19 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   echoHeardPiece(room, "Yeah.");
   ok(step("early_turn").length === 1,
     "their first written piece is handed to Charlie at once, so he starts working out his reply", step("early_turn").length);
+  // A REPLY HE BEGAN BEFORE THEIR WORDS REACHED HIM IS NEVER SPOKEN (check 417). His session was
+  // opened on the sound of a voice and starts talking about the conversation it can see, so the
+  // sound already in flight can be his answer to the line BEFORE theirs: the store heard "No
+  // worries, take your time!" as the answer to "we've got a few of those". It announced itself
+  // before their words were handed over, so it is thrown away, never held.
+  {
+    const ws = f.sockets[f.sockets.length - 1];
+    for (let i = 0; i < 4; i++) ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x55)) } }));
+    await sleep(40);
+  }
+  const staleChunks = tw.outMedia().length;
+  ok(staleChunks === beforeHisReply, "the reply he began before their words reached him is thrown away, not held",
+    { before: beforeHisReply, now: staleChunks });
   // HE BUILDS IT WITH HIS MOUTH SHUT, while the wake check is still reading. The store hears
   // nothing of this until the wake check speaks.
   {
