@@ -1,6 +1,51 @@
 # ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-20, Echo 4)
 
-## WHERE ECHO 4 GOT TO (08-20 afternoon) — BOTH FIXES BUILT AND PROVEN, THE DIAL IS NOT RUN
+## WHERE ECHO 4 GOT TO (08-20 evening) — FOUR FIXES BUILT AND PROVEN, THE DIAL IS STILL NOT RUN
+
+## THE MONEY FIXES (owner's order, 08-20 evening; commit c6f7d95 on staging)
+**FIX 3, THE MONEY MUST BE TRUE.** Check 427's sheet said Charlie cost 0.0¢. Two real bills were
+being paid on that check and neither was counted.
+- **ElevenLabs, per CHARACTER, for saying his words.** `clipsUsd` existed in `src/calls/cost.ts` and
+  NOTHING outside the tests ever filled `ttsChars`. `phoneClip` (clip-cache.ts) now returns
+  `charsBilled`: the characters really synthesized, and NOUGHT when the line came out of memory or
+  off disk — a cache hit is handed back as a copy with the count zeroed, or every later check would
+  be charged for a clip nobody re-recorded. Counted at that one door: `clipCharsBilled` on the bridge
+  context for the opening question and hold reply made before the dial, `addCount(room,"spokenChars")`
+  for the fresh two word hello, and `onSpend` from `ourbrain-session.ts` for every line our brain writes.
+- **Anthropic, per TOKEN, for writing them.** There was no slot at all. `brainReply` (brain.ts) now
+  reads the REAL counts off the model's own stream — Anthropic's `message_start`/`message_delta`
+  frames, and `stream_options:{include_usage:true}` on the OpenAI/Groq path — and `brainCostUsd`
+  (cost.ts) prices them at the model's published per million rate (`claude-sonnet-4-6` = $3 in,
+  $15 out; VERIFIED against the current price table, not from memory). **A model nobody has priced is
+  charged at the DEAREST rate, never at nothing**: a check that quietly reads as free is the fault.
+- Both are Charlie's, so both are inside CHARLIE's bucket with their own rows, `readable.charlie` is
+  all three together, and `cost_brain_usd` is a real column (schema + bootstrap self-heal + the
+  stamp in receipt-store + the read-back in server.ts).
+- **WHAT THIS WILL DO TO THE NUMBERS, said before the dial**: at the house rate (1 credit a character,
+  $22/145,094 credits) 300 characters is about 4.5¢. So an own-brain check that was reading 2.8¢ will
+  read materially more once the fresh hello and his replies are counted. That is the real spend, and
+  it is the whole point. Watch the profit row against his 67% floor on the first dial.
+
+**FIX 4, THE WRONG NAME.** The first bucket said "Bravo (Menu Nav)" on every check. `costBuckets`
+takes `menuWorked` now (read off the record: any `alpha_press` or `bravo_say`), and with no menu the
+label is "Before a person answered" and the row is "Ringing and greeting". `public/app.html` ~2484
+does the same on the check sheet's cost card. Same money either way — the NAME being true.
+
+**CHECKS 425 AND 426 WERE NOT A CLEANUP, THEY WERE A FAULT.** They read in progress with their whole
+conversations written down. Cause: `ourOwnRecord` in `src/voice/elevenlabs.ts` read `getReceipt(room)`
+— the IN MEMORY record — so after any restart a check our own brain ran answers "nothing here", which
+every settling door reads as still in progress, FOR EVER. Fixed: `finishedRecordFromDb` (receipt-store)
+reads it from the database, `over` is the record's own hangup row and never a clock, and the
+`bridge:<room>` branch of `/pub/result/:cid` hands a finished unsettled check to the same settling
+path every other check takes (repointing the row at `ours:<room>`, which is what it really was).
+**THE TWO ROWS ARE NOT SETTLED YET** — the fix has to be LIVE first. The moment staging serves
+c6f7d95, hit `/pub/result/bridge:ad6032fe-969a-47c3-b685-6f0a501bd2d6` (425) and
+`/pub/result/bridge:76684a9f-e46d-4492-820b-7069727a6746` (426) with the admin token, then re-read
+the Testing list to prove both carry an answer.
+
+Suites after these: call-events 142 · ourbrain 36 · dropped-call 39 · delta-clip 432 · meter 96 ·
+behaved 109 · bridge 13 · tsc clean.
+
 Read this block before the order below: fixes 1 and 2 are DONE, the ordered dial is NOT.
 - **FIX 1 IS BUILT (commit 18030a8, merged to staging as ca6aa82).** The engine's own record answered
   it before any code was opened (RULE 12). 427's timeline carries `early_turn` at 39.1s, `little_hello`
@@ -27,8 +72,8 @@ Read this block before the order below: fixes 1 and 2 are DONE, the ordered dial
   fails from 9, true seconds only. `scripts/test-meter.ts` pins both edges by his own numbers and that
   427's own 7 seconds now passes. meter 96.
 - Suites: delta-clip 432 · meter 96 · ourbrain 31 · behaved 109 · call-events 124 · bridge 13 · tsc clean.
-- **WHY THE DIAL DID NOT RUN: Railway had THREE builds QUEUED (429db84, 449742f, 38ce856) for 25+
-  minutes and had not even opened one for ca6aa82.** `/api/health` still served 0f93e733 all session.
+- **WHY THE DIAL DID NOT RUN: Railway's build queue.** It moved during the evening (0f93e733 ->
+  449742f8 -> 38ce8563) but never reached ca6aa82 or c6f7d95 while this chat was awake.
   The owner's law: never cancel, never re-queue, tell the PM, keep working. **NEXT CHAT'S FIRST MOVE:
   read `/api/health`, and the moment it serves ca6aa82 or later, dial `ADMIN_TOKEN=... node
   scripts/robot-check.mjs 22` ONCE and report PASSED or FAILED with the true charged seconds, the
