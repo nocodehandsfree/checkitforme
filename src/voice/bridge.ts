@@ -1227,7 +1227,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // their turn and his reply was already released; shutting his mouth again here took that
       // reply back off the line, and six seconds later a stale one escaped instead: the store heard
       // "No worries, take your time!" as the answer to "we've got a few of those".
-      if (!(provedByWords && reconnectFeed.handed.length)) charlieMaySpeak = false;
+      // READ OFF THE PROOF ALONE (check 425). It used to also demand that the reconnect feed still
+      // held the pieces, and the joined line ABSORBS that feed a beat earlier — so on a check where
+      // Echo finished the sentence quickly the feed was empty, his mouth shut again, and the reply
+      // our own brain had already written was dropped at the door. Words proving the comeback is
+      // the whole of it: he has their turn and he owes them an answer.
+      if (!provedByWords) charlieMaySpeak = false;
       // The wordless-rejoin window opens with his ears: written words spend it, and a rejoin that
       // reaches the far side with nothing written was the music (owner 08-18, check 380).
       // …EXCEPT WHEN WORDS ARE WHAT PROVED THE COMEBACK (owner, 08-19 night, off check 416). The
@@ -1280,6 +1285,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** Our own hold reply really played, and in which words — so his session can never say it again. */
   let ackAlreadyPlayed = false;
   let ackLineSaid = "";
+  /** A whole line that is nothing but "take your time" (owner, 08-20, off check 425). Short and
+   *  entirely that sentiment: a real answer that happens to contain "no worries" is never one. */
+  const isJustAnAck = (t: string) => {
+    const w = t.trim().replace(/\s+/g, " ");
+    return w.length <= 60 && /\b(take your time|no rush|whenever you'?re ready)\b/i.test(w);
+  };
   /** HIS OWN NOTE IS NOT SPEECH (owner, 08-19, off checks 398 and 399). When the reply he is about
    *  to say is a note to himself rather than words for Staff, this turn's audio never reaches the
    *  line: silence plays and the turn counts as skipped. Set from his OWN words only, at every
@@ -3044,7 +3055,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // very line our own recording played at second 15. The store heard "No worries, take your
         // time!" as the answer to "we've got a few of those", and he then had to ask his question
         // all over again: eleven seconds of his meter and a repeat on the sheet.
-        if (txt && ackAlreadyPlayed && normSaid(String(txt)) === normSaid(ackLineSaid)) {
+        // …AND IN ANY WORDING (check 425). His own instructions tell him to answer a "let me check"
+        // with one warm line like "no worries, take your time", so the reply that comes back is
+        // that sentiment in his own words rather than ours word for word. Our recording has already
+        // said it; a second one lands on the answer they came back with.
+        if (txt && ackAlreadyPlayed && (normSaid(String(txt)) === normSaid(ackLineSaid) || isJustAnAck(String(txt)))) {
           noteTurnSilenced = true;
           emit(room, "unknown", "Charlie began the hold reply a second time, which our recording had already said, so it never played",
             { step: "ack_said_twice", text: String(txt).slice(0, 160) });

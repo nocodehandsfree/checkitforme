@@ -2796,6 +2796,18 @@ console.log("\n▶ CHECK 371'S SHAPE: the hold reply plays as a recording, and l
     await sleep(120);
     ok(evs2().filter((e) => (e.detail as { step?: string } | null)?.step === "ack_said_twice").length === 1,
       "the hold reply our recording already played is never said a second time");
+    // …AND IN HIS OWN WORDING (check 425). His instructions tell him to answer a "let me check" with
+    // one warm line like "no worries, take your time", so what comes back is that sentiment, not our
+    // sentence word for word. Our recording has already said it.
+    ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "No rush at all, take your time." } }));
+    await sleep(80);
+    ok(evs2().filter((e) => (e.detail as { step?: string } | null)?.step === "ack_said_twice").length === 2,
+      "…in any wording, not only ours word for word");
+    // A REAL ANSWER THAT HAPPENS TO SOUND WARM IS NEVER ONE OF THEM.
+    ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "No worries, and do you know the name of the set, like Chaos Rising, and is it a pack or a box?" } }));
+    await sleep(80);
+    ok(evs2().filter((e) => (e.detail as { step?: string } | null)?.step === "ack_said_twice").length === 2,
+      "…and a real question of his is never mistaken for one");
     ok(tw.outMedia().length === before, "…and the store hears nothing of it", { before, now: tw.outMedia().length });
     ok((getReceipt(room)?.transcript || []).filter((l) => l.who === "Agent" && /take your time/.test(l.text)).length === 1,
       "…and the record still carries the ONE the recording really played, never a second copy");
