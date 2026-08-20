@@ -8,6 +8,7 @@ import { config } from "../config";
 // seconds split into talking / listening / dead air, because it is the only place the audio passes
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
+import { HOLD_ACK_LINE, HOLD_ACK_LINE_ES } from "../calls/charlie-setup";
 import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, stampLineEnd, lastLineEndEpoch, normSaid, getReceipt, whereItWouldDraw } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
@@ -1222,6 +1223,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let hisTurnOpen = false;
   /** Our recorded hold reply is covering the announce; his own generated version is dropped. */
   let ackPlayingUntil = 0;
+  /** Our own hold reply really played, and in which words — so his session can never say it again. */
+  let ackAlreadyPlayed = false;
+  let ackLineSaid = "";
   /** HIS OWN NOTE IS NOT SPEECH (owner, 08-19, off checks 398 and 399). When the reply he is about
    *  to say is a note to himself rather than words for Staff, this turn's audio never reaches the
    *  line: silence plays and the turn counts as skipped. Set from his OWN words only, at every
@@ -2071,6 +2075,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     }
     agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
     ackPlayingUntil = Date.now() + clip.ms + 4000;
+    ackAlreadyPlayed = true;
+    ackLineSaid = es ? HOLD_ACK_LINE_ES : HOLD_ACK_LINE;
     // OUR RECORDING IS NOT HIS METER (owner, 08-17 late). It is our own audio going down the line
     // from our own file, and once he is off the meter for the wait, none of it is his to bill: the
     // seconds are only counted as his when he is actually connected.
@@ -2898,6 +2904,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // exact-string drop still doubled it — and once per SESSION: every reopened session is handed
         // the question again and echoes it again (08-01 audit, open fault 4).
         if (txt && !clipEchoDropped && clipText && normSaid(String(txt)) === normSaid(clipText)) { clipEchoDropped = true; return; }
+        // THE HOLD REPLY WE ALREADY PLAYED IS NEVER SAID TWICE (owner, 08-19 night, off checks 417
+        // and 419). His session is opened on the sound of a voice coming back, so it sees Staff's
+        // "one moment, I'll go and have a look" as the newest thing said and answers it — with the
+        // very line our own recording played at second 15. The store heard "No worries, take your
+        // time!" as the answer to "we've got a few of those", and he then had to ask his question
+        // all over again: eleven seconds of his meter and a repeat on the sheet.
+        if (txt && ackAlreadyPlayed && normSaid(String(txt)) === normSaid(ackLineSaid)) {
+          noteTurnSilenced = true;
+          emit(room, "unknown", "Charlie began the hold reply a second time, which our recording had already said, so it never played",
+            { step: "ack_said_twice", text: String(txt).slice(0, 160) });
+          log(`ack repeat: he began "${String(txt).slice(0, 50)}" again and the store heard nothing`);
+          return;
+        }
         // A LINE THE STORE NEVER HEARD IS NOT A LINE. Either gate being shut means his audio was
         // dropped rather than played, so recording the words would put a sentence on the customer's
         // page, on the owner's transcript and in front of the reader that nobody on the phone ever

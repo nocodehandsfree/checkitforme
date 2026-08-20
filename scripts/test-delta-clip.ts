@@ -2771,6 +2771,24 @@ console.log("\n▶ CHECK 371'S SHAPE: the hold reply plays as a recording, and l
   const handed = f.raw.filter((m) => m.includes("user_message") && m.includes("Thank you for holding"));
   ok(handed.length === 1, "late pieces coalesce into ONE handed turn, never two");
   ok(!!handed[0] && handed[0].includes("did not see any"), "…with both pieces in it, oldest first");
+  // CHECKS 417 AND 419: his session, opened on the sound of a voice coming back, saw Staff's
+  // "one moment, I'll go and have a look" as the newest thing said and answered it with the very
+  // line our own recording had already played. The store heard "No worries, take your time!" as the
+  // answer to "we've got a few of those", and he then asked his question all over again: eleven
+  // seconds of his meter and a repeat on the sheet.
+  {
+    const evs2 = () => getReceipt(room)?.events || [];
+    const ws = f.sockets[f.sockets.length - 1];
+    const before = tw.outMedia().length;
+    ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "No worries, take your time!" } }));
+    for (let i = 0; i < 4; i++) ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+    await sleep(120);
+    ok(evs2().filter((e) => (e.detail as { step?: string } | null)?.step === "ack_said_twice").length === 1,
+      "the hold reply our recording already played is never said a second time");
+    ok(tw.outMedia().length === before, "…and the store hears nothing of it", { before, now: tw.outMedia().length });
+    ok((getReceipt(room)?.transcript || []).filter((l) => l.who === "Agent" && /take your time/.test(l.text)).length === 1,
+      "…and the record still carries the ONE the recording really played, never a second copy");
+  }
   echoListening(room, false);
   restore(); tw.close(); f.close();
 }
