@@ -363,9 +363,20 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string, s
     // and the line files where it arrived. The ONE exception is a moment our own ear measured
     // (`earMeasured`): Staff's hello really is spoken before our question and only becomes words
     // later, so it still files where it belongs (owner screenshot 07-31, both laws kept).
+    // A WHOLE SENTENCE ECHO MEASURED KEEPS ITS OWN TWO MOMENTS (owner's order, 08-20 evening, off
+    // check 428). Echo does not stamp a line when the words arrive: it reads the moment off the
+    // audio stream's own clock, so a line that comes back with BOTH a start and an end is a sentence
+    // we measured from its first sound to its last. On 428 Staff's "Pitch black the booster boxes."
+    // came back stamped 45420 to 45420, a line with no length at the very instant Charlie's question
+    // starts, because Echo's writing landed a beat after his reply had already been written down and
+    // the clamp below moved their line up onto his. It carried its own start and end on 425, 426 and
+    // 427. THE GUARD, and it is the whole reason this is safe: it may only step back over a line its
+    // own SOUND FINISHED BEFORE. Check 372's fault was a stamp with no end at all claiming to
+    // precede a question it really answered; that line can never satisfy this and never moves.
+    const measuredWholeSentence = spoken != null && ended != null;
     const last = r.transcript[r.transcript.length - 1];
     if (last && last.atMs > at) {
-      if (earMeasured && spoken != null) {
+      if ((earMeasured && spoken != null) || (measuredWholeSentence && ended <= last.atMs)) {
         let i = r.transcript.length;
         while (i > 0 && r.transcript[i - 1].atMs > at) i--;
         r.transcript.splice(i, 0, line);

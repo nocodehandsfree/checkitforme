@@ -215,26 +215,32 @@ export function costBuckets(
   /** `speakingSecs` and `listeningSecs` are measured on the call itself, and whatever is left of
    *  Charlie's open seconds is him waiting. Left out, his line simply does not break down. */
   t: { callSecs: number; navSecs: number | null; streams?: number; speakingSecs?: number | null; listeningSecs?: number | null;
-       /** WAS A PHONE MENU ACTUALLY WORKED (owner's order, 08-20, fix 4). On a call that no menu
-        *  answered, these seconds are the phone line and Echo listening through the ringing and the
-        *  greeting, and calling them menu time was simply untrue. Left out means no menu. */
-       menuWorked?: boolean },
+       /** WHICH MODEL REALLY WALKED THE MENU (owner's order, 08-20, and his correction the same
+        *  evening). "alpha" pressed a key, "bravo" said a menu word. Left out or null means NO menu
+        *  was worked at all: the store simply picked the phone up, and those seconds belong to the
+        *  phone line and to Echo listening through the ringing and the greeting. They are given back
+        *  to those two lines and this bucket does not render, because there was nothing to render. */
+       menuWalkedBy?: "alpha" | "bravo" | null },
   rates: Rates = MEASURED_RATES,
   statusReadUsd = 0,
 ): CostBucket[] {
   const nav = Math.max(0, Math.min(t.navSecs ?? 0, t.callSecs));
-  const share = t.callSecs > 0 ? nav / t.callSecs : 0;
+  // NO MENU, NO SHARE (owner's correction, 08-20 evening). Only a check that really worked a menu
+  // may take a slice of the line and the listening off the other two lines. With no menu the share
+  // is nought, so the phone line gets all of its own seconds back and Echo gets all of its own, and
+  // this bucket costs nothing and drops out through the no-free-items filter at the bottom.
+  const walkedBy = t.menuWalkedBy ?? null;
+  const share = t.callSecs > 0 && walkedBy ? nav / t.callSecs : 0;
   const navLine = Math.round(cost.lineUsd * share);
   const navFork = Math.round(cost.forkUsd * share);
   const streams = Math.max(1, t.streams ?? 1);
-  // THE FIRST BUCKET IS NOT ALWAYS A MENU (owner's order, 08-20, fix 4). It is the stretch from the
-  // dial to a person being on the line, and on a store that simply picks the phone up that is the
-  // ringing and the greeting, with the line and Echo running through it. It was labelled Menu Nav
-  // on every check, menu or no menu. Only a call where a menu was really worked says menu now.
-  const menuWorked = t.menuWorked === true;
+  // AND IT IS NAMED FOR WHAT REALLY RAN (owner's correction, 08-20 evening). Alpha presses keys and
+  // Bravo says the menu word; the bucket was hard-labelled Bravo whichever one had walked it, and
+  // labelled a menu on checks where no menu existed at all. Both are the same fault: the row saying
+  // something that did not happen.
   const b: CostBucket[] = [
-    { key: "bravo", label: menuWorked ? "Bravo (Menu Nav)" : "Before a person answered", usd: navLine + navFork, detail: [
-      [menuWorked ? "Menu time" : "Ringing and greeting", mmss(nav)],
+    { key: "bravo", label: walkedBy === "alpha" ? "Alpha (Menu Nav)" : "Bravo (Menu Nav)", usd: navLine + navFork, detail: [
+      ["Menu time", mmss(nav)],
       ["Rate (per minute)", perMin(rates.linePerMinUsd + rates.forkPerMinUsd * streams)],
       ["Cost", money(navLine + navFork)],
     ] },

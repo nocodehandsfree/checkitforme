@@ -15,7 +15,7 @@ import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { callEvents, callResults, retailers, categories, statuses } from "../src/db/schema";
 import { findRecentCheck, recentlyDropped, weHungUpOnAHold, diedOnAHold, staffHungUpOn, billableOutcome } from "../src/calls/service";
-import { finishedRecordFromDb } from "../src/calls/receipt-store";
+import { finishedRecordFromDb, findCheckRow, roomOfCheckId } from "../src/calls/receipt-store";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -176,6 +176,32 @@ async function main() {
     ok((after?.transcript ?? "").includes("Pitch Black"), "…and the whole conversation comes back with it, so the reader has the words");
     ok(after?.durationSecs === 60, "…with the seconds the check really ran", );
     ok(await finishedRecordFromDb("room-that-never-existed") === null, "a room with no check at all is still nothing, never an invented one");
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // ONE CHECK, ONE ANSWER, WHICHEVER NAME YOU ASK BY (owner's order, 08-20 evening, off check 428).
+  // Asking about 428 by its room-shaped id read in_stock with the product; asking about the very
+  // same check by the name our own brain gives it read "completed, nothing confirmed, empty
+  // summary". Same check, two answers, because the row is filed under one name and was only ever
+  // looked for under the other. The ROOM is the key every check really has.
+  console.log("\n▶ one check is found by every name it is known by");
+  {
+    const room = "room-two-names";
+    const [row] = await db.insert(callResults).values({
+      retailerId: store.id, categoryId: cat.id, room, providerCallId: `bridge:${room}`,
+      status: "completed", statusKey: "in_stock", confirmed: true, summary: "They have them in stock.",
+      startedAt: now() - 200, finderUserId: USER,
+    }).returning();
+    ok((await findCheckRow(`bridge:${room}`))?.id === row.id, "the name it was filed under finds it");
+    ok((await findCheckRow(`ours:${room}`))?.id === row.id, "…and the name our own brain gives it finds the SAME row");
+    const byOurs = await findCheckRow(`ours:${room}`);
+    ok(byOurs?.statusKey === "in_stock" && byOurs?.confirmed === true && !!byOurs?.summary,
+      "…so both doors answer with the settled verdict, never an empty one",
+      { statusKey: byOurs?.statusKey, confirmed: byOurs?.confirmed, summary: byOurs?.summary });
+    ok(roomOfCheckId(`ours:${room}`) === room && roomOfCheckId(`bridge:${room}`) === room,
+      "both names carry the same room inside them");
+    ok(roomOfCheckId("conv_abc123") === "", "a real conversation id at the voice provider names no room, and is looked up as itself");
+    ok(await findCheckRow("conv_nothing_like_this") === undefined, "a name no check ever had still finds nothing");
   }
 
   console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);

@@ -2477,11 +2477,11 @@ function splitCard(c,priced,tl){
   const steps=(tl||[]).filter(e=>e.kind==='alpha_press'||e.kind==='bravo_say');
   const model=steps.some(e=>e.kind==='alpha_press')||lane==='alpha'?'Alpha'
     :steps.some(e=>e.kind==='bravo_say')||lane==='bravo'?'Bravo':'';
-  // …AND A STORE THAT SIMPLY PICKED THE PHONE UP WALKED NO MENU AT ALL (owner's order, 08-20, fix 4).
-  // These seconds are the phone line and Echo listening through the ringing and the greeting, and
-  // calling them Menu Nav on every check was untrue. Only a check where a key was really pressed or
-  // a menu word was really said says menu now.
-  const menuLabel=model?('Menu Nav ('+model+')'):'Before a person answered';
+  // …AND A STORE THAT SIMPLY PICKED THE PHONE UP WALKED NO MENU AT ALL (owner's order, 08-20, and his
+  // correction that evening: only a check that really worked a menu may show one). The number on this
+  // row is the phone line plus Echo listening, which on a menu check is what the menu spent and on a
+  // direct one is simply the line and the listening. So the row says which of the two it really is.
+  const menuLabel=model?('Menu Nav ('+model+')'):'Phone line and Echo';
   return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
     <div class="k-eyebrow" style="margin:0 0 4px">Check cost</div>
     ${row(menuLabel,rd.menu||rd.line||'')}

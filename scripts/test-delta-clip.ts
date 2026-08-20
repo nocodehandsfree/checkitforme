@@ -3487,6 +3487,53 @@ console.log("\n▶ CHECK 427'S MOMENT: his words are in, his sound is still bein
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 428'S OTHER FAULT: a line of his files where the store really HEARS it");
+{
+  // On 428 his goodbye was stamped 48.194s while his own question's sound ran to 49.947s, so the
+  // record read as him talking over himself. The voice provider writes his next reply while the
+  // previous one is still playing out at the carrier, so "now" is a moment the store has not reached
+  // yet. Everything of ours already queued has to finish before a word of the next line is heard.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-428-heard";
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, { agentId: "a", apiKey: "k", dynamicVars: {}, midCallAgentId: "mid" } as never);
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_428", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(400);
+  const ws = f.sockets[f.sockets.length - 1];
+  // Staff answer, so his mouth is open and what follows is a real turn of his.
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Yeah, we've got a few of those." } }));
+  await sleep(120);
+  // HIS QUESTION, IN THE ORDER A REAL CHECK PRODUCES IT: his sound starts going out first and the
+  // provider sends the words a beat later, which is why his line files at his turn's first frame.
+  // A long pile of sound with it: seconds of audio queued at the carrier ahead of anything next.
+  for (let i = 0; i < 150; i++) ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x30)) } }));
+  await sleep(40);
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Oh nice, do you know the name of the set?" } }));
+  await sleep(40);
+  for (let i = 0; i < 20; i++) ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x30)) } }));
+  await sleep(60);
+  // …AND HIS GOODBYE, WRITTEN WHILE THAT SOUND IS STILL PLAYING. This is exactly 428's shape.
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thanks so much, have a good one!" } }));
+  await sleep(120);
+  const his = (getReceipt(room)?.transcript ?? []).filter((l) => l.who === "Agent");
+  const q = his.find((l) => /name of the set/.test(l.text));
+  const bye = his.find((l) => /have a good one/.test(l.text));
+  ok(!!q && !!bye, "both of his lines are on the record", his.map((l) => l.text.slice(0, 24)));
+  ok(!!q?.endMs && q.endMs > q.atMs, "his question knows how long its sound really runs", { at: q?.atMs, end: q?.endMs });
+  ok(!!bye && !!q?.endMs && bye.atMs >= q.endMs,
+    "…and his goodbye files AFTER it, because that is when the store can first hear a word of it",
+    { question: [q?.atMs, q?.endMs], goodbye: bye?.atMs });
+  ok(!!bye && !!q && bye.atMs > q.atMs, "…never at the same instant, and never inside his own sentence");
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ CHECK 399'S MOMENT: his private note never reaches the line (owner, 08-19)");
 {
   // 31 seconds into check 399 the store's advert had been handed to him as if Staff had spoken, and

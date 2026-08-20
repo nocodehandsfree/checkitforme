@@ -42,7 +42,7 @@ import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, navOutcomeOf, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, oneSlowestReplyRow, type Rollup } from "./calls/events";
 import { buildCharlieSetup } from "./calls/charlie-setup";
-import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
+import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine, findCheckRow } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, type BehavedRow } from "./calls/behaved";
@@ -3620,8 +3620,7 @@ app.get("/pub/result/:cid", async (c) => {
       // conversation id the moment one exists, so looking only for the room-shaped id missed the very
       // rows that need this door — the ones our own brain ran, which never get a conversation of
       // theirs at all. Either id finds the same one check.
-      const row = (await db.select().from(callResults)
-        .where(or(eq(callResults.providerCallId, cid), eq(callResults.room, room))))[0];
+      const row = await findCheckRow(cid);
       if (row && row.status !== "dialing" && row.status !== "in_progress" && row.status !== "queued") {
         // ts rides EVERY result branch — the verdict page shows the call's date/time on all statuses (owner 07-16).
         return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "", ts: (row.startedAt || 0) * 1000 });
@@ -3688,7 +3687,12 @@ app.get("/pub/result/:cid", async (c) => {
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
   // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
   // call is still in flight, fall back to the live outcome so the consumer sees progress immediately.
-  const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+  // ONE CHECK, ONE ANSWER, WHICHEVER NAME YOU ASK BY (owner's order, 08-20 evening, off check 428).
+  // A check our own brain ran is named `ours:<room>` and its row may still be filed under the room's
+  // own id, so asking by that name found NO row and answered off the raw record: completed, nothing
+  // confirmed, an empty summary — while asking by the room's id answered in stock with the product.
+  // Same check, two answers. The room is the key every check really has, so both names find the one row.
+  const row = await findCheckRow(cid);
   // The ladder tells the WHOLE story (owner 07-22): nav runs as TwiML BEFORE the media stream
   // exists, so the EL transcript can never narrate the menu phase. But the nav plan is FACT — we
   // know the menu started at pickup and when every press/word fired (the learned schedule the TwiML
@@ -6602,12 +6606,14 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // …and the seconds he spent speaking and listening, so his one line can open to show where
       // his meter went. Measured on the call itself; a check recorded before we measured them shows
       // the line without the breakdown rather than an invented one.
-      // …AND WHETHER A MENU WAS REALLY WORKED (owner's order, 08-20, fix 4). Read off the check's own
-      // record: a key pressed or a menu word spoken is a menu. Nothing pressed and nothing said means
-      // the store simply answered the phone, and those seconds are the ringing and the greeting.
+      // …AND WHICH MODEL REALLY WALKED THE MENU (owner's order, 08-20 and his correction that
+      // evening). Read off the check's own record: Alpha pressed a key, Bravo said the menu word.
+      // Neither means no menu was worked at all, the store simply answered the phone, and those
+      // seconds go back to the phone line and to Echo where they were really spent.
       { callSecs: sums?.callSecs ?? 0, navSecs: sums?.navSeconds ?? null, streams: 2,
         speakingSecs: sums?.speakingSecs ?? null, listeningSecs: sums?.listeningSecs ?? null,
-        menuWorked: timeline.some((e) => e.kind === "alpha_press" || e.kind === "bravo_say") },
+        menuWalkedBy: timeline.some((e) => e.kind === "alpha_press") ? "alpha"
+          : timeline.some((e) => e.kind === "bravo_say") ? "bravo" : null },
       await currentRates(), readUsd,
     ) : [];
     const totalUsd = (cost?.totalUsd ?? 0) + readUsd;

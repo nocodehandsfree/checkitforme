@@ -223,6 +223,33 @@ export async function finishedRecordFromDb(room: string): Promise<
   } catch { return null; }
 }
 
+/**
+ * ONE CHECK, ONE ROW, WHICHEVER NAME IT IS ASKED FOR BY (owner's order, 08-20 evening, off check 428).
+ *
+ * A check is named three ways over its life: `bridge:<room>` before anything answers, the voice
+ * provider's own conversation id once a hosted session exists, and `ours:<room>` when our own brain
+ * ran the conversation and there is no session of theirs at all. The row is repointed as it goes, so
+ * looking it up by ONE of those names finds nothing whenever the row happens to be filed under
+ * another — and the door then answers off the raw record instead of the settled verdict. Check 428
+ * read in_stock with the product when asked by one name and "completed, nothing confirmed, empty
+ * summary" when asked by the other. Same check, two answers.
+ *
+ * The ROOM is the key every check really has, from before the phone rings (the receipt's own first
+ * rule), so both names resolve through it and every door gets the same one row.
+ */
+export function roomOfCheckId(cid: string): string {
+  const s = String(cid || "");
+  if (s.startsWith("ours:")) return s.slice("ours:".length);
+  if (s.startsWith("bridge:")) return s.slice("bridge:".length);
+  return "";
+}
+export async function findCheckRow(cid: string): Promise<typeof callResults.$inferSelect | undefined> {
+  const room = roomOfCheckId(cid);
+  return (await db.select().from(callResults)
+    .where(room ? or(eq(callResults.providerCallId, cid), eq(callResults.room, room))
+                : eq(callResults.providerCallId, cid)))[0];
+}
+
 /** The last thing Staff actually said with real words in it — the line the status was decided by,
  *  quoted on the verdict step. ONE copy, used by every door that settles a verdict. */
 export function lastClerkLine(transcript: string | null | undefined): string | null {

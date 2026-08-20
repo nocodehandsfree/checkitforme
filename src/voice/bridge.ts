@@ -3240,8 +3240,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // the very same start as the question before it, because both landed inside one turn of his
         // audio). A turn's first sound belongs to the FIRST line of that turn; anything he says
         // after it files at its own moment, and gets its own end when its own sound plays.
+        // …AND A LINE OF HIS THAT HAS NO TURN START TO SPEND FILES WHERE THE STORE REALLY HEARS IT
+        // (owner's order, 08-20 evening, off check 428). The provider writes his next reply while the
+        // previous one is still playing out at the carrier, so "now" is a moment the store has not
+        // reached yet: 428's goodbye filed at 48.194s while his own question's sound ran to 49.947s,
+        // which reads as him talking over himself. Everything of ours already queued has to finish
+        // before a word of this one is heard, and `agentPlayingUntil` is exactly when that is.
         const hisStart = (hisTurnOpen && !hisTurnStartSpent && hisTurnAudioStartMs > 0 && Date.now() - hisTurnAudioStartMs < 20_000)
-          ? hisTurnAudioStartMs : undefined;
+          ? hisTurnAudioStartMs
+          : (agentPlayingUntil > Date.now() && agentPlayingUntil - Date.now() < 20_000 ? agentPlayingUntil : undefined);
         hisTurnStartSpent = true;
         // WHICH BRAIN WROTE THIS ONE (owner's go, 08-20). Stamped on the reply itself, not just on
         // the stretch, so the record answers "who wrote each line" line by line, with what it cost
@@ -3249,8 +3256,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         if (txt) stampWhoWroteIt();
         if (txt && recordLine(room, "Agent", String(txt), hisStart)) {
           hisTurnLineWritten = true;
+          // …AND THE END HIS SOUND WAS ALREADY HEADING FOR LANDS ON IT (owner's order, 08-20 evening,
+          // found beside 428's stamps). His frames go out before the provider sends us the words, so
+          // the end waits in `hisEndWaitingForWords` for the line to exist. It was cleared to nought
+          // on the line above the test that reads it, so it could never be true and the end never
+          // landed: every line of his written after its own sound had started kept no end at all.
+          const waiting = hisEndWaitingForWords;
           hisEndWaitingForWords = 0;
-          if (hisEndWaitingForWords > 0) { stampLineEnd(room, "Agent", hisEndWaitingForWords); hisEndWaitingForWords = 0; }
+          if (waiting > 0) stampLineEnd(room, "Agent", waiting);
           try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
         }
       } else if (m.type === "ping") {

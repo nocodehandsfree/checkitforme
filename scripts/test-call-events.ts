@@ -277,7 +277,7 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
 {
   // A 62 second check: 14s of menu, 18s of Charlie, the second read ran.
   const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48] });
-  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, speakingSecs: 7, listeningSecs: 2, menuWorked: true }, MEASURED_RATES, STATUS_READ_USD);
+  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, speakingSecs: 7, listeningSecs: 2, menuWalkedBy: "bravo" }, MEASURED_RATES, STATUS_READ_USD);
   // ONE LINE PER NAME (owner 08-07). Echo's words shipped as a second Echo line and he sent it back:
   // everything Echo does rolls up under Echo, and the line opens to show the pieces.
   ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Ears) · Charlie (Voice) · Status (Verification)",
@@ -291,7 +291,7 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
   ok(voice.detail.some(([l, v]) => l === "Speaking" && v.startsWith("7s · ")), "his line opens to the seconds he spoke");
   ok(voice.detail.some(([l, v]) => l === "Listening" && v.startsWith("2s · ")), "…the seconds somebody spoke to him");
   ok(voice.detail.some(([l, v]) => l === "Waiting" && v.startsWith("9s · ")), "…and the seconds nobody said anything, which is the waste");
-  ok(costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, menuWorked: true }, MEASURED_RATES, STATUS_READ_USD)
+  ok(costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, menuWalkedBy: "bravo" }, MEASURED_RATES, STATUS_READ_USD)
     .find((x) => x.key === "charlie")!.detail.every(([l]) => l !== "Speaking"),
     "a check recorded before we measured them shows no split rather than an invented one");
   const sum = b.reduce((n, x) => n + x.usd, 0);
@@ -350,7 +350,7 @@ console.log("\n▶ EVERYTHING CHARLIE COSTS IS UNDER CHARLIE, AND THE BUCKETS ST
 {
   const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48],
     ttsChars: 300, brainInTokens: 4200, brainOutTokens: 90, brainModel: "claude-sonnet-4-6" });
-  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, speakingSecs: 7, listeningSecs: 2, menuWorked: true }, MEASURED_RATES, STATUS_READ_USD);
+  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, speakingSecs: 7, listeningSecs: 2, menuWalkedBy: "bravo" }, MEASURED_RATES, STATUS_READ_USD);
   const voice = b.find((x) => x.key === "charlie")!;
   ok(voice.detail.some(([l]) => l === "ElevenLabs speaking his words"), "his line opens to what ElevenLabs charged to say his words");
   ok(voice.detail.some(([l]) => l === "Anthropic writing his replies"), "…and to what Anthropic charged to write them");
@@ -363,18 +363,30 @@ console.log("\n▶ EVERYTHING CHARLIE COSTS IS UNDER CHARLIE, AND THE BUCKETS ST
   ok(!bravo.detail.some(([l]) => l === "Spoken menu words"), "the speaking charge is no longer filed under the menu");
 }
 
-console.log("\n▶ THE FIRST BUCKET ONLY SAYS MENU WHEN A MENU WAS WORKED (owner's order, 08-20, fix 4)");
+console.log("\n▶ ONLY A CHECK THAT REALLY WORKED A MENU SHOWS ONE (owner's order, 08-20 evening)");
 {
   const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48] });
-  const worked = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, menuWorked: true }, MEASURED_RATES, 0).find((x) => x.key === "bravo")!;
-  ok(worked.label === "Bravo (Menu Nav)", `a check that really walked a menu still says so (${worked.label})`);
-  ok(worked.detail.some(([l, v]) => l === "Menu time" && v === "0:14"), "…and its row is the menu time it priced");
-  // A store that simply picked the phone up walked no menu. Those seconds are the phone line and
-  // Echo listening through the ringing and the greeting, which is what the row says now.
-  const direct = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2 }, MEASURED_RATES, 0).find((x) => x.key === "bravo")!;
-  ok(direct.label === "Before a person answered", `a direct check no longer claims a menu (${direct.label})`);
-  ok(direct.detail.some(([l, v]) => l === "Ringing and greeting" && v === "0:14"), "…and its row says what those seconds really were");
-  ok(direct.usd === worked.usd, "the money is the same either way: this is the NAME being true, never a re-price");
+  const bucketsFor = (by: "alpha" | "bravo" | null) =>
+    costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, menuWalkedBy: by }, MEASURED_RATES, 0);
+  // NAMED FOR WHAT REALLY RAN. Alpha presses keys, Bravo says the menu word, and the row was
+  // hard-labelled Bravo whichever one had walked it.
+  const said = bucketsFor("bravo").find((x) => x.key === "bravo")!;
+  ok(said.label === "Bravo (Menu Nav)", `a menu walked by speaking says Bravo (${said.label})`);
+  const pressed = bucketsFor("alpha").find((x) => x.key === "bravo")!;
+  ok(pressed.label === "Alpha (Menu Nav)", `a menu walked by pressing keys says Alpha (${pressed.label})`);
+  ok(said.detail.some(([l, v]) => l === "Menu time" && v === "0:14"), "…and either way its row is the menu time it priced");
+  // NO MENU, NO ROW. On check 428 the store simply picked the phone up and the row still claimed
+  // 4 seconds of menu. There is nothing to show, so it shows nothing and its seconds go back.
+  const direct = bucketsFor(null);
+  ok(!direct.some((x) => x.key === "bravo"), "a check that walked no menu shows no menu row at all",
+    direct.map((x) => x.label));
+  const fox = direct.find((x) => x.key === "foxtrot")!;
+  const ears = direct.find((x) => x.key === "echo")!;
+  ok(fox.usd === cost.lineUsd, "…the phone line gets every one of its own seconds back", { row: fox.usd, line: cost.lineUsd });
+  ok(ears.usd === cost.forkUsd + cost.sttUsd, "…and Echo gets every one of its own back too", { row: ears.usd, fork: cost.forkUsd, stt: cost.sttUsd });
+  ok(direct.reduce((n, x) => n + x.usd, 0) === bucketsFor("bravo").reduce((n, x) => n + x.usd, 0),
+    "and the check costs exactly the same either way: this is the NAME and the SHARE being true, never a re-price");
+  ok(direct.reduce((n, x) => n + x.usd, 0) === cost.totalUsd, "…and the lines still sum to the whole total");
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -397,6 +409,57 @@ console.log("▶ a spoken line is filed at the moment it was really said");
   recordLine("room-clock", "Clerk", "We did not.", 1_019);
   ok(near(r.transcript[2].atMs, 30_000, 60), `a number that cannot be a moment is refused (got ${r.transcript[2].atMs}ms)`);
   ok(r.transcript.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the conversation stays in the order it happened");
+}
+
+// ---------------------------------------------------------------------------------------------
+// CHECK 428: STAFF'S ANSWER LOST ITS TIME (owner's order, 08-20 evening).
+// "Pitch black the booster boxes." came back stamped 45420 to 45420 — a line with no length, at the
+// very instant Charlie's question starts. It had carried its own start and its own end on checks
+// 425, 426 and 427. Echo does not stamp a line when the words arrive: it reads the moment off the
+// audio stream's own clock, so a line that comes back with BOTH a start and an end is a sentence we
+// measured from its first sound to its last, and losing it to the transcriber being a beat slow is
+// the fault. The guard is that it may only step back over a line its own SOUND FINISHED BEFORE.
+console.log("\n▶ CHECK 428'S MOMENT: a whole sentence Echo measured keeps its own start and end");
+{
+  _reset();
+  const r = openReceipt("room-428-clock");
+  const t0 = Date.now() - 50_000;                         // the check opened 50 seconds ago
+  r.startMs = t0;
+  // Staff come back and answer. Charlie's reply is HELD while its sound is made, so his line is
+  // written first, at the moment his voice really starts — 45.420 on 428.
+  recordLine("room-428-clock", "Agent", "Oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a box?",
+    t0 + 45_420, undefined, undefined, t0 + 49_947);
+  // …and Echo's writing of what Staff said lands a beat later, carrying the two moments it measured
+  // on the audio itself: they spoke 44.3 to 45.0, which is BEFORE his question started.
+  recordLine("room-428-clock", "Clerk", "Pitch black the booster boxes.", t0 + 44_300, undefined, undefined, t0 + 45_000);
+  const staff = r.transcript.find((l) => l.who === "Clerk")!;
+  ok(staff.atMs === 44_300, `Staff's answer keeps the moment Echo measured (${staff.atMs}ms)`);
+  ok(staff.endMs === 45_000, `…and its own end, so it is not a line with no length (${staff.endMs}ms)`);
+  ok(staff.endMs! > staff.atMs, "…the line has a real length again");
+  ok(r.transcript[0].who === "Clerk", "…and it reads before the question it came in ahead of");
+  ok(r.transcript.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the conversation is still in one order, oldest first");
+}
+
+console.log("\n▶ …AND CHECK 372'S FAULT STILL CANNOT COME BACK");
+{
+  // 372: a reply that really ANSWERED our question was stamped as if it came first, and printed
+  // above it. That line's sound did not finish before the question began, so it may never step back.
+  _reset();
+  const r = openReceipt("room-372-guard");
+  const t0 = Date.now() - 50_000;
+  r.startMs = t0;
+  recordLine("room-372-guard", "Agent", "do you have any Pokemon cards in stock?", t0 + 20_000, undefined, undefined, t0 + 24_000);
+  // Their answer, mis-stamped as starting before our question and still talking through it.
+  recordLine("room-372-guard", "Clerk", "Next week maybe?", t0 + 19_000, undefined, undefined, t0 + 26_000);
+  ok(r.transcript[0].who === "Agent", "a line still talking through the question can never print above it");
+  ok(r.transcript[1].atMs === 20_000, "…it is held at the question's moment, exactly as it always was");
+  // And a stamp with no end at all is the 372 shape itself: nothing measured, nothing to trust.
+  _reset();
+  const r2 = openReceipt("room-372-noend");
+  r2.startMs = t0;
+  recordLine("room-372-noend", "Agent", "do you have any Pokemon cards in stock?", t0 + 20_000);
+  recordLine("room-372-noend", "Clerk", "Next week maybe?", t0 + 19_000);
+  ok(r2.transcript[0].who === "Agent", "a stamp with no measured end never rearranges the story either");
 }
 
 // ---------------------------------------------------------------------------------------------
