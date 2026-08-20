@@ -1,6 +1,33 @@
 # ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-20, Echo 4)
 
-## WHERE ECHO 4 GOT TO (08-20 evening) — FOUR FIXES BUILT AND PROVEN, THE DIAL IS STILL NOT RUN
+## WHERE ECHO 4 GOT TO — FOUR FIXES BUILT, DIALLED, AND CHECK 428 PASSED (08-20 evening)
+
+### THE DIAL: CHECK 428, "Hold: music with advert" — THE PILL SAYS TEST PASSED
+Card's five needed rows all true (handed_to_charlie · question_recorded · meter_stopped_on_hold ·
+wrapped_up · charlie_ended_the_check), status in_stock, and THE METER PASSES WITH ZERO FAILS.
+- **Meter 24s on the record, 17s graded**, against his 31 line and his 23 goal.
+- **Awake on hold 6s** — yellow under his new bands (green 3, yellow 8, red from 9) and RED under the
+  old ones. That row is exactly what fix 2 was for.
+- Answer gap worst turn 1s green · Echo handover 2s · drop gap 1s green · profit 71% real / 76% graded.
+- **THE SILENCE FAULT IS GONE, ON A REAL DIAL.** Their voice came back at 37.479s, "Oh, hey!" played
+  at 40.600s (3.1 seconds), and **his full reply played on its own at 45.420s with nothing from Staff
+  in between**: "Oh nice, do you know the name of the set, like Chaos Rising, and is it a pack or a
+  box?" On 427 that line never existed and Staff had to speak first.
+- **THE MONEY IS TRUE: 7.2¢, Charlie 4.6¢, of which ElevenLabs speaking his words 0.2¢**
+  (`clipsUsd` 2426 microdollars = 16 characters really synthesized: the fresh hello, made once per
+  reconnect). Anthropic writing 0.0¢ because the switch was OFF and the hosted agent did the
+  thinking — the writing charge gets its first live proof on the Fun store check.
+- **The first bucket read "Before a person answered"** with a "Ringing and greeting" row, which is
+  the truth on scene 22's store: it picks the phone up, there is no menu.
+- **THE ONE HARNESS RED is the 08-07 screen family**: the customer's result screen said left on hold
+  while the record says in_stock. Known, pre-existing on hold checks (301, 366, 373), not the card's.
+  It was absent on 427 and is back on 428, so it is not fixed, it is intermittent. Worth one look
+  before real customers meet it.
+
+### CHECKS 425 AND 426 ARE SETTLED
+Both read in_stock on the Testing list, settled through the fixed door on their own recorded words.
+
+
 
 ## THE MONEY FIXES (owner's order, 08-20 evening; commit c6f7d95 on staging)
 **FIX 3, THE MONEY MUST BE TRUE.** Check 427's sheet said Charlie cost 0.0¢. Two real bills were
@@ -38,10 +65,8 @@ every settling door reads as still in progress, FOR EVER. Fixed: `finishedRecord
 reads it from the database, `over` is the record's own hangup row and never a clock, and the
 `bridge:<room>` branch of `/pub/result/:cid` hands a finished unsettled check to the same settling
 path every other check takes (repointing the row at `ours:<room>`, which is what it really was).
-**THE TWO ROWS ARE NOT SETTLED YET** — the fix has to be LIVE first. The moment staging serves
-c6f7d95, hit `/pub/result/bridge:ad6032fe-969a-47c3-b685-6f0a501bd2d6` (425) and
-`/pub/result/bridge:76684a9f-e46d-4492-820b-7069727a6746` (426) with the admin token, then re-read
-the Testing list to prove both carry an answer.
+**BOTH ROWS ARE SETTLED** — hit through `/pub/result/bridge:<room>` with the admin token once the
+fix was live, and the Testing list now reads 425 in_stock 7.4¢ and 426 in_stock 4.4¢.
 
 Suites after these: call-events 142 · ourbrain 36 · dropped-call 39 · delta-clip 432 · meter 96 ·
 behaved 109 · bridge 13 · tsc clean.
