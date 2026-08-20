@@ -1,9 +1,44 @@
-# ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-19, Echo 3)
+# ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-20, Echo 4)
 
 Boot per CLAUDE.md, then read this file, `docs/team/voice-calls/RULES.md` (every line),
-`checkpoint.md`, and `docs/team/voice-calls/next-box.md` (the owner's box, most of it now done).
-Work on `staging`. Robot store only, never the Fun store. Never push while a check is in the air
-(`/api/admin/test-calls?limit=1`). Report every check by its NUMBER.
+`checkpoint.md`, and `docs/team/voice-calls/next-box.md`. Work on `staging`. Never push while a
+check is in the air (`/api/admin/test-calls?limit=1`). Report every check by its NUMBER.
+
+## YOUR ORDER (owner, 08-20 morning) — two fixes, one dial, then ONE Fun store check on his word
+Prove BOTH on the workbench recordings before any dial.
+
+**FIX 1, THE SILENCE FAULT.** After Charlie's two word hello on a comeback, his FULL reply must play
+on its own. On check 427 the question he was meant to ask, "do you know the name of the set, like
+Chaos Rising, and is it a pack or a box?", never played and Staff had to speak first.
+- WHERE IT LIVES: `earlyTurn` in `src/voice/bridge.ts` (~line 900). `releaseTheEarlyTurn()` (~2065)
+  runs when the wake check proves a person. If his reply has not begun yet it sets `proved = true`,
+  keeps the turn alive so a reply he began BEFORE their words is still dropped as stale, and arms
+  `earlyTurnBackstop` for `EARLY_STALE_MS` (3000). The audio branch drops every frame while
+  `earlyTurn.fed.length && !earlyTurn.heldText.length`. **The suspicion to test first: our own
+  brain's reply announces itself AFTER that 3 second backstop has already nulled `earlyTurn`, or
+  the `agent_response` is swallowed by one of the guards above `recordLine` in that handler.** The
+  bridge log (`/pub/bridge-debug`) prints "our brain: …" for every reply it really wrote, so compare
+  that against the `brain_reply` rows on the record: on 427 the brain wrote ONE reply and one only.
+- `src/voice/**` is machine-locked: write the exact line `src/voice/**` into repo-root `.unlock`,
+  fix only that scope, then DELETE `.unlock`.
+
+**FIX 2, THE OWNER'S RULING ON AWAKE ON HOLD.** The seconds Charlie sits awake while the store has
+us waiting now PASS up to 8 and FAIL from 9. True seconds only, never an adjusted number.
+- WHERE: `AWAKE_ON_HOLD_GREEN` (3) and `AWAKE_ON_HOLD_YELLOW` (5) in `src/calls/meter.ts` lines
+  28-29. His new bands are green to 3 unchanged, yellow to 8, red from 9 — so `AWAKE_ON_HOLD_YELLOW`
+  becomes 8. `scripts/test-meter.ts` asserts the bands and the row's words; update both.
+
+**THEN dial "Hold: music with advert" ONCE on the practice store** (`ADMIN_TOKEN=… node
+scripts/robot-check.mjs 22`) and report PASSED or FAILED, true charged seconds, awake seconds, and
+that the set question played on its own after the hello.
+
+**THEN, ONLY AFTER THAT DIAL AND ONLY WHEN THE OWNER SAYS HE IS STANDING AT THE FUN STORE PHONE
+READY TO ANSWER**: run ONE staging check aimed at the Fun store with our own brain switched ON.
+- The switch: `curl -X PATCH .../api/policy -d '{"flags":{"ourBrain":true}}'`. It is OFF right now.
+- **THE MOMENT THAT CALL ENDS, PATCH IT BACK OFF.** His order, not a preference.
+- This is the ONE exception to "robot store only": he named the Fun store and he is answering it.
+- Report what he heard against what the record says.
+
 
 ## ECHO 3'S ORDER (08-19): three builds, in order, each proven before the next
 ONE the advert grading fix (below) · TWO the recorded goodbye ("thanks so much, have a good one",
