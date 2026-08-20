@@ -15,6 +15,7 @@ import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { callEvents, callResults, retailers, categories, statuses } from "../src/db/schema";
 import { findRecentCheck, recentlyDropped, weHungUpOnAHold, diedOnAHold, staffHungUpOn, billableOutcome } from "../src/calls/service";
+import { finishedRecordFromDb } from "../src/calls/receipt-store";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -147,6 +148,34 @@ async function main() {
     await db.update(callResults).set({ startedAt: now() - 40 * 60 })
       .where(eq(callResults.statusKey, "call_dropped"));
     ok(await recentlyDropped(store.id, cat.id, USER) === false, "and once the line is stale it falls back to the normal greeting");
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // A CHECK OUR OWN BRAIN RAN CAN STILL BE SETTLED AFTER A RESTART (owner's order, 08-20).
+  // On the hosted lane a settling door asks the voice provider what happened and their answer
+  // outlives our restarts. On our own lane there is no conversation of theirs, so the door reads OUR
+  // record — and it only ever read the live one, which a deploy empties. Checks 425 and 426 sat on
+  // the Testing list unsettled for exactly that, with their whole conversations written down.
+  console.log("\n▶ a check our own brain ran is still readable once the process that ran it is gone");
+  {
+    const room = "room-ourbrain-after-restart";
+    const [row] = await db.insert(callResults).values({
+      retailerId: store.id, categoryId: cat.id, room, providerCallId: `bridge:${room}`,
+      status: "in_progress", startedAt: now() - 300, finderUserId: USER,
+      transcript: "Clerk: Yeah, we've got a few of those.\nAgent: Oh nice, is it a pack or a box?\nClerk: Pitch Black, the booster boxes.",
+      callSeconds: 60,
+    }).returning();
+    // NOTHING IS IN MEMORY: this is a fresh process as far as the live record is concerned, exactly
+    // as it is after a deploy.
+    const before = await finishedRecordFromDb(room);
+    ok(before !== null, "the record is found in the database, not in memory");
+    ok(before?.over === false, "…and a check with no hang-up row on it is NOT called finished");
+    await db.insert(callEvents).values({ callId: row.id, room, atMs: 60000, atSec: 60, kind: "hangup", note: "Check ended", detail: null });
+    const after = await finishedRecordFromDb(room);
+    ok(after?.over === true, "the record's own hang-up row is what says the phone went down");
+    ok((after?.transcript ?? "").includes("Pitch Black"), "…and the whole conversation comes back with it, so the reader has the words");
+    ok(after?.durationSecs === 60, "…with the seconds the check really ran", );
+    ok(await finishedRecordFromDb("room-that-never-existed") === null, "a room with no check at all is still nothing, never an invented one");
   }
 
   console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);

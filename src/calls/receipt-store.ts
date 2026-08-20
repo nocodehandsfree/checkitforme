@@ -37,6 +37,26 @@ export async function currentRates(): Promise<Rates> {
 
 /** Find the call_results row this receipt belongs to. Null when the call never got a row (a bench
  *  call, or a dial the carrier refused) — the timeline is still written, just unattached. */
+/** THE TWO CHARGES THAT ARE BILLED BY THE PIECE, NOT BY THE SECOND (owner's order, 08-20, fix 3).
+ *  ElevenLabs charges per character to say his words and Anthropic charges per token to write them.
+ *  Both were spent on every check our own brain ran and neither was ever counted, which is why the
+ *  sheet printed 0.0¢ for Charlie on check 427. The counts are measured live on the call; the model
+ *  that wrote the words is read off the check's own `brain_reply` rows, so a check is priced by the
+ *  brain that really answered it. */
+function brainAndSpeech(r: Receipt, sums: ReturnType<typeof rollup>): { ttsChars: number; brainInTokens: number; brainOutTokens: number; brainModel: string | null } {
+  let brainModel: string | null = null;
+  for (const e of r.events) {
+    const d = (e.detail || {}) as { step?: string; model?: string };
+    if (d.step === "brain_reply" && d.model) brainModel = d.model;
+  }
+  return {
+    ttsChars: sums.spokenChars,
+    brainInTokens: sums.brainInTokens,
+    brainOutTokens: sums.brainOutTokens,
+    brainModel,
+  };
+}
+
 async function findCallId(r: Receipt): Promise<number | null> {
   if (r.callId) return r.callId;
   const ids = [`bridge:${r.room}`, r.providerCallId].filter(Boolean) as string[];
@@ -90,6 +110,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
         callSecs: sums.callSecs, charlieSecs: sums.charliePaidSeconds,
         avoidableSecs: sums.charlieSilentSeconds,
         forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))],
+        ...brainAndSpeech(r, sums),
       }, rates);
       await db.update(callEvents)
         .set({ detail: JSON.stringify({ ...(last.detail ?? {}), seconds: sums, cost: c0 }).slice(0, 4000) })
@@ -103,6 +124,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       charlieSecs: sums.charliePaidSeconds,
       avoidableSecs: sums.charlieSilentSeconds,
       forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))],
+      ...brainAndSpeech(r, sums),
     }, rates);
 
     await db.update(callResults).set({
@@ -149,6 +171,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       costForkUsd: cost.forkUsd,
       costCharlieUsd: cost.charlieUsd,
       costClipsUsd: cost.clipsUsd,
+      costBrainUsd: cost.brainUsd,
       costSttUsd: cost.sttUsd,
       costTotalUsd: cost.totalUsd,
       costAvoidableUsd: cost.avoidableUsd,
@@ -164,6 +187,42 @@ export async function persistReceipt(r: Receipt): Promise<void> {
  * time we know what the clerk said the receipt is closed and flushed. It is appended directly, at
  * the second the call ended, so a replay finishes with the answer the customer got. Never throws.
  */
+/**
+ * A CHECK OUR OWN BRAIN RAN, READ BACK AFTER THE PROCESS THAT RAN IT IS GONE (owner's order, 08-20).
+ *
+ * On the hosted lane a settling door asks the voice provider what happened, and their answer outlives
+ * our restarts. On our own lane there is no conversation of theirs to ask about, so the door reads
+ * OUR record — and it only ever read the in-memory one. A deploy, a crash or simply an hour passing
+ * empties that, and from then on the check answered "still in progress" for ever: that is what left
+ * checks 425 and 426 unsettled on the Testing list with their whole conversations written down.
+ *
+ * The database's answer outlives the process, which is the rule this door already states out loud a
+ * few lines further down. So this is the same record, read from where it is kept. NULL when there is
+ * genuinely no row, and never a verdict of its own: the same reader that decides every other check
+ * decides this one from the words.
+ */
+export async function finishedRecordFromDb(room: string): Promise<
+  { callId: number; transcript: string; durationSecs: number; navSecs: number | null; over: boolean } | null> {
+  try {
+    const row = (await db.select({
+      id: callResults.id, transcript: callResults.transcript, callSeconds: callResults.callSeconds,
+      navSeconds: callResults.navSeconds, status: callResults.status,
+    }).from(callResults).where(eq(callResults.room, room)).limit(1))[0];
+    if (!row) return null;
+    // OVER MEANS THE RECORD SAYS THE PHONE WENT DOWN, never a clock and never a guess: the check's
+    // own timeline ends with the hang-up row every finished check writes.
+    const ended = await db.select({ id: callEvents.id }).from(callEvents)
+      .where(and(eq(callEvents.room, room), eq(callEvents.kind, "hangup"))).limit(1);
+    return {
+      callId: row.id,
+      transcript: row.transcript ?? "",
+      durationSecs: row.callSeconds ?? 0,
+      navSecs: row.navSeconds ?? null,
+      over: ended.length > 0,
+    };
+  } catch { return null; }
+}
+
 /** The last thing Staff actually said with real words in it — the line the status was decided by,
  *  quoted on the verdict step. ONE copy, used by every door that settles a verdict. */
 export function lastClerkLine(transcript: string | null | undefined): string | null {

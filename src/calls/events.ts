@@ -94,6 +94,18 @@ export interface Meters {
    *  session open and billing while the store had us on hold — waiting, music, or an advert playing
    *  at us. It is the waste that used to hide inside a passing check, so every sheet prints it. */
   awakeOnHoldMs: number;
+  /** CHARACTERS ELEVENLABS REALLY SPOKE FOR THIS CHECK (owner's order, 08-20, fix 3). Their speech
+   *  service bills per character, and a line served out of our own clip store is free — so this is
+   *  only ever the characters a clip was really MADE from on this call: the fresh two word hello, and
+   *  every line our own brain wrote, plus the opening question or the hold reply on the first check
+   *  that ever says them in that voice. It was uncounted until now, which is why a check run by our
+   *  own brain printed 0.0¢ for Charlie. */
+  spokenChars: number;
+  /** WHAT ANTHROPIC CHARGED FOR WRITING HIS REPLIES (owner's order, 08-20, fix 3). Real token counts
+   *  off the reply itself, never an estimate: the model reports both halves on every turn. Nought on
+   *  a check the hosted agent ran, because then nobody wrote anything on our account. */
+  brainInTokens: number;
+  brainOutTokens: number;
 }
 
 /** One stretch of the reasoning agent being connected. Normally there is exactly one. If he is
@@ -113,6 +125,7 @@ export interface CharlieSegment {
 const zeroMeters = (): Meters => ({
   charlieOpenMs: null, charlieCloseMs: null, answeredMs: null, humanMs: null,
   navEndMs: null, endMs: null, speakingMs: 0, listeningMs: 0, ringingMs: 0, holdMs: null, awakeOnHoldMs: 0,
+  spokenChars: 0, brainInTokens: 0, brainOutTokens: 0,
 });
 
 export interface Receipt {
@@ -468,6 +481,19 @@ export function addMs(room: string, key: "speakingMs" | "listeningMs" | "ringing
   } catch { /* recording must never break a call */ }
 }
 
+/** WHAT THE OUTSIDE ACCOUNTS REALLY CHARGED, counted as it happens (owner's order, 08-20, fix 3).
+ *  The same running-total door `addMs` is, for the two things that are billed by the piece rather
+ *  than by the second: the characters ElevenLabs really spoke, and the tokens Anthropic really read
+ *  and wrote. Counted at the moment of the charge so nothing has to be worked out backwards from a
+ *  transcript afterwards, which would be a guess. */
+export function addCount(room: string, key: "spokenChars" | "brainInTokens" | "brainOutTokens", n: number): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed || !Number.isFinite(n) || n <= 0) return;
+    r.meters[key] = (r.meters[key] ?? 0) + Math.round(n);
+  } catch { /* recording must never break a call */ }
+}
+
 /**
  * "We are now measuring this." Turns a meter that means "never checked" (null) into a real,
  * measured zero — which is a different fact, and the dashboard has to be able to tell them apart.
@@ -534,6 +560,13 @@ export interface Rollup {
   /** Of those, the seconds the voice provider's own conversation service really billed. Equal to
    *  `charlieConnectedSeconds` on every hosted check; smaller on one our own brain ran. */
   charliePaidSeconds: number;
+  /** WHAT THE OUTSIDE ACCOUNTS REALLY CHARGED BY THE PIECE (owner's order, 08-20, fix 3): the
+   *  characters ElevenLabs really spoke on this check, and the tokens Anthropic really read and
+   *  wrote. Both nought on a check where nothing fresh was said and the hosted agent did the
+   *  thinking. */
+  spokenChars: number;
+  brainInTokens: number;
+  brainOutTokens: number;
   /** Of that, seconds somebody was actually speaking. Connected minus this is the waste. */
   charlieTalkingSeconds: number;
   /** The waste, spelled out so nobody has to subtract. */
@@ -634,6 +667,9 @@ export function rollup(r: Receipt): Rollup {
     talkSeconds: m.humanMs !== null ? Math.max(0, callSecs - sec(m.humanMs)) : null,
     charlieConnectedSeconds: charlieSecs,
     charliePaidSeconds: charliePaidSecs,
+    spokenChars: m.spokenChars,
+    brainInTokens: m.brainInTokens,
+    brainOutTokens: m.brainOutTokens,
     charlieTalkingSeconds: speakingSecs + listeningSecs,
     charlieSilentSeconds: silentSecs,
     speakingSecs,
@@ -737,6 +773,12 @@ export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string;
     charliePaidSeconds: stamped
       ? (call.brain === "ours" ? 0 : call.charlieConnectedSeconds!)
       : 0,
+    // THE PIECE COUNTS ARE NOT ON THE ROW. They are counted live while the check runs and priced
+    // into its cost at the moment it settles, so reading a finished row back reports nought rather
+    // than a number invented from a transcript (owner's order, 08-20, fix 3).
+    spokenChars: 0,
+    brainInTokens: 0,
+    brainOutTokens: 0,
     charlieTalkingSeconds: stamped ? (call.charlieTalkingSeconds ?? 0) : 0,
     charlieSilentSeconds: stamped ? (call.charlieSilentSeconds ?? 0) : 0,
     speakingSecs: stamped ? (call.charlieSpeakingSeconds ?? 0) : 0,

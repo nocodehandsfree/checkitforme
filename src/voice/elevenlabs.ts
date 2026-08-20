@@ -20,6 +20,9 @@ import type {
 import { SOFT_TIMEOUT_FALLBACK, kioskNote, departmentNote, SET_EXAMPLE } from "./prompts";
 import { assertCallsEnabled } from "../config";
 import { getReceipt, transcriptOf, rollup } from "../calls/events";
+// The same record, read from where it survives a restart. Kept in receipt-store because that is the
+// one file that owns writing a check's record to the database (owner's order, 08-20).
+import { finishedRecordFromDb } from "../calls/receipt-store";
 
 /**
  * THE OUTCOME OF A CHECK OUR OWN BRAIN RAN, read off our own record (owner's go, 08-20).
@@ -29,10 +32,24 @@ import { getReceipt, transcriptOf, rollup } from "../calls/events";
  * wrote every word live, the receipt holds the clock — and the verdict itself is left NULL on
  * purpose, so the same second reader that decides every other check decides this one from the words.
  */
-function ourOwnRecord(providerCallId: string): CallOutcome | null {
+async function ourOwnRecord(providerCallId: string): Promise<CallOutcome | null> {
   const room = providerCallId.slice("ours:".length);
   const r = getReceipt(room);
-  if (!r) return null;                       // the record has gone: a later door will settle it
+  // THE PROCESS THAT RAN IT IS GONE (owner's order, 08-20). A deploy, a crash or an hour passing
+  // empties the live record, and this used to answer "nothing here", which every settling door reads
+  // as still in progress. Checks 425 and 426 sat on the Testing list unsettled for exactly that
+  // reason, with their whole conversations written down the whole time. The database's answer
+  // outlives the process, so it is read from there instead. Still no verdict of ours: the same
+  // reader that decides every other check decides this one, from the words.
+  if (!r) {
+    const kept = await finishedRecordFromDb(room);
+    if (!kept || !kept.over) return null;    // genuinely nothing, or the phone is still up
+    return {
+      callId: kept.callId, providerCallId, confirmed: null, categoryResults: {}, shipmentDay: null,
+      summary: "", transcript: kept.transcript, durationSecs: kept.durationSecs, navSecs: kept.navSecs,
+      status: "completed",
+    };
+  }
   const words = transcriptOf(r);
   const sums = rollup(r);
   return {
@@ -121,7 +138,7 @@ export class ElevenLabsProvider implements VoiceProvider {
     // asks this one question, so answering it from the record is what lets all three keep working
     // untouched: the words are ours, written live by Echo, and the reader decides from them exactly
     // as it does on a hosted check.
-    if (providerCallId.startsWith("ours:")) return ourOwnRecord(providerCallId);
+    if (providerCallId.startsWith("ours:")) return await ourOwnRecord(providerCallId);
     const res = await fetch(`${BASE}/conversations/${providerCallId}`, { headers: this.headers() });
     if (!res.ok) return null;
     const d = (await res.json()) as ElevenLabsConversation;

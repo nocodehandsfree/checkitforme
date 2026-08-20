@@ -227,20 +227,28 @@ export async function brainReply(
   system: string,
   turns: Array<{ role: string; content: string }>,
   maxTokens = 120,
-): Promise<{ text: string; model: string; ms: number }> {
+): Promise<{ text: string; model: string; ms: number; inTokens: number; outTokens: number }> {
   const model = await brainModel();
   const started = Date.now();
   const ask: Ask = { system, turns, maxTokens };
+  // WHAT THIS REPLY REALLY COST TO WRITE (owner's order, 08-20, fix 3). The model reports both
+  // halves on its own stream, so the check is charged a MEASURED number and never a guess from the
+  // length of a sentence. A stream that says nothing about its tokens leaves these at nought and
+  // the check simply carries no writing charge, which is the honest answer when nobody told us.
+  const used: TokenCount = { inTokens: 0, outTokens: 0 };
   let upstream: AsyncGenerator<string>;
-  try { upstream = await openStream(model, ask); }
+  try { upstream = await openStream(model, ask, used); }
   catch (e) {
     console.error("[brain] first try failed, one immediate retry:", String(e).slice(0, 160));
-    upstream = await openStream(model, ask);
+    upstream = await openStream(model, ask, used);
   }
   let text = "";
   for await (const piece of upstream) text += piece;
-  return { text: text.trim(), model, ms: Date.now() - started };
+  return { text: text.trim(), model, ms: Date.now() - started, inTokens: used.inTokens, outTokens: used.outTokens };
 }
+
+/** The tokens one turn really read and wrote, filled in as the stream runs. */
+export interface TokenCount { inTokens: number; outTokens: number }
 
 interface Ask { system: string; turns: Array<{ role: string; content: string }>; maxTokens: number; temperature?: number }
 
@@ -254,7 +262,7 @@ export function brainProvider(model: string): { kind: "groq" | "openai" | "anthr
 
 /** Open a streamed turn on whichever account the model names. Yields text as it arrives, because
  *  the provider starts speaking on the first words and anything else adds silence the clerk hears. */
-async function openStream(model: string, o: Ask): Promise<AsyncGenerator<string>> {
+async function openStream(model: string, o: Ask, used?: TokenCount): Promise<AsyncGenerator<string>> {
   const p = brainProvider(model);
   if (p.kind === "anthropic") {
     const key = config.anthropicKey;
@@ -270,8 +278,18 @@ async function openStream(model: string, o: Ask): Promise<AsyncGenerator<string>
       }),
     });
     if (!r.ok || !r.body) throw new Error(`anthropic ${r.status}: ${(await r.text().catch(() => "")).slice(0, 160)}`);
-    return sse(r.body, (ev) => (ev as { type?: string; delta?: { text?: string } }).type === "content_block_delta"
-      ? (ev as { delta?: { text?: string } }).delta?.text ?? "" : "");
+    return sse(r.body, (ev) => {
+      const e = ev as { type?: string; delta?: { text?: string }; message?: { usage?: { input_tokens?: number; output_tokens?: number } }; usage?: { input_tokens?: number; output_tokens?: number } };
+      // Their own counts, off their own frames: the opening frame carries what it read, the closing
+      // one what it wrote.
+      if (used) {
+        const started = e.type === "message_start" ? e.message?.usage : undefined;
+        if (started?.input_tokens) used.inTokens = started.input_tokens;
+        if (started?.output_tokens) used.outTokens = started.output_tokens;
+        if (e.type === "message_delta" && e.usage?.output_tokens) used.outTokens = e.usage.output_tokens;
+      }
+      return e.type === "content_block_delta" ? e.delta?.text ?? "" : "";
+    });
   }
   const key = p.kind === "groq" ? config.groqKey : config.openaiKey;
   if (!key) throw new Error(`no key for the ${p.kind} account`);
@@ -290,10 +308,20 @@ async function openStream(model: string, o: Ask): Promise<AsyncGenerator<string>
         ...(o.turns.length ? o.turns : [{ role: "user", content: "(the line is quiet)" }]),
       ],
       stream: true,
+      // Ask for the token counts on the last frame. Without this they simply never arrive and a
+      // check would carry no writing charge at all (owner's order, 08-20, fix 3).
+      stream_options: { include_usage: true },
     }),
   });
   if (!r.ok || !r.body) throw new Error(`${p.kind} ${r.status}: ${(await r.text().catch(() => "")).slice(0, 160)}`);
-  return sse(r.body, (ev) => (ev as { choices?: Array<{ delta?: { content?: string } }> }).choices?.[0]?.delta?.content ?? "");
+  return sse(r.body, (ev) => {
+    const e = ev as { choices?: Array<{ delta?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+    if (used && e.usage) {
+      if (e.usage.prompt_tokens) used.inTokens = e.usage.prompt_tokens;
+      if (e.usage.completion_tokens) used.outTokens = e.usage.completion_tokens;
+    }
+    return e.choices?.[0]?.delta?.content ?? "";
+  });
 }
 
 /** Read a server-sent-events body and yield whatever `pick` finds in each frame. Shared, so one

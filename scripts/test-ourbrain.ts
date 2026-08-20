@@ -56,20 +56,22 @@ function stubTheWorld(o: { reply?: string; thinkMs?: number; speakMs?: number; s
   return { restore: () => { globalThis.fetch = real; }, counts: () => ({ asked, spoke, spokenText }) };
 }
 
-/** One session, with everything it says back collected in order. */
+/** One session, with everything it says back collected in order — and every charge it reported. */
 function sessionUnderTest(onStumble?: (why: string) => void) {
   const said: Array<Record<string, unknown>> = [];
   const stumbles: string[] = [];
+  const spend: Array<{ inTokens: number; outTokens: number; spokenChars: number; model: string }> = [];
   const s: OurBrainSession = openOurBrainSession({
     dynamicVars: { category: "Pokémon cards", personality: "warm", set_example: "Chaos Rising" },
     voiceId: "voice_test",
     room: "room-under-test",
     log: () => { /* quiet */ },
     onStumble: (why) => { stumbles.push(why); onStumble?.(why); },
+    onSpend: (sp) => spend.push(sp),
   });
   s.on("message", (b: Buffer) => { try { said.push(JSON.parse(String(b))); } catch { /* not ours */ } });
   const of = (type: string) => said.filter((m) => m.type === type);
-  return { s, said, stumbles, of };
+  return { s, said, stumbles, of, spend };
 }
 
 console.log("▶ A FULL TURN, END TO END: their words in, his voice out");
@@ -256,6 +258,43 @@ console.log("\n▶ HIS INSTRUCTIONS ARE THE SAME ONES, WORD FOR WORD");
   ok(RESTOCK_PROMPT.includes("{{category}}"), "…off the very prompt the hosted agent is configured with");
   s.close();
   globalThis.fetch = real;
+}
+
+// -------------------------------------------------------------------------------------------
+// THE MONEY MUST BE TRUE (owner's order, 08-20, fix 3). Check 427's sheet said Charlie cost 0.0¢
+// because the only thing priced was the voice provider's per second conversation charge, which our
+// own brain does not use. Two real bills were paid on that check and neither was counted.
+console.log("\n▶ EVERY TURN REPORTS WHAT IT REALLY COST OUTSIDE");
+{
+  const world = stubTheWorld({ reply: "Oh nice, is it a pack or a box?" });
+  const { s, spend } = sessionUnderTest();
+  await sleep(5);
+  s.send(JSON.stringify({ type: "user_message", text: "Yeah, we've got a few of those." }));
+  await sleep(120);
+  ok(spend.length === 1, "one turn, one report of what it cost", spend.length);
+  // ELEVENLABS CHARGES PER CHARACTER OF THE LINE IT IS ASKED TO SAY, and his lines are fresh every
+  // time, so this is really paid on every single turn.
+  ok(spend[0]?.spokenChars === "Oh nice, is it a pack or a box?".length,
+    "…the characters ElevenLabs was really asked to say, off the line itself", spend[0]?.spokenChars);
+  ok(spend[0]?.model.length > 0, "…and which brain wrote it, because the writing price is per model", spend[0]?.model);
+  world.restore();
+}
+
+console.log("\n▶ A LINE OUR OWN STORE ALREADY HELD IS NEVER CHARGED TWICE");
+{
+  // His replies are made fresh on purpose, so the store is skipped both ways and every turn is a
+  // real charge. What must never happen is a turn reporting characters it did not pay for.
+  const world = stubTheWorld({ reply: "Perfect, thanks so much, have a good one!" });
+  const { s, spend } = sessionUnderTest();
+  await sleep(5);
+  s.send(JSON.stringify({ type: "user_message", text: "Pitch Black, the booster boxes." }));
+  await sleep(120);
+  s.send(JSON.stringify({ type: "user_message", text: "Anything else?" }));
+  await sleep(120);
+  ok(spend.length === 2, "two turns, two charges", spend.length);
+  ok(spend.every((x) => x.spokenChars === "Perfect, thanks so much, have a good one!".length),
+    "…each one the real length of the line it really had said", spend.map((x) => x.spokenChars));
+  world.restore();
 }
 
 console.log(`\n════════════════════════════════`);

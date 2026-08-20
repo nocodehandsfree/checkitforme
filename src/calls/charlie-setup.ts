@@ -75,7 +75,7 @@ export function personWaitForStore(baseMs: number, directPickup: boolean): numbe
 export type CharlieShared = Pick<BridgeContext,
   | "agentId" | "apiKey" | "dynamicVars" | "onConversationId" | "openingClip" | "openingClipEs" | "midCallAgentId"
   | "departmentName" | "ourBrain" | "ourBrainAgentId" | "holdStrategy" | "tuning" | "timeLimitSec"
-  | "holdAckClip" | "holdAckClipEs"
+  | "holdAckClip" | "holdAckClipEs" | "clipCharsBilled"
   | "giveUpSeconds" | "earFromSec" | "voiceId" | "voiceTuning">;
 
 export type CharlieSetup =
@@ -112,6 +112,10 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
   let holdAckClip: BridgeContext["holdAckClip"];
   let holdAckClipEs: BridgeContext["holdAckClipEs"];
   let clipFailed = false;
+  // WHAT ELEVENLABS REALLY CHARGED TO RECORD THIS CHECK'S CLIPS (owner's order, 08-20, fix 3). Every
+  // one of these lines is kept and reused, so on all but the FIRST check in a voice this is nought —
+  // which is exactly why it has to be counted here rather than assumed either way.
+  let clipCharsBilled = 0;
   const question = input.dynamicVars.opening_line || "";
   // DELTA SWITCHED OFF ON PURPOSE (owner 08-07, the Delta: failed card). Nothing could ever make the
   // recording fail, so the fallback where Charlie asks the question himself had never been tested on
@@ -127,7 +131,7 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       return { refused: true, fault: "no-voice", reason: "no voice is set for this store's workflow, so the check was refused. Set one in Admin, Voice, Workflows." };
     }
     const c = await phoneClip(input.voiceId, question, input.voiceTuning || {}, input.apiKey);
-    if (c) openingClip = { audio: c.audio, ms: c.ms, text: c.text };
+    if (c) { openingClip = { audio: c.audio, ms: c.ms, text: c.text }; clipCharsBilled += c.charsBilled; }
     else clipFailed = true;
     // THE SAME QUESTION IN SPANISH, RECORDED BESIDE IT (owner 08-07). The sentence and an approved
     // reference recording of it have both existed for a while and nothing could ever reach them,
@@ -141,7 +145,7 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
     if (openingClip) {
       const es = DEFAULT_OPENER_ES.replace(/\{category\}/g, input.dynamicVars.category || "cartas");
       const cEs = await phoneClip(input.voiceId, es, input.voiceTuning || {}, input.apiKey).catch(() => null);
-      if (cEs) openingClipEs = { audio: cEs.audio, ms: cEs.ms, text: cEs.text };
+      if (cEs) { openingClipEs = { audio: cEs.audio, ms: cEs.ms, text: cEs.text }; clipCharsBilled += cEs.charsBilled; }
       else console.log("[charlie] no Spanish recording for this check, so a Spanish store hears the English question");
       // THE HOLD REPLY, RECORDED BESIDE THE QUESTION (owner box 08-16 late, off check 371: the
       // spoken version of "No worries, take your time!" cost 8 metered seconds while the outside
@@ -149,9 +153,9 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       // our own system the moment Staff announce a hold. Best effort: with no recording the check
       // runs exactly as it does today.
       const ack = await phoneClip(input.voiceId, HOLD_ACK_LINE, input.voiceTuning || {}, input.apiKey).catch(() => null);
-      if (ack) holdAckClip = { audio: ack.audio, ms: ack.ms, text: ack.text };
+      if (ack) { holdAckClip = { audio: ack.audio, ms: ack.ms, text: ack.text }; clipCharsBilled += ack.charsBilled; }
       const ackEs = await phoneClip(input.voiceId, HOLD_ACK_LINE_ES, input.voiceTuning || {}, input.apiKey).catch(() => null);
-      if (ackEs) holdAckClipEs = { audio: ackEs.audio, ms: ackEs.ms, text: ackEs.text };
+      if (ackEs) { holdAckClipEs = { audio: ackEs.audio, ms: ackEs.ms, text: ackEs.text }; clipCharsBilled += ackEs.charsBilled; }
     }
   }
 
@@ -165,6 +169,7 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       openingClipEs,
       holdAckClip,
       holdAckClipEs,
+      clipCharsBilled,
       midCallAgentId: config.voice.midCallAgentId,
       departmentName: input.departmentName,
       ourBrain: !!pol.flags?.ourBrain,

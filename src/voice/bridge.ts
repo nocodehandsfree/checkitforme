@@ -9,10 +9,13 @@ import { config } from "../config";
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
 import { HOLD_ACK_LINE, HOLD_ACK_LINE_ES, COMEBACK_HELLO_LINE, COMEBACK_HELLO_LINE_ES } from "../calls/charlie-setup";
-import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, stampLineEnd, lastLineEndEpoch, normSaid, getReceipt, whereItWouldDraw } from "../calls/events";
+import { emit, amend, markNow, addMs, addCount, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, stampLineEnd, lastLineEndEpoch, normSaid, getReceipt, whereItWouldDraw } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
 import { ConversationEar, looksLikeAPerson, type HoldReason } from "../calls/listen-nav";
+// What our own account charges to write one reply. Pure arithmetic on the model's own token counts,
+// so the row that names the brain can also say what that brain cost (owner's order, 08-20, fix 3).
+import { brainCostUsd } from "../calls/cost";
 import { TUNING_DEFAULTS, type CallTuning } from "../calls/tuning";
 // Delta's opening question: our own line, our own voice, already in phone format and already paid
 // for. The bridge only PLAYS it — synthesis and caching live outside the call path (clip-cache.ts).
@@ -108,6 +111,10 @@ export interface BridgeContext {
   // decides a call is finished. It exists so the clerk hears the question the instant they say
   // hello, while the expensive agent is still connecting behind it.
   openingClip?: { audio: Buffer; ms: number; text: string };
+  /** WHAT ELEVENLABS REALLY CHARGED TO RECORD THIS CHECK'S CLIPS, in characters (owner's order,
+   *  08-20, fix 3). Nought on every check but the first one in a voice, because the recordings are
+   *  kept and reused — and it is counted rather than assumed so the sheet can say which it was. */
+  clipCharsBilled?: number;
   /** THE SAME QUESTION IN SPANISH, recorded before the dial beside the English one (owner 08-07).
    *  Which of the two actually plays is decided at the moment we ask, off the WORDS of the store's
    *  own first line. Absent on a check that could not record one, and then the English one asks. */
@@ -407,6 +414,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** The same session when OUR OWN BRAIN is behind it (owner's go, 08-20), kept beside `eleven` so
    *  the record can name which brain wrote each reply and how long it took. Null on a hosted call. */
   let ourBrain: OurBrainSession | null = null;
+  /** WHAT THE OUTSIDE ACCOUNTS HAVE CHARGED SO FAR ON THIS CHECK (owner's order, 08-20, fix 3).
+   *  Kept here as well as on the receipt so every `brain_reply` row can print the running money
+   *  beside the running time, which is the whole point of moving the thinking to our own account. */
+  let brainInTokens = 0, brainOutTokens = 0, brainModelUsed = "";
   let ready = false;
   let frames = 0;
   let ended = false;
@@ -932,6 +943,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       .then((c) => {
         if (!c || ended) return;
         littleHello = { audio: c.audio, ms: c.ms, text: c.text };
+        // HIS TWO WORDS ARE THE ONE LINE THAT IS NEVER A RECORDING, so ElevenLabs is really paid to
+        // say them on every single check (owner's order, 08-20, fix 3). Counted at the moment they
+        // are made, which is the only moment anybody is charged for them.
+        addCount(room, "spokenChars", c.charsBilled);
         log(`little hello: "${c.text}" made fresh for this check, ${c.ms}ms`);
         maybeSayTheLittleHello("it finished being made");
       })
@@ -2072,7 +2087,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!ourBrain || eleven !== (ourBrain as unknown as WebSocket)) return;
     emit(room, "unknown", "Our own brain wrote that reply and the plain speech service said it in his voice",
       { step: "brain_reply", brain: "ours", model: ourBrain.brainModelUsed,
-        thinkMs: ourBrain.lastThinkMs, speakMs: ourBrain.lastSpeakMs, notASound: true });
+        thinkMs: ourBrain.lastThinkMs, speakMs: ourBrain.lastSpeakMs,
+        // AND WHAT IT COST, ON THE ROW ITSELF (owner's order, 08-20, fix 3): the tokens Anthropic
+        // really read and wrote across this check so far, and what they come to in money.
+        inTokens: brainInTokens, outTokens: brainOutTokens,
+        writingUsd: brainCostUsd(brainModelUsed || ourBrain.brainModelUsed, brainInTokens, brainOutTokens),
+        notASound: true });
   }
   /** THE WAKE CHECK SAID PERSON. Everything he thought while it was proving goes out now, in order,
    *  and his words are written down because the store really hears them. */
@@ -2621,6 +2641,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       ourBrain = openOurBrainSession({
         dynamicVars: joining && clipText ? { ...c.dynamicVars, opening_line: clipText } : c.dynamicVars,
         voiceId: c.voiceId!, voiceTuning: c.voiceTuning, apiKey: c.apiKey, joining, room, log, onStumble: stumble,
+        // WHAT EACH REPLY REALLY COST OUTSIDE, ONTO THE CHECK AS IT HAPPENS (owner's order, 08-20,
+        // fix 3). Anthropic's tokens for writing it and ElevenLabs' characters for saying it. Until
+        // this, both were spent and neither was counted, so a check our own brain ran read 0.0¢ for
+        // Charlie while two real bills were being paid on it.
+        onSpend: (sp) => {
+          brainInTokens += sp.inTokens; brainOutTokens += sp.outTokens; brainModelUsed = sp.model;
+          addCount(room, "brainInTokens", sp.inTokens);
+          addCount(room, "brainOutTokens", sp.outTokens);
+          addCount(room, "spokenChars", sp.spokenChars);
+        },
       });
       // It answers `on`, `emit`, `send`, `close` and `readyState` — every member this file touches on
       // a session — so from here the two lanes are the same code.
@@ -3637,6 +3667,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (!room && m.start?.customParameters?.room) { room = m.start.customParameters.room; hangSignoffDoor(); } // Twilio puts <Parameter> here; the check has its name NOW, so its door hangs now
       if (!ctx && room) ctx = contexts.get(room);
       adoptTuning(); // the Admin's numbers catch up with the room — the socket connected bare (check 364)
+      // WHAT WAS ALREADY PAID BEFORE THE PHONE RANG (owner's order, 08-20, fix 3). The opening
+      // question and the hold reply are recorded before the dial, so their characters are charged
+      // to the check they were made for and to nothing after it.
+      if (ctx?.clipCharsBilled) addCount(room, "spokenChars", ctx.clipCharsBilled);
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
       if (ctx?.connectOnHuman) {
         if (ctx.connectAtSec && ctx.connectAtSec > 0) {

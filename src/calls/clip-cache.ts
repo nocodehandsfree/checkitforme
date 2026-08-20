@@ -46,6 +46,12 @@ export interface PhoneClip {
   /** The words, kept for the transcript and the receipt. Never the audio. */
   text: string;
   voiceId: string;
+  /** WHAT ELEVENLABS REALLY CHARGED FOR THIS CLIP, in characters (owner's order, 08-20, fix 3).
+   *  Their speech service bills per character of the line it is asked to say, so a clip served out
+   *  of our own store — memory or disk — costs NOTHING and reads nought here. Only a clip really
+   *  made on this call carries its characters, which is why this is counted at the one door that
+   *  ever pays them rather than worked out afterwards from a transcript. */
+  charsBilled: number;
 }
 
 /** How many distinct clips we keep. Each is a few seconds of 8kHz audio (~8KB/second), so a
@@ -115,7 +121,10 @@ export async function phoneClip(voiceId: string, text: string, tuning: Record<st
     // Freshen: re-inserting moves it to the end of the map's order, so the oldest UNUSED clip is
     // the one that falls out when we hit the ceiling, not simply the oldest one.
     cache.delete(key); cache.set(key, hit);
-    return hit;
+    // The SECOND check to want this line pays nothing for it, so it is handed back with its
+    // characters at nought. The kept object carries the count from the call that really made it,
+    // and returning that object as-is would charge every later check for a clip nobody re-recorded.
+    return { ...hit, charsBilled: 0 };
   }
   // The same words in the same voice, kept from an earlier run: play those exact bytes rather than
   // paying to have them said again at a different length.
@@ -123,7 +132,8 @@ export async function phoneClip(voiceId: string, text: string, tuning: Record<st
   // one line that must never be a recording: made new on every check, in that check's own voice.
   const kept = fresh ? null : fromDisk(key);
   if (kept && kept.length) {
-    const clip: PhoneClip = { audio: kept, ms: Math.round(kept.length / ULAW_BYTES_PER_MS), text: words, voiceId };
+    // Kept from an earlier run, so nothing is paid for it now.
+    const clip: PhoneClip = { audio: kept, ms: Math.round(kept.length / ULAW_BYTES_PER_MS), text: words, voiceId, charsBilled: 0 };
     cache.set(key, clip);
     while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
     return clip;
@@ -138,7 +148,8 @@ export async function phoneClip(voiceId: string, text: string, tuning: Record<st
     if (!r.ok) { console.error("[clip] synth", r.status, (await r.text()).slice(0, 120)); return null; }
     const audio = Buffer.from(await r.arrayBuffer());
     if (!audio.length) return null;
-    const clip: PhoneClip = { audio, ms: Math.round(audio.length / ULAW_BYTES_PER_MS), text: words, voiceId };
+    // Really made, right now, so this is the one clip on this call that ElevenLabs bills us for.
+    const clip: PhoneClip = { audio, ms: Math.round(audio.length / ULAW_BYTES_PER_MS), text: words, voiceId, charsBilled: words.length };
     if (fresh) return clip;   // never kept, never served to another check
     cache.set(key, clip);
     toDisk(key, audio);
@@ -167,7 +178,7 @@ export async function mp3Clip(voiceId: string, text: string, tuning: Record<stri
   // means nothing for an MP3, so it stays zero here exactly as it does on a fresh recording.
   const kept = fromDisk(key);
   if (kept && kept.length) {
-    cache.set(key, { audio: kept, ms: 0, text: words, voiceId });
+    cache.set(key, { audio: kept, ms: 0, text: words, voiceId, charsBilled: 0 });
     while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
     return kept;
   }
@@ -183,7 +194,9 @@ export async function mp3Clip(voiceId: string, text: string, tuning: Record<stri
     if (!audio.length) return null;
     // ms is the μ-law identity (bytes ÷ 8) and means nothing for an MP3, so it is left at zero rather
     // than filled with a number that would be wrong wherever it was read.
-    cache.set(key, { audio, ms: 0, text: words, voiceId });
+    // The MP3 door is the robot store's own line and never a customer check, so nothing here is
+    // charged to a check; the count stays where the check can see it, on the phone-clip door.
+    cache.set(key, { audio, ms: 0, text: words, voiceId, charsBilled: 0 });
     toDisk(key, audio);
     while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
     return audio;

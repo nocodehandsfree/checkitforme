@@ -45,6 +45,11 @@ export interface OurBrainOpts {
   /** OUR SIDE STUMBLED MID CALL. The runtime hands the call back to the provider's hosted agent in
    *  the same voice and the person never notices — the fallback is law (spec §7, rung two). */
   onStumble: (why: string) => void;
+  /** WHAT THIS TURN REALLY COST OUTSIDE (owner's order, 08-20, fix 3). Reported the moment each
+   *  charge happens: the tokens Anthropic read and wrote for the reply, and the characters
+   *  ElevenLabs was really asked to say. Both go straight onto the check's own record, so the money
+   *  on the sheet is measured and never worked out backwards from a transcript. */
+  onSpend?: (spend: { inTokens: number; outTokens: number; spokenChars: number; model: string }) => void;
 }
 
 /** The longest a reply may be. His instructions already say ONE short sentence; this is the ceiling
@@ -151,6 +156,11 @@ export class OurBrainSession extends EventEmitter {
       if (this.closed) return;
       if (!clip || !clip.audio.length) { this.o.onStumble("his voice could not be made for that line"); return; }
       this.lastSpeakMs = Date.now() - startedSpeaking;
+      // BOTH BILLS FOR THIS TURN, ON THE CHECK'S OWN RECORD. His line was fresh, so ElevenLabs
+      // really charged for every character of it, and our own account really paid to write it.
+      try {
+        this.o.onSpend?.({ inTokens: reply.inTokens, outTokens: reply.outTokens, spokenChars: clip.charsBilled, model: reply.model });
+      } catch { /* the money count must never break a call */ }
       for (const f of toMediaFrames(clip.audio)) this.say({ type: "audio", audio_event: { audio_base_64: f } });
       this.o.log(`our brain: "${text.slice(0, 60)}" — ${reply.ms}ms to write on ${reply.model}, ${this.lastSpeakMs}ms to speak, ${clip.ms}ms of sound`);
     } catch (e) {

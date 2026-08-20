@@ -1481,7 +1481,7 @@ app.get("/api/calls/:id/receipt", async (c) => {
   const sums: Rollup = live ? rollup(live) : rollupFromRow(call, timeline);
   const cost = live
     ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charliePaidSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
-    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, sttUsd: call.costSttUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charliePaidSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
+    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, brainUsd: call.costBrainUsd ?? 0, sttUsd: call.costSttUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charliePaidSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
 
   return c.json({
     call: {
@@ -3612,7 +3612,8 @@ app.get("/pub/result/:cid", async (c) => {
   // repointed at the EL conversation. Resolve room → conv id and fall through to the normal EL path;
   // before/without a connect, report the row's own state (dialing, or the finalizer's no_answer).
   if (cid.startsWith("bridge:")) {
-    const convId = bridgeConversationId(cid.slice(7));
+    const room = cid.slice(7);
+    const convId = bridgeConversationId(room);
     if (convId) cid = convId;
     else {
       const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
@@ -3620,7 +3621,21 @@ app.get("/pub/result/:cid", async (c) => {
         // ts rides EVERY result branch — the verdict page shows the call's date/time on all statuses (owner 07-16).
         return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "", ts: (row.startedAt || 0) * 1000 });
       }
-      return c.json({ status: "in_progress", transcript: "", summary: "" });
+      // THE CHECK IS OVER AND NOBODY EVER SETTLED IT (owner's order, 08-20). The live map that ties a
+      // room to a conversation dies with the process, so after a restart this answered "still in
+      // progress" for ever — which is exactly how checks 425 and 426 sat on the Testing list with
+      // their whole conversations written down and no answer beside them. Our own record knows the
+      // phone went down, so the check is handed to the SAME settling path every other check takes,
+      // reading the words off the record rather than off a conversation nobody kept.
+      if (row && !(await isCheckAlive(cid))) {
+        // A row still carrying the ROOM as its conversation id after the phone went down never got a
+        // conversation at the voice provider at all — which is every check our own brain ran, because
+        // we ran the conversation ourselves. So the row is repointed at the record that really holds
+        // it, and every door downstream reads the same one.
+        cid = `ours:${room}`;
+        await db.update(callResults).set({ providerCallId: cid }).where(eq(callResults.id, row.id)).catch(() => {});
+      }
+      else return c.json({ status: "in_progress", transcript: "", summary: "" });
     }
   }
   // D-lane call ("delta:<session>"): the verdict lives in OUR row (written by the Delta finalize hook),
@@ -6552,8 +6567,15 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // 5,282,200¢. One printer, one envelope, no second formatter anywhere.
   // `menu` is the walk to a person — the carrier leg plus the listening fork — which is the half of
   // the money the owner reads first, against Charlie's seconds. Two buckets, nothing else.
-  const readable = (cost: { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; avoidableUsd: number }) =>
-    ({ total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd),
+  // EVERYTHING CHARLIE COSTS, UNDER CHARLIE (owner's order, 08-20, fix 3). His line used to be the
+  // voice provider's per second charge alone, so a check our own brain ran read 0.0¢ while
+  // ElevenLabs was really being paid per character to say his words and Anthropic per token to write
+  // them. Both are his and both are in his number now, and each has its own row inside his bucket.
+  const readable = (cost: { totalUsd: number; charlieUsd: number; clipsUsd?: number; brainUsd?: number; lineUsd: number; forkUsd?: number; avoidableUsd: number }) =>
+    ({ total: money(cost.totalUsd),
+       charlie: money(cost.charlieUsd + (cost.clipsUsd ?? 0) + (cost.brainUsd ?? 0)),
+       speaking: money(cost.clipsUsd ?? 0), writing: money(cost.brainUsd ?? 0),
+       line: money(cost.lineUsd),
        menu: money(cost.lineUsd + (cost.forkUsd ?? 0)), wasted: money(cost.avoidableUsd) });
   // EVERYTHING THE OWNER'S APPROVED SHEET READS AND THE RAW RECORD DOES NOT SAY (owner 08-04):
   // which of his 16 locked cards this check ran, the cost split into his five buckets off the rates
@@ -6562,7 +6584,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // DID THIS TEST PASS (owner 08-07). The card names the rows that must be green and the status the
   // check has to come back with, and `graded` is those two read against this check. Omitted while a
   // check is still going, because a test that has not finished has not failed either.
-  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null, graded?: { rows: BehavedRow[]; statusKey: string | null } | null, spokenLines?: Array<{ who: string; text: string; atMs: number | null; endMs?: number | null }> | null) => {
+  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; brainUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null, graded?: { rows: BehavedRow[]; statusKey: string | null } | null, spokenLines?: Array<{ who: string; text: string; atMs: number | null; endMs?: number | null }> | null) => {
     const stepOf = (name: string) => timeline.find((e) => (e.detail || {}).step === name) || null;
     const named = stepOf("named_test");
     const card = named ? TEST_CARDS[String((named.detail || {}).card || "")] ?? null : null;
@@ -6571,12 +6593,16 @@ app.get("/api/admin/receipt/:room", async (c) => {
     const buckets = cost ? costBuckets(
       // A check from before Echo had words has no stt line stamped on it, and it never paid for one,
       // so it prices at nought and no line renders (owner's no-free-items rule).
-      { ...cost, forkUsd: cost.forkUsd ?? 0, clipsUsd: cost.clipsUsd ?? 0, sttUsd: cost.sttUsd ?? 0, billedMinutes: cost.billedMinutes ?? Math.ceil((sums?.callSecs ?? 0) / 60), charlieSecs: cost.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0, avoidableUsd: 0, totalUsd: cost.totalUsd },
+      { ...cost, forkUsd: cost.forkUsd ?? 0, clipsUsd: cost.clipsUsd ?? 0, brainUsd: cost.brainUsd ?? 0, sttUsd: cost.sttUsd ?? 0, billedMinutes: cost.billedMinutes ?? Math.ceil((sums?.callSecs ?? 0) / 60), charlieSecs: cost.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0, avoidableUsd: 0, totalUsd: cost.totalUsd },
       // …and the seconds he spent speaking and listening, so his one line can open to show where
       // his meter went. Measured on the call itself; a check recorded before we measured them shows
       // the line without the breakdown rather than an invented one.
+      // …AND WHETHER A MENU WAS REALLY WORKED (owner's order, 08-20, fix 4). Read off the check's own
+      // record: a key pressed or a menu word spoken is a menu. Nothing pressed and nothing said means
+      // the store simply answered the phone, and those seconds are the ringing and the greeting.
       { callSecs: sums?.callSecs ?? 0, navSecs: sums?.navSeconds ?? null, streams: 2,
-        speakingSecs: sums?.speakingSecs ?? null, listeningSecs: sums?.listeningSecs ?? null },
+        speakingSecs: sums?.speakingSecs ?? null, listeningSecs: sums?.listeningSecs ?? null,
+        menuWorked: timeline.some((e) => e.kind === "alpha_press" || e.kind === "bravo_say") },
       await currentRates(), readUsd,
     ) : [];
     const totalUsd = (cost?.totalUsd ?? 0) + readUsd;

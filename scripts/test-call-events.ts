@@ -8,7 +8,7 @@ import {
   openReceipt, emit, amend, markNow, addMs, closeReceipt, rollup, rollupFromRow, setEventSink,
   getReceipt, laneNote, laneFor, actualLane, recordLine, oneSlowestReplyRow, lastLineEndEpoch, stampLineEnd, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
-import { costCall, costPerResult, costBuckets, money, MEASURED_RATES, STATUS_READ_USD, USD } from "../src/calls/cost";
+import { costCall, costPerResult, costBuckets, brainCostUsd, money, MEASURED_RATES, STATUS_READ_USD, USD } from "../src/calls/cost";
 
 /** The two nav plans a store can have, in the exact shape the recipe produces them. */
 const presses = [{ action: "press", value: "2", atSec: 8 }, { action: "press", value: "2", atSec: 16 }];
@@ -277,7 +277,7 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
 {
   // A 62 second check: 14s of menu, 18s of Charlie, the second read ran.
   const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48] });
-  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, speakingSecs: 7, listeningSecs: 2 }, MEASURED_RATES, STATUS_READ_USD);
+  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, speakingSecs: 7, listeningSecs: 2, menuWorked: true }, MEASURED_RATES, STATUS_READ_USD);
   // ONE LINE PER NAME (owner 08-07). Echo's words shipped as a second Echo line and he sent it back:
   // everything Echo does rolls up under Echo, and the line opens to show the pieces.
   ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Ears) · Charlie (Voice) · Status (Verification)",
@@ -291,7 +291,7 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
   ok(voice.detail.some(([l, v]) => l === "Speaking" && v.startsWith("7s · ")), "his line opens to the seconds he spoke");
   ok(voice.detail.some(([l, v]) => l === "Listening" && v.startsWith("2s · ")), "…the seconds somebody spoke to him");
   ok(voice.detail.some(([l, v]) => l === "Waiting" && v.startsWith("9s · ")), "…and the seconds nobody said anything, which is the waste");
-  ok(costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2 }, MEASURED_RATES, STATUS_READ_USD)
+  ok(costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, menuWorked: true }, MEASURED_RATES, STATUS_READ_USD)
     .find((x) => x.key === "charlie")!.detail.every(([l]) => l !== "Speaking"),
     "a check recorded before we measured them shows no split rather than an invented one");
   const sum = b.reduce((n, x) => n + x.usd, 0);
@@ -311,6 +311,70 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
   const b2 = costBuckets(cost2, { callSecs: 30, navSecs: 0, streams: 1 }, MEASURED_RATES, 0);
   ok(!b2.some((x) => x.key === "bravo") && !b2.some((x) => x.key === "status"), "a bucket that spent nothing does not render");
   ok(b2.reduce((n, x) => n + x.usd, 0) === cost2.totalUsd, "…and the rest still sum to the total");
+}
+
+// -------------------------------------------------------------------------------------------
+// THE MONEY MUST BE TRUE (owner's order, 08-20, fixes 3 and 4). Check 427 was run by our own brain
+// and its sheet said Charlie cost 0.0¢. Two real bills were being paid on that check and neither was
+// counted: ElevenLabs charges per character to SAY his words, which had a slot in the cost code that
+// nothing ever filled, and Anthropic charges per token to WRITE them, which had no slot at all.
+console.log("\n▶ WHAT ELEVENLABS CHARGED TO SAY HIS WORDS IS ON THE CHECK (owner's order, 08-20, fix 3)");
+{
+  const spoke = costCall({ callSecs: 60, charlieSecs: 0, avoidableSecs: 0, ttsChars: 300 });
+  ok(spoke.clipsUsd > 0, `saying 300 characters is a real charge (${money(spoke.clipsUsd)})`);
+  ok(spoke.totalUsd >= spoke.clipsUsd, "…and it is inside the check's total, not beside it");
+  // CHECK 427'S OWN SHAPE: no metered session of the provider's at all, because our own brain ran
+  // every stretch. Before this fix that priced out at nought and the sheet said Charlie was free.
+  const like427 = costCall({ callSecs: 60, charlieSecs: 0, avoidableSecs: 0, ttsChars: 300,
+    brainInTokens: 4200, brainOutTokens: 90, brainModel: "claude-sonnet-4-6" });
+  ok(like427.charlieUsd === 0, "the provider's per second charge really is nought on a check our own brain ran");
+  ok(like427.clipsUsd + like427.brainUsd > 0, "…and Charlie still costs money, because two other bills were really paid");
+}
+
+console.log("\n▶ WHAT ANTHROPIC CHARGED TO WRITE HIS REPLIES IS ON THE CHECK (owner's order, 08-20, fix 3)");
+{
+  // Real token counts off the model's own stream, at its own published price: 4200 read and 90
+  // written on claude-sonnet-4-6 is $3 and $15 per million, so 0.0126 + 0.00135 = $0.01395.
+  const c = costCall({ callSecs: 60, charlieSecs: 0, avoidableSecs: 0, brainInTokens: 4200, brainOutTokens: 90, brainModel: "claude-sonnet-4-6" });
+  ok(near(c.brainUsd / USD, 0.01395, 0.0002), `the writing charge is the model's own price on its own token counts (${money(c.brainUsd)})`);
+  ok(costCall({ callSecs: 60, charlieSecs: 20, avoidableSecs: 0 }).brainUsd === 0,
+    "a hosted check charges nothing for writing, because the thinking is inside the provider's per second charge");
+  ok(brainCostUsd(null, 0, 0) === 0, "nothing written costs nothing");
+  // A MODEL NOBODY HAS PRICED IS NEVER FREE. A check that quietly reads as costing nothing is the
+  // whole fault this fix exists to end, so an unknown model is charged at the dearest rate we know.
+  ok(brainCostUsd("some-model-we-never-priced", 1_000_000, 0) > brainCostUsd("claude-sonnet-4-6", 1_000_000, 0),
+    "a model nobody has priced is charged at the dearest rate, never at nothing");
+}
+
+console.log("\n▶ EVERYTHING CHARLIE COSTS IS UNDER CHARLIE, AND THE BUCKETS STILL SUM (owner's order, 08-20, fix 3)");
+{
+  const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48],
+    ttsChars: 300, brainInTokens: 4200, brainOutTokens: 90, brainModel: "claude-sonnet-4-6" });
+  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, speakingSecs: 7, listeningSecs: 2, menuWorked: true }, MEASURED_RATES, STATUS_READ_USD);
+  const voice = b.find((x) => x.key === "charlie")!;
+  ok(voice.detail.some(([l]) => l === "ElevenLabs speaking his words"), "his line opens to what ElevenLabs charged to say his words");
+  ok(voice.detail.some(([l]) => l === "Anthropic writing his replies"), "…and to what Anthropic charged to write them");
+  ok(voice.usd === cost.charlieUsd + cost.clipsUsd + cost.brainUsd, "…and his number is all three together");
+  const sum = b.reduce((n, x) => n + x.usd, 0);
+  ok(sum === cost.totalUsd + STATUS_READ_USD, `nothing counted twice, nothing dropped: ${sum} = ${cost.totalUsd} + ${STATUS_READ_USD}`);
+  // The speaking charge used to be filed under the menu bucket and called "Spoken menu words",
+  // which was never what it was.
+  const bravo = b.find((x) => x.key === "bravo")!;
+  ok(!bravo.detail.some(([l]) => l === "Spoken menu words"), "the speaking charge is no longer filed under the menu");
+}
+
+console.log("\n▶ THE FIRST BUCKET ONLY SAYS MENU WHEN A MENU WAS WORKED (owner's order, 08-20, fix 4)");
+{
+  const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48] });
+  const worked = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, menuWorked: true }, MEASURED_RATES, 0).find((x) => x.key === "bravo")!;
+  ok(worked.label === "Bravo (Menu Nav)", `a check that really walked a menu still says so (${worked.label})`);
+  ok(worked.detail.some(([l, v]) => l === "Menu time" && v === "0:14"), "…and its row is the menu time it priced");
+  // A store that simply picked the phone up walked no menu. Those seconds are the phone line and
+  // Echo listening through the ringing and the greeting, which is what the row says now.
+  const direct = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2 }, MEASURED_RATES, 0).find((x) => x.key === "bravo")!;
+  ok(direct.label === "Before a person answered", `a direct check no longer claims a menu (${direct.label})`);
+  ok(direct.detail.some(([l, v]) => l === "Ringing and greeting" && v === "0:14"), "…and its row says what those seconds really were");
+  ok(direct.usd === worked.usd, "the money is the same either way: this is the NAME being true, never a re-price");
 }
 
 // ---------------------------------------------------------------------------------------------

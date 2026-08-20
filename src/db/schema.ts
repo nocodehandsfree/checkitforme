@@ -623,6 +623,9 @@ export const callResults = sqliteTable(
     costClipsUsd: integer("cost_clips_usd"),
     // Echo's words: the transcriber that hears the store whether Charlie is on the line or not.
     costSttUsd: integer("cost_stt_usd"),
+    // What our own account charged to WRITE his replies (owner's order, 08-20). Nought on a hosted
+    // check, where the thinking is inside the voice provider's per second charge.
+    costBrainUsd: integer("cost_brain_usd"),
     costTotalUsd: integer("cost_total_usd"),
     costAvoidableUsd: integer("cost_avoidable_usd"), // the dead-air slice, already inside costCharlieUsd
   },

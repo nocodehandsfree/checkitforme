@@ -280,6 +280,9 @@ export async function bootstrap() {
     "cost_clips_usd INTEGER", "cost_total_usd INTEGER", "cost_avoidable_usd INTEGER",
     // Echo's words: what the transcriber on the phone line cost this check (owner 08-07).
     "cost_stt_usd INTEGER",
+    // WHAT ANTHROPIC CHARGED TO WRITE HIS REPLIES (owner's order, 08-20, fix 3). Nought on every
+    // check the voice provider's hosted agent ran; the whole cost of thinking on one our own brain ran.
+    "cost_brain_usd INTEGER",
   ]) await client.execute(`ALTER TABLE call_results ADD COLUMN ${col}`).catch(() => {});
   // Referral growth loop: each account's shareable code + who referred them.
   await client.execute("ALTER TABLE accounts ADD COLUMN referral_code TEXT").catch(() => {});

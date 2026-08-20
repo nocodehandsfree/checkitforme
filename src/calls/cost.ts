@@ -52,8 +52,13 @@ export interface CallCost {
   forkUsd: number;
   /** The billed reasoning session, per second. */
   charlieUsd: number;
-  /** Recorded lines synthesized for this call (0 once they are cached and reused). */
+  /** ELEVENLABS SPEAKING HIS WORDS, per character (0 once a line is cached and reused). Until
+   *  08-20 nothing ever filled this on a real check, so a check our own brain ran printed nought
+   *  for Charlie while ElevenLabs was really being paid to say every line he wrote. */
   clipsUsd: number;
+  /** ANTHROPIC WRITING HIS REPLIES (owner's order, 08-20, fix 3). Nought on a check the voice
+   *  provider's hosted agent ran, because then the thinking is inside their per second charge. */
+  brainUsd: number;
   /** Echo's words: the transcriber on the phone line, for as long as the line was up. */
   sttUsd: number;
   totalUsd: number;
@@ -79,6 +84,13 @@ export interface CostInput {
   forkSecs?: number[];
   /** Characters of speech synthesized for this call. 0 when the lines came from the cache. */
   ttsChars?: number;
+  /** THE REPLIES OUR OWN BRAIN WROTE, in real tokens off the models' own counts (owner, 08-20).
+   *  Both halves, because they are priced differently, and the model that wrote them, because the
+   *  price is per model. Left out means the hosted agent did the thinking and there is nothing of
+   *  ours to charge. */
+  brainInTokens?: number;
+  brainOutTokens?: number;
+  brainModel?: string | null;
   /** Was Echo's transcriber listening on this check? False prices it at nought (an older check, or
    *  one where the socket never came up). Left out means yes, which is every check from 08-07. */
   sttOn?: boolean;
@@ -98,16 +110,42 @@ export function costCall(inp: CostInput, rates: Rates = MEASURED_RATES): CallCos
 
   const clipsUsd = Math.round(Math.max(0, inp.ttsChars ?? 0) * rates.ttsCreditsPerChar * rates.creditUsd * USD);
 
+  // WHAT ANTHROPIC CHARGED TO WRITE HIS REPLIES (owner's order, 08-20, fix 3). Real token counts,
+  // reported by the model on every turn, at the model's own published per million price. Nought
+  // when our own brain never ran, which is every hosted check.
+  const brainUsd = brainCostUsd(inp.brainModel, inp.brainInTokens ?? 0, inp.brainOutTokens ?? 0);
+
   // ECHO'S WORDS (owner 08-07). Billed on the seconds the phone line was up, because that is exactly
   // how long the transcriber listens: it opens with the stream and closes with it. A check that ran
   // without one (no key, or the socket never came up) is priced at nought, never at a guess.
   const sttUsd = inp.sttOn === false ? 0 : Math.round((Math.max(0, inp.callSecs) / 60) * rates.sttPerMinUsd * USD);
 
   return {
-    lineUsd, forkUsd, charlieUsd, clipsUsd, sttUsd,
-    totalUsd: lineUsd + forkUsd + charlieUsd + clipsUsd + sttUsd,
+    lineUsd, forkUsd, charlieUsd, clipsUsd, brainUsd, sttUsd,
+    totalUsd: lineUsd + forkUsd + charlieUsd + clipsUsd + brainUsd + sttUsd,
     billedMinutes, charlieSecs: Math.max(0, inp.charlieSecs), avoidableUsd,
   };
+}
+
+/** WHAT OUR OWN BRAIN COSTS TO WRITE ONE CHECK'S REPLIES (owner's order, 08-20, fix 3).
+ *
+ *  Anthropic publishes a price per million tokens, in and out, per model. The reply itself reports
+ *  how many of each it really used, so this is a MEASURED number like every other one in this file,
+ *  never a guess from the length of a sentence. A model nobody has priced here is charged at the
+ *  dearest rate on the list rather than at nothing, because a check that quietly reads as free is
+ *  the exact fault this fix exists to end. */
+export const BRAIN_PRICE_PER_MTOK: Record<string, { in: number; out: number }> = {
+  "claude-sonnet-4-6": { in: 3.00, out: 15.00 },
+  "claude-opus-4-6": { in: 5.00, out: 25.00 },
+  "claude-haiku-4-5": { in: 1.00, out: 5.00 },
+};
+export function brainCostUsd(model: string | null | undefined, inTokens: number, outTokens: number): number {
+  const i = Math.max(0, inTokens || 0), o = Math.max(0, outTokens || 0);
+  if (!i && !o) return 0;
+  const key = String(model || "").trim();
+  const dearest = { in: 5.00, out: 25.00 };
+  const p = BRAIN_PRICE_PER_MTOK[key] ?? dearest;
+  return Math.round(((i / 1_000_000) * p.in + (o / 1_000_000) * p.out) * USD);
 }
 
 /** ONE STATUS VERIFICATION READ (the second read of the transcript). Not on the phone bill: it is
@@ -176,7 +214,11 @@ export function costBuckets(
   cost: CallCost,
   /** `speakingSecs` and `listeningSecs` are measured on the call itself, and whatever is left of
    *  Charlie's open seconds is him waiting. Left out, his line simply does not break down. */
-  t: { callSecs: number; navSecs: number | null; streams?: number; speakingSecs?: number | null; listeningSecs?: number | null },
+  t: { callSecs: number; navSecs: number | null; streams?: number; speakingSecs?: number | null; listeningSecs?: number | null;
+       /** WAS A PHONE MENU ACTUALLY WORKED (owner's order, 08-20, fix 4). On a call that no menu
+        *  answered, these seconds are the phone line and Echo listening through the ringing and the
+        *  greeting, and calling them menu time was simply untrue. Left out means no menu. */
+       menuWorked?: boolean },
   rates: Rates = MEASURED_RATES,
   statusReadUsd = 0,
 ): CostBucket[] {
@@ -185,12 +227,16 @@ export function costBuckets(
   const navLine = Math.round(cost.lineUsd * share);
   const navFork = Math.round(cost.forkUsd * share);
   const streams = Math.max(1, t.streams ?? 1);
+  // THE FIRST BUCKET IS NOT ALWAYS A MENU (owner's order, 08-20, fix 4). It is the stretch from the
+  // dial to a person being on the line, and on a store that simply picks the phone up that is the
+  // ringing and the greeting, with the line and Echo running through it. It was labelled Menu Nav
+  // on every check, menu or no menu. Only a call where a menu was really worked says menu now.
+  const menuWorked = t.menuWorked === true;
   const b: CostBucket[] = [
-    { key: "bravo", label: "Bravo (Menu Nav)", usd: navLine + navFork + cost.clipsUsd, detail: [
-      ["Menu time", mmss(nav)],
+    { key: "bravo", label: menuWorked ? "Bravo (Menu Nav)" : "Before a person answered", usd: navLine + navFork, detail: [
+      [menuWorked ? "Menu time" : "Ringing and greeting", mmss(nav)],
       ["Rate (per minute)", perMin(rates.linePerMinUsd + rates.forkPerMinUsd * streams)],
-      ...(cost.clipsUsd > 0 ? [["Spoken menu words", money(cost.clipsUsd)] as [string, string]] : []),
-      ["Cost", money(navLine + navFork + cost.clipsUsd)],
+      ["Cost", money(navLine + navFork)],
     ] },
     { key: "foxtrot", label: "Foxtrot (Phone Line)", usd: cost.lineUsd - navLine, detail: [
       ["Line time", mmss(t.callSecs)],
@@ -206,7 +252,12 @@ export function costBuckets(
       ["Writing down the words", `${perMin(rates.sttPerMinUsd)} · ${money(cost.sttUsd)}`],
       ["Cost", money((cost.forkUsd - navFork) + cost.sttUsd)],
     ] },
-    { key: "charlie", label: "Charlie (Voice)", usd: cost.charlieUsd, detail: [
+    // EVERYTHING CHARLIE COSTS, UNDER CHARLIE (owner's order, 08-20, fix 3). His seconds on the
+    // voice provider's conversation service, PLUS what ElevenLabs charged per character to say his
+    // words, PLUS what Anthropic charged to write them. The last two were invisible: the per
+    // character charge had a slot nothing ever filled, and the writing charge had no slot at all,
+    // so a check our own brain ran read 0.0¢ for Charlie while both were really being paid.
+    { key: "charlie", label: "Charlie (Voice)", usd: cost.charlieUsd + cost.clipsUsd + cost.brainUsd, detail: [
       ["On the meter", mmss(cost.charlieSecs)],
       ["Rate (per minute)", perMin((rates.charlieCreditsPerMin) * rates.creditUsd)],
       // The "Covers: voice and thinking together" row is DELETED (owner 08-08): he knows what
@@ -215,7 +266,9 @@ export function costBuckets(
       // talk, or sitting on a line where nobody is saying anything. Only the last one is waste, and
       // it was invisible: check 354 billed 33 seconds of him and he never said a word.
       ...charliePieces(cost, t, rates),
-      ["Cost", money(cost.charlieUsd)],
+      ...(cost.clipsUsd > 0 ? [["ElevenLabs speaking his words", money(cost.clipsUsd)] as [string, string]] : []),
+      ...(cost.brainUsd > 0 ? [["Anthropic writing his replies", money(cost.brainUsd)] as [string, string]] : []),
+      ["Cost", money(cost.charlieUsd + cost.clipsUsd + cost.brainUsd)],
     ] },
     { key: "status", label: "Status (Verification)", usd: statusReadUsd, detail: [
       ["Cost", money(statusReadUsd)],
