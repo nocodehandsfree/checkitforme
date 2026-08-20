@@ -120,6 +120,9 @@ class FakeTwilio extends EventEmitter {
  *  which keeps every scene deterministic; the hello scene below sets a real greeting. */
 let STT_TEXT = "";
 let STT_CALLS = 0;
+/** How many times a clip was really recorded in this scene: his little hello is made fresh each
+ *  check and must never be served from the clip store. */
+let TTS_CALLS = 0;
 function stubSignedUrl(f: Fake) {
   const real = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -128,6 +131,12 @@ function stubSignedUrl(f: Fake) {
     if (url.includes("/v1/speech-to-text")) {
       STT_CALLS++;
       return new Response(JSON.stringify({ text: STT_TEXT }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    // HIS LITTLE HELLO IS MADE FRESH ON EVERY CHECK (owner, 08-20), so a scene about a comeback has
+    // to be able to make one. 240ms of μ-law, the length two words really run to.
+    if (url.includes("/v1/text-to-speech/")) {
+      TTS_CALLS++;
+      return new Response(Buffer.alloc(240 * 8, 0x30), { status: 200, headers: { "content-type": "audio/basic" } });
     }
     if (url.includes("/convai/conversation/get-signed-url")) {
       f.agentIdsAsked.push(new URL(url).searchParams.get("agent_id") || "");
@@ -160,6 +169,8 @@ async function callToHello(f: Fake, clipMs: number, room: string, tuning?: Parti
     dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
     connectOnHuman: true, holdMaxSeconds: 999,
     openingClip: { audio, ms: clipMs, text: "do you have any Pokemon cards in stock?" },
+    // The voice his little hello is made in. Every real check carries one.
+    voiceId: "voice_test",
     // A scene that is about the DROP has to be able to switch the floor off, the same way the hold
     // scenes already do: the rig drives a whole check in milliseconds, so every session here is
     // newborn and the floor would hold every one of them open. And closing him for a wait is the
@@ -3122,6 +3133,7 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   ok(step("ears_back").length === 0, "…and it does not wake him: an advert is not a person talking to us");
   ok(step("not_a_person").length === 0, "…and with the reader down nothing is claimed about it either way", step("not_a_person").length);
   ok(step("reconnect_early").length === 0, "…and the advert never starts his session opening either");
+  ok(step("little_hello").length === 0, "…and not one sound of ours plays inside the advert either", step("little_hello").length);
   ok(!evs().some((e) => e.kind === "hold_end"), "…and it does not end the wait either, so his meter stays off");
   ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Clerk" && /price match/.test(l.text)),
     "…while Echo still wrote it down, so it is on the record and the reader can name it");
@@ -3190,6 +3202,27 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
     { before: beforeHisReply, now: tw.outMedia().length });
   ok(!(getReceipt(room)?.transcript || []).some((l) => l.who === "Agent" && /name of the set/.test(l.text)),
     "…and words the store has not heard are not written down as a line of his either");
+  // FIX 2 (owner, 08-20): the moment the words prove a real person AND that person pauses, he says
+  // two words in his own voice, made fresh for this check, while the rest of his reply is still
+  // being built. Staff hear him within three seconds of coming back instead of standing on a quiet
+  // line for seven.
+  {
+    // THEY FINISH THEIR SENTENCE. His two words may never play over a person talking, so the pause
+    // is what lets them out — on a real check the wake check proves them mid sentence and the words
+    // land the moment they stop (check 423: their line ran 37.2 to 39.1 and the wait ended at 39.0).
+    ok(step("little_hello").length === 0, "nothing of his plays while they are still talking", step("little_hello").length);
+    quiet(tw, 40);
+    await sleep(150);
+    const hello = step("little_hello")[0];
+    ok(!!hello, "he says his little hello the moment the words prove a person and that person pauses");
+    const back = evs().find((e) => (e.detail as { step?: string } | null)?.step === "reconnect_early"
+      && (e.atMs ?? 0) > (holds()[0]?.atMs ?? 0) + 5000);
+    const gap = (hello?.atMs ?? 0) - (back?.atMs ?? 0);
+    ok(!!hello && !!back && gap >= 0 && gap < 3000,
+      "…within three seconds of the person coming back", { back: back?.atMs, hello: hello?.atMs, gap });
+    ok(TTS_CALLS >= 1, "…and it was recorded fresh for this check, never served from the clip store", TTS_CALLS);
+    ok(tw.outMedia().length > beforeHisReply, "…and the store really hears it");
+  }
   // THE WAKE CHECK SAYS PERSON, on the piece alone, so the wait ends without waiting for Echo to
   // finish the sentence — and everything he had ready goes out whole.
   await sleep(700);

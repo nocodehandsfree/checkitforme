@@ -423,8 +423,18 @@ console.log("\u25b6 EXACTLY TWO RECORDINGS SURVIVE (owner's ruling, 08-19 night)
   // away. His set question and his goodbye are a conversation, so he says both himself, live.
   const { readFileSync } = await import("fs");
   const setup = await import("../src/calls/charlie-setup");
-  ok(setup.HOLD_ACK_LINE === "No worries, take your time!",
+  // A QUICK SHORT THANKS, TWO OR THREE WORDS AT MOST (owner, 08-20). It was "No worries, take your
+  // time!" and took nearly two seconds to play at Staff who were already walking away.
+  ok(setup.HOLD_ACK_LINE === "Sure, thanks!",
     "the line played as Staff walk away is still a recording, in his words", setup.HOLD_ACK_LINE);
+  ok(setup.HOLD_ACK_LINE.split(/\s+/).filter(Boolean).length <= 3,
+    "…and it is a quick short thanks, three words at most", setup.HOLD_ACK_LINE);
+  ok(/thank|gracias/i.test(setup.HOLD_ACK_LINE) && /gracias/i.test(setup.HOLD_ACK_LINE_ES),
+    "…and it really thanks them, in both languages", [setup.HOLD_ACK_LINE, setup.HOLD_ACK_LINE_ES]);
+  // HIS LITTLE HELLO IS NOT A RECORDING (owner, 08-20): two words, made fresh on every check.
+  ok(setup.COMEBACK_HELLO_LINE.split(/\s+/).filter(Boolean).length <= 3,
+    "his little hello on a comeback is two or three words", setup.COMEBACK_HELLO_LINE);
+  ok(!!setup.COMEBACK_HELLO_LINE_ES, "…and it ships its Spanish in the same commit", setup.COMEBACK_HELLO_LINE_ES);
   ok(!("GOODBYE_LINE" in setup), "the goodbye recording is gone: he says his own sign-off");
   const shared = readFileSync("src/calls/charlie-setup.ts", "utf8");
   ok(!/setAskClip|goodbyeClip/.test(shared), "…and neither recording is made before a check any more");

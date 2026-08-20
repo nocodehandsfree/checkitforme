@@ -8,7 +8,7 @@ import { config } from "../config";
 // seconds split into talking / listening / dead air, because it is the only place the audio passes
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
-import { HOLD_ACK_LINE, HOLD_ACK_LINE_ES } from "../calls/charlie-setup";
+import { HOLD_ACK_LINE, HOLD_ACK_LINE_ES, COMEBACK_HELLO_LINE, COMEBACK_HELLO_LINE_ES } from "../calls/charlie-setup";
 import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, stampLineEnd, lastLineEndEpoch, normSaid, getReceipt, whereItWouldDraw } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
@@ -16,7 +16,7 @@ import { ConversationEar, looksLikeAPerson, type HoldReason } from "../calls/lis
 import { TUNING_DEFAULTS, type CallTuning } from "../calls/tuning";
 // Delta's opening question: our own line, our own voice, already in phone format and already paid
 // for. The bridge only PLAYS it — synthesis and caching live outside the call path (clip-cache.ts).
-import { toMediaFrames } from "../calls/clip-cache";
+import { toMediaFrames, phoneClip } from "../calls/clip-cache";
 // The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
@@ -873,6 +873,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function dropTheEarlySession(why: string): void {
     if (earlyReconnectTimer) { clearTimeout(earlyReconnectTimer); earlyReconnectTimer = null; }
     binTheEarlyTurn(why);
+    binTheLittleHello();
     if (!reconnectingEarly) return;
     reconnectingEarly = false;
     if (ended || !onHold || !eleven) return;
@@ -903,6 +904,55 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** A ceiling on what may be held, so a session that generates for ever cannot grow without end.
    *  400 chunks is far past any reply he makes (about 20 seconds of speech). */
   const MOST_HELD_CHUNKS = 400;
+
+  /** HIS LITTLE HELLO, IN TWO PARTS (owner's order, 08-20). He used to be silent from the moment a
+   *  person came back until his whole reply existed, about seven seconds of a person standing on a
+   *  quiet line. Now the comeback is split: the instant the words prove a real person AND that
+   *  person pauses, he says two words in his own voice, made fresh for this check, while the rest
+   *  of his reply is still being built behind it and follows straight after. Words prove it was the
+   *  store's recording instead and this is thrown away with everything else: nothing plays. */
+  let littleHello: { audio: Buffer; ms: number; text: string } | null = null;
+  let helloAsked = false;      // its making has been started for this comeback
+  let helloOwed = false;       // the words proved a person: it plays the moment they pause
+  /** Start making it the moment a voice comes back, so it is in hand by the time the words prove
+   *  who it was. Never kept between checks: `fresh` skips the clip store both ways. */
+  function startTheLittleHello(): void {
+    if (helloAsked || ended || !ctx?.voiceId) return;
+    helloAsked = true;
+    const es = staffSpokeSpanish(theirFirstLine);
+    const line = es ? COMEBACK_HELLO_LINE_ES : COMEBACK_HELLO_LINE;
+    void phoneClip(ctx.voiceId, line, (ctx.voiceTuning as Record<string, unknown>) || {}, ctx.apiKey, true)
+      .then((c) => {
+        if (!c || ended) return;
+        littleHello = { audio: c.audio, ms: c.ms, text: c.text };
+        log(`little hello: "${c.text}" made fresh for this check, ${c.ms}ms`);
+        maybeSayTheLittleHello("it finished being made");
+      })
+      .catch(() => { /* he simply waits for his whole reply, exactly as before */ });
+  }
+  /** Say it, but ONLY into a pause: never over the person talking, and never over our own audio. */
+  function maybeSayTheLittleHello(why: string): void {
+    if (!helloOwed || !littleHello || ended) return;
+    if (theirVoiceOn) return;                       // they are still talking: it waits
+    if (Date.now() < agentPlayingUntil) return;     // our own sound is still going out
+    if (twilio.readyState !== 1) return;
+    const hello = littleHello;
+    helloOwed = false; littleHello = null;
+    for (const f of toMediaFrames(hello.audio)) {
+      twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: f } }));
+      fanout(room, f, "agent");
+    }
+    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + hello.ms;
+    hisVoiceOutAtMs = Date.now();
+    addMs(room, "speakingMs", hello.ms);
+    charlieSpoke = true; charlieSpokenMs += hello.ms;
+    if (recordLine(room, "Agent", hello.text)) { try { relayLine?.(room, "Agent", hello.text); } catch { /* best-effort */ } }
+    emit(room, "unknown", "Charlie said hello the moment a person was proved, while the rest of his reply was still being built",
+      { step: "little_hello", text: hello.text, ms: hello.ms, why });
+    log(`little hello: said "${hello.text}" (${why})`);
+  }
+  /** Nothing of it survives a comeback that turned out to be the store's own recording. */
+  function binTheLittleHello(): void { helloOwed = false; littleHello = null; helloAsked = false; }
   /** How long the sound half stays good for: a person's words reach us through Echo a moment after
    *  their voice, so the two halves are allowed to land a few seconds apart. */
   const WAKE_TOGETHER_MS = 6000;
@@ -1626,6 +1676,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     reconnectFeed = null;
     // …and a reply he was building for a comeback that turned back into a wait is never spoken.
     binTheEarlyTurn("the line went back to being a wait");
+    // …nor is the little hello that comeback was going to open with. The next one makes its own.
+    binTheLittleHello();
     onHold = true; holdReason = reason; heldWords = [];
     // THE SENTENCE AND THE ROW ARE ONE NUMBER (owner, 08-19 night). A backdated stamp is never let
     // above the row before it, so the second this row DRAWS at is what its own wait must be
@@ -1773,6 +1825,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // Echo wrote them and has been building his reply with his mouth shut; the wake check has just
     // said a person, so it plays now, before the pocket can hand him anything else and have two
     // replies on the line at once.
+    // THE WORDS PROVED A PERSON, so his two words are owed. They go out the moment that person
+    // pauses and never over them (owner, 08-20).
+    helloOwed = true;
+    maybeSayTheLittleHello("the words proved a person");
     releaseTheEarlyTurn();
     openCharliesEars("the wait ended and somebody came back", backAtMs);
     // DELTA PLAYS THE RECORDING AGAIN AFTER A TRANSFER (owner 08-04: "Echo absolutely needs to
@@ -2025,6 +2081,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         try { emit(room, "unknown", "Charlie's slowest reply so far", { step: "gaps", answerGapWorstMs: worstAnswerGapMs }); } catch { /* best-effort */ }
       }
     }
+    if (helloOwed) { maybeSayTheLittleHello("his own reply is about to go out"); binTheLittleHello(); }
     let ms = 0;
     for (const b64 of held.heldAudio) {
       twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
@@ -2083,7 +2140,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
     ackPlayingUntil = Date.now() + clip.ms + 4000;
     ackAlreadyPlayed = true;
-    ackLineSaid = es ? HOLD_ACK_LINE_ES : HOLD_ACK_LINE;
+    // THE WORDS THAT REALLY PLAYED, off the clip itself — never a constant that a change to the
+    // line could leave pointing at something the store never heard.
+    ackLineSaid = clip.text || (es ? HOLD_ACK_LINE_ES : HOLD_ACK_LINE);
     // OUR RECORDING IS NOT HIS METER (owner, 08-17 late). It is our own audio going down the line
     // from our own file, and once he is off the meter for the wait, none of it is his to bill: the
     // seconds are only counted as his when he is actually connected.
@@ -2703,6 +2762,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // the same sentiment twice on the line (owner box 08-16 late).
         else if (b64 && Date.now() < ackPlayingUntil) { /* covered by the recording, dropped */ }
         else if (b64 && twilio.readyState === 1) {
+          // HIS TWO WORDS GO FIRST, ALWAYS (owner, 08-20). If his whole reply is ready before the
+          // pause his little hello was waiting for, the hello goes out ahead of it and the carrier
+          // plays the two back to back; if it cannot go at all, it is dropped rather than landing
+          // in the middle of his own sentence.
+          if (helloOwed) { maybeSayTheLittleHello("his own reply is about to start"); binTheLittleHello(); }
           // HIS TURN STARTS with its first frame on the line: the reply gap is measured from their
           // voice stopping, or from the words being handed to him, whichever came last.
           if (!hisTurnOpen) {
@@ -3171,6 +3235,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             // …AND FROM HERE HE IS FED THEIR WORDS AS ECHO WRITES THEM, with his mouth held shut
             // until the wake check proves a person (owner, 08-19 night).
             earlyTurn = { fed: [], heldAudio: [], heldText: [], proved: false };
+            // …AND HIS LITTLE HELLO STARTS BEING MADE NOW (owner, 08-20), so it is in hand by the
+            // time the words say who came back. Thrown away untouched if they say a recording.
+            startTheLittleHello();
             emit(room, "unknown", "A voice came back, so Charlie's session started opening while we read the words",
               { step: "reconnect_early", spokeMs, notASound: true });
             log("reconnect: starting his session on the sound, his turn waits for the words");
@@ -3583,6 +3650,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // and anything said into it calls the whole thing off. Silence, hold music, a handset on a
         // counter and every language read the same, because none of them are read at all.
         armTheMeterOff("their voice stopped and it is their turn");
+        // THE PAUSE HIS LITTLE HELLO WAITS FOR (owner, 08-20): it may never play over them.
+        maybeSayTheLittleHello("their voice stopped");
         if (reconnectFeed && !reconnectFeed.voiceStopped) {
           reconnectFeed.voiceStopped = true;
           // ONE HAND-OVER, EVER (owner, 08-17 evening, off check 373: the handed words step printed

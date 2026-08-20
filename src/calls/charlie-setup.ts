@@ -38,10 +38,19 @@ export interface CharlieSetupInput {
   directPickup?: boolean;
 }
 
-/** THE HOLD REPLY'S WORDS — Charlie's own line from checks 368 and 371, and its Spanish beside it
- *  (every spoken string rides with its Spanish, same as the opening question). */
-export const HOLD_ACK_LINE = "No worries, take your time!";
-export const HOLD_ACK_LINE_ES = "No se preocupe, tómese su tiempo.";
+/** THE HOLD REPLY'S WORDS — a QUICK SHORT THANKS, two or three words at most (owner, 08-20). It was
+ *  "No worries, take your time!" and it took nearly two seconds to play at Staff who were already
+ *  walking away. The rules around it are unchanged: it plays only as they leave, and its Spanish
+ *  rides with it, same as the opening question. */
+export const HOLD_ACK_LINE = "Sure, thanks!";
+export const HOLD_ACK_LINE_ES = "Claro, gracias.";
+
+/** HIS LITTLE HELLO WHEN SOMEBODY COMES BACK (owner, 08-20). Two words, said in his own voice, made
+ *  NEW on every check and never kept — it is the one line of ours that may not be a recording. It
+ *  buys the silence while the rest of his reply is still being built, so Staff hear him within
+ *  three seconds of coming back instead of standing on a quiet line for seven. */
+export const COMEBACK_HELLO_LINE = "Oh, hey!";
+export const COMEBACK_HELLO_LINE_ES = "Ah, hola.";
 
 /** THE GOODBYE IS CHARLIE'S OWN AGAIN (owner's ruling, 08-19 night). His rule for a recording is
  *  that it may only stand where nobody can answer back, so exactly TWO survive: the opening

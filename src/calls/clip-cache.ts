@@ -106,11 +106,11 @@ function voiceSettings(tuning: Record<string, unknown>): Record<string, number> 
  * exact voice. Returns null when synthesis fails — every caller must treat that as "no clip" and
  * fall back to the behaviour that does not need one, never as a reason to drop the call.
  */
-export async function phoneClip(voiceId: string, text: string, tuning: Record<string, unknown> = {}, apiKey?: string): Promise<PhoneClip | null> {
+export async function phoneClip(voiceId: string, text: string, tuning: Record<string, unknown> = {}, apiKey?: string, fresh = false): Promise<PhoneClip | null> {
   const words = (text || "").trim();
   if (!voiceId || !words) return null;
   const key = keyFor(voiceId, words, tuning);
-  const hit = cache.get(key);
+  const hit = fresh ? undefined : cache.get(key);
   if (hit) {
     // Freshen: re-inserting moves it to the end of the map's order, so the oldest UNUSED clip is
     // the one that falls out when we hit the ceiling, not simply the oldest one.
@@ -119,7 +119,9 @@ export async function phoneClip(voiceId: string, text: string, tuning: Record<st
   }
   // The same words in the same voice, kept from an earlier run: play those exact bytes rather than
   // paying to have them said again at a different length.
-  const kept = fromDisk(key);
+  // A LINE ASKED FOR FRESH IS SAID FRESH (owner, 08-20). His little greeting on a comeback is the
+  // one line that must never be a recording: made new on every check, in that check's own voice.
+  const kept = fresh ? null : fromDisk(key);
   if (kept && kept.length) {
     const clip: PhoneClip = { audio: kept, ms: Math.round(kept.length / ULAW_BYTES_PER_MS), text: words, voiceId };
     cache.set(key, clip);
@@ -137,6 +139,7 @@ export async function phoneClip(voiceId: string, text: string, tuning: Record<st
     const audio = Buffer.from(await r.arrayBuffer());
     if (!audio.length) return null;
     const clip: PhoneClip = { audio, ms: Math.round(audio.length / ULAW_BYTES_PER_MS), text: words, voiceId };
+    if (fresh) return clip;   // never kept, never served to another check
     cache.set(key, clip);
     toDisk(key, audio);
     while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }

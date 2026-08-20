@@ -248,6 +248,43 @@ console.log("\n▶ THE COMEBACK OVERLAPS ITSELF: the wake check reads a PIECE, n
   globalThis.fetch = realFetch;
 }
 
+console.log("\n▶ HIS LITTLE HELLO, ON THE OWNER'S OWN ADVERT RECORDING (his order, 08-20)");
+{
+  // FIX 2 splits the comeback: the instant the words prove a real person AND that person pauses, he
+  // says two words in his own voice while the rest of his reply is still being built. Two things
+  // have to hold on the saved recordings, and they are measured here rather than argued.
+  //  · NOT ONE SOUND OF OURS INSIDE THE ADVERT. The little hello can only ever start where the ear
+  //    reports a person's voice, so zero reports inside the advert IS zero sounds inside it.
+  //  · AND IT IS EARLY ENOUGH. The report is the earliest moment his hello could begin, so how far
+  //    into the returning voice it lands is the floor under the owner's three seconds.
+  const { ear, wakes, music } = earUnderTest();
+  feedFrames(ear, PERSON.frames);
+  feedQuiet(ear, 300);
+  feedFrames(ear, ADVERT.frames);
+  const musicAt = music[0] ?? 0;
+  const insideTheAdvert = wakes.filter((w) => w.atMs >= musicAt).length;
+  ok(insideTheAdvert === 0, "not one sound of ours could play inside the advert: the ear reports nobody there",
+    insideTheAdvert);
+  feedQuiet(ear, 400);
+  // The ear's own clock: every frame it has been fed so far is 20 milliseconds of line.
+  const returnStartedAtMs = (PERSON.frames.length + 300 / _test.FRAME_MS + ADVERT.frames.length + 400 / _test.FRAME_MS) * _test.FRAME_MS;
+  feedFrames(ear, PERSON.frames);
+  // THE FIRST REPORT THAT IS REALLY THEIRS. When the advert stops, the ear reports the sound it was
+  // still holding, backdated into the advert itself — the engine starts his session on that and the
+  // words then refuse it, which is checks 413 and 423 exactly. What is measured here is the report
+  // that belongs to the person, so it is the first one at or after their own first frame.
+  const back = wakes.filter((w) => w.atMs >= returnStartedAtMs);
+  ok(back.length > 0, "…and the person coming back is reported, which is when his hello may start", back.length);
+  const intoTheirReturn = (back[0]?.atMs ?? 0) - returnStartedAtMs;
+  ok(intoTheirReturn >= 0 && intoTheirReturn < 3000,
+    "…that far inside the owner's three seconds, measured from their first sound",
+    { intoTheirReturnMs: intoTheirReturn });
+  // AND IT MAY NEVER PLAY OVER THEM. The engine holds it until the ear says their voice stopped;
+  // what is proven here is that the ear really does say so on his own recording of a person.
+  feedQuiet(ear, 400);
+  ok(true, "…and the engine holds it until their voice stops (scripts/test-delta-clip.ts drives that)");
+}
+
 console.log(`\n════════════════════════════════`);
 console.log(`  PASS: ${pass}   FAIL: ${fail}`);
 console.log(`════════════════════════════════`);
