@@ -303,6 +303,13 @@ export interface JudgeInput {
    *  second of the check (fix pass 7, item 5). Absent = we do not know when, so the ring only
    *  counts for the line being judged right now. */
   ringAtSec?: number | null;
+  /** WHEN THE PHONE SYSTEM SAID IT WAS FINISHED WITH US (owner 08-20). "Okay, transferring you now"
+   *  is the menu letting go of the call. On CVS Avon the menu handed us on at 124 seconds and a real
+   *  person said "Hello. This is" at 130, and nothing here knew the hand-over had happened, so the
+   *  person read as a recording and keys were pressed into their ear. It is NOT an override: a desk
+   *  can ring out and drop us back into the store's own menu, so a line that matches the menu we hold,
+   *  or that carries a menu's own words, is still the menu. Anything else after it is a person. */
+  handedOnAtSec?: number | null;
   /** LAYER 3 — when WE last spoke. A line arriving right after ours is a reply, and replies are people. */
   weSpokeAtSec?: number | null;
   /** LAYER 3 — when we asked the product question, if we have. */
@@ -352,6 +359,11 @@ function rangBefore(o: JudgeInput): boolean {
   return typeof o.ringAtSec === "number" ? o.atSec >= o.ringAtSec : true;
 }
 
+/** HAS THE MENU ALREADY HANDED US ON by the time this line was spoken? */
+function handedOnBefore(o: JudgeInput): boolean {
+  return typeof o.handedOnAtSec === "number" && o.atSec >= o.handedOnAtSec;
+}
+
 export function judgeVoice(o: JudgeInput): VoiceVerdict {
   const text = String(o.text || "").trim();
   const words = text ? text.split(/\s+/).length : 0;
@@ -390,14 +402,22 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // sentence twice in a row. CVS proved why this has to come first: its opening carries "if this is
   // an emergency", which tripped a phrase meant to catch a person saying "this is Bob", and Echo
   // handed a pharmacy menu to Charlie 16 seconds in. Behaviour decides, words do not.
-  if ((o.saidBefore || []).some((l) => sameSpokenLine(l, text))) {
+  // AFTER THE MENU HAS HANDED US ON, a repeat is not proof of a recording (owner 08-20). Somebody who
+  // picks up and says "Hello." into our silence says it again a few seconds later, which is exactly
+  // what a looping recording looks like to this rule. On CVS Avon that is what happened, and the
+  // third "Hello." was answered with a keypress in the person's ear. The rule still bites on the
+  // store's OWN menu coming back after a desk rang out, because that line is a menu line and a menu
+  // line is caught below whatever the hand-over said.
+  const afterHandover = handedOnBefore(o);
+  const menuish = MENU_WORDS.test(text) || (o.knownMenuLines || []).some((l) => sameSpokenLine(l, text));
+  if ((o.saidBefore || []).some((l) => sameSpokenLine(l, text)) && !(afterHandover && !menuish)) {
     return { who: "recording", why: "it has said this exact line already on this call", ...ride };
   }
 
   // THE SAME SOUND, HEARD AGAIN (owner 08-07). A person never repeats a stretch of sound exactly;
   // a recording playing round again always does. This is what catches hold music, and hold music
   // with an advert over it, which every word rule calls a person.
-  if (o.soundHeardBefore) {
+  if (o.soundHeardBefore && !(afterHandover && !menuish)) {
     return { who: "recording", why: "this exact sound has already played on this call", ...ride };
   }
 
@@ -465,6 +485,14 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // already settled as the recording it is. What is left after a ring is somebody new on the line.
   if (rangBefore(o)) {
     return { who: "person", why: "the desk rang and this is not the store's own menu", ...ride };
+  }
+  // THE MENU SAID IT WAS FINISHED WITH US, and this is not its own menu talking (owner 08-20). Every
+  // piece of menu evidence above has already had its say, so a menu that came back after a desk rang
+  // out is settled as the recording it is before this line is reached. What is left after a hand-over
+  // is somebody new on the line, and it does not matter what words they use, which is what carries a
+  // bare "Hello." and every language we hold no words for.
+  if (afterHandover) {
+    return { who: "person", why: "the menu handed us on and this is not the store's own menu", ...ride };
   }
   const repliedToUs = typeof o.weSpokeAtSec === "number" && o.atSec - o.weSpokeAtSec <= 6 && words <= 40;
   if (repliedToUs && tellsUsSomething) {

@@ -392,5 +392,64 @@ console.log("\n▶ PRACTICE CHECK 9 — a menu that pauses between two DIFFERENT
   }
 }
 
+console.log("\n▶ PRACTICE CHECK 10 — CVS Avon, the check that pressed 0 at a real person (08-20)");
+{
+  // THE REAL CHECK, off its own record. The mapping walked CVS Avon's menu, the menu said "Okay,
+  // transferring you now" at 124 seconds, a person answered at 130 with "Hello. This is", and the
+  // engine did not know them. At 145 seconds it pressed 0 into their ear and they hung up on us.
+  // Two rules together did it: a bare hello is not a person to any word test, and the SECOND "Hello."
+  // matched the rule that catches a recording playing round again.
+  const CVS_OPEN = "Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911.";
+  const handedOnAtSec = 124;
+
+  ok(judge({ text: "Hello. This is", atSec: 130, knownMenuLines: [CVS_OPEN], handedOnAtSec }).who === "person",
+    "once the menu has handed us on, whoever speaks is a person, even saying only \"Hello. This is\"");
+  ok(judge({ text: "Hello.", atSec: 145, knownMenuLines: [CVS_OPEN], saidBefore: ["Hello."], handedOnAtSec }).who === "person",
+    "and saying \"Hello.\" a second time is somebody waiting on us, never a recording playing round again");
+  // The rule it replaces must still bite where it was built to: the store's own menu coming back.
+  ok(judge({ text: CVS_OPEN, atSec: 150, knownMenuLines: [CVS_OPEN], saidBefore: [CVS_OPEN], handedOnAtSec }).who === "recording",
+    "while the store's own menu coming back after the hand-over is still the menu");
+  ok(judge({ text: "For the pharmacy press 1, for the front of the store press 2.", atSec: 150, knownMenuLines: [], handedOnAtSec }).who === "recording",
+    "and so is a line carrying a menu's own words, whatever the hand-over said");
+  // BEFORE the hand-over nothing changes: a bare hello is still held open, never guessed at.
+  ok(judge({ text: "Hello. This is", atSec: 30, knownMenuLines: [CVS_OPEN] }).who !== "person",
+    "before any hand-over the same words prove nothing, so Charlie is never opened on a guess");
+
+  // DRIVEN: the keys can never go out again once the menu has handed us on.
+  {
+    setMappingHandoff(async () => `<Response><Connect/></Response>`);
+    engine.open({ id: "avon-1", confirm: { product: "Pokémon cards" }, stage: "map", chainMenuKnown: true } as never);
+    engine.at("avon-1", 124);
+    const s = engine.get("avon-1")!;
+    (s as { transferAtSec?: number }).transferAtSec = 124;   // the menu said "Okay, transferring you now"
+    engine.at("avon-1", 130);
+    const out = await engine.step("avon-1", "Hello. This is");
+    ok(!/<Play digits=/.test(out), "no key is pressed after the hand-over, whatever the line reads as");
+    ok(engine.get("avon-1")?.knockAtSec == null, "and the keys are never sent after a hand-over either");
+    ok(engine.get("avon-1")?.humanAtSec != null, "the person is stamped, so the check is handed to Charlie");
+    engine.end("avon-1");
+  }
+}
+
+console.log("\n▶ PRACTICE CHECK 11 — the keys are never pressed at a chain whose menu we hold");
+{
+  // The keys exist to find out whether a number is answered by a person or a recording. At a chain we
+  // have already mapped there is nothing to find out, and pressing costs a real question: CVS's
+  // assistant listens the whole time, so the beeps landed as an ANSWER and it replied "sorry, I'm not
+  // understanding" on two of the three CVS Avon checks (08-20).
+  setMappingHandoff(async () => null);
+  engine.open({ id: "known-1", confirm: { product: "Pokémon cards" }, chainMenuKnown: true } as never);
+  engine.at("known-1", 6);
+  const out = await engine.step("known-1", "Thank you for calling CVS, Pharmacy.");
+  ok(!/<Play digits="123"\/>/.test(out), "a store of a chain whose menu we hold is never knocked");
+  engine.end("known-1");
+  // A chain we hold nothing for still gets the keys, because there it is the only way to find out.
+  engine.open({ id: "unknown-1", confirm: { product: "Pokémon cards" } });
+  engine.at("unknown-1", 6);
+  const out2 = await engine.step("unknown-1", "Thanks for calling, this is Card Mart.");
+  ok(/<Play digits="123"\/>/.test(out2), "and a chain we know nothing about still gets them");
+  engine.end("unknown-1");
+}
+
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

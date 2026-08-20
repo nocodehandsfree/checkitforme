@@ -624,6 +624,10 @@ function driveMapper(run: MapperRun): void {
       // During a first run the map holds nothing yet, so without the run's own lines the judge's
       // first layer is blind exactly when it is needed most (fix pass 6, item 6).
       const known = [...(await rememberedMenuLines(chainId, store.id)), ...(run.lastLines || [])];
+      // AND WHETHER WE KNOW THIS CHAIN'S MENU AT ALL. A held recipe means the chain's phone tree is
+      // already on file, so there is nothing the keys could tell us at a fresh store of that chain —
+      // and pressing costs a real question at any store whose system is listening (owner 08-20).
+      const chainMenuKnown = !!(run.lockedRecipe?.steps || []).length;
 
       // ---- place this stage's check ----
       run.attempt++; run.callsToday = await bumpDaily(chainId);
@@ -663,7 +667,7 @@ function driveMapper(run: MapperRun): void {
           deadDoors: proving && blockedDoors.length ? blockedDoors : undefined,
           // THE JUDGE'S FIRST LAYER: what this store has said before. Nothing on file makes this the
           // store's first check — pure listening, hang up on nothing.
-          knownMenuLines: known,
+          knownMenuLines: known, chainMenuKnown,
           // This loop folds its own calls into the map at the lock. `finish` must not fold them.
           callerRecords: true,
           why: `Mapping ${run.chainName} (${stageWord}, check ${run.attempt})` },

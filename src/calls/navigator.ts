@@ -161,6 +161,13 @@ export interface NavSession {
    *  word, a person never does. Empty on a store's first check, which is why that check is pure
    *  listening and hangs up on nothing. */
   knownMenuLines?: string[];
+  /** WE ALREADY KNOW THIS CHAIN'S MENU, even at a store we have never rung (owner 08-20). The keys
+   *  exist to find out whether a number is answered by a person or a recording. At a chain whose menu
+   *  we hold there is nothing to find out, and pressing anyway costs a real question: CVS's assistant
+   *  listens the whole time, so our beeps landed as an ANSWER and it came back "sorry, I'm not
+   *  understanding" on two of three checks. The old guard read the STORE's own remembered lines, so a
+   *  fresh store of a mapped chain knocked every time. */
+  chainMenuKnown?: boolean;
   /** No line of this store's menu is on file yet: record everything, hang up on nothing. */
   firstEverCall?: boolean;
   /** LAYER 4 — we stayed silent for a beat to see whether the line kept reading (a recording) or
@@ -679,6 +686,9 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
     routeHandoffSeen: s.transferAtSec != null,
     ringsHeard: s.ear?.conv?.rings ?? s.ringsHeard ?? 0,
     ringAtSec: s.ringAtSec ?? null,
+    // WHEN THE MENU SAID IT WAS FINISHED WITH US. Everything spoken after it belongs to whoever
+    // picked up, unless it is the store's own menu coming back (owner 08-20).
+    handedOnAtSec: s.transferAtSec ?? s.routedAtSec ?? null,
     weSpokeAtSec: [...s.steps].reverse().find((st) => st.who === "us" && !st.knock)?.atSec ?? null,
     weAskedAtSec: s.confirm?.askedAtSec ?? null,
     firstEverCall: s.firstEverCall,
@@ -822,7 +832,11 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // catches a recording repeating itself on a number we have never rung.
   // Never at a mailbox or a closed store: there is nobody there to hear the beeps, and the check is
   // about to end anyway.
-  if (s.knockAtSec == null && !(s.knownMenuLines || []).length && String(speech || "").trim()
+  // AND NEVER ONCE THE MENU HAS HANDED US ON (owner 08-20, found by the CVS Avon practice check). The
+  // keys ask who answered THIS number. After a hand-over the person on the line is not who answered
+  // the number, so the question is already settled and the beeps would go off in their ear.
+  if (s.knockAtSec == null && s.transferAtSec == null && s.routedAtSec == null
+    && !(s.knownMenuLines || []).length && !s.chainMenuKnown && String(speech || "").trim()
     && !looksLikeADeadEnd(speech)) {
     s.knockAtSec = atSec;
     s.knockStepIdx = s.steps.push({ who: "us", text: "pressed a few keys to see whether the talking stops", atSec, action: "press", value: "123", knock: true }) - 1;
@@ -1110,8 +1124,15 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // systems, but on CVS it routes into the PHARMACY queue (voicemail at night) — so never hammer 0
   // while a long intro is still playing (≥3 stalled turns AND ≥4 total), and never during a barge
   // replay (the plan IS the strategy; if it misses, fail honestly so the mapper learns).
+  // NOTHING IS EVER PRESSED AFTER THE MENU HANDS US ON (owner 08-20). On CVS Avon the menu said
+  // "Okay, transferring you now" at 124 seconds, a person answered at 130, and this branch pressed 0
+  // into their ear at 145 because the third "Hello." had been read as a recording. Whoever is on the
+  // line after a hand-over is a person until they prove otherwise, and a keypress at a person is the
+  // one thing that must never happen — so the escape hatch closes at the hand-over, full stop, and
+  // no reading of any line can re-open it.
+  const handedOn = s.transferAtSec != null || s.routedAtSec != null;
   const stalled = s.turns - (s.lastActTurn ?? 0);
-  if (!s.barge && (s.escaped || (stalled >= 3 && s.turns >= 4))) {
+  if (!s.barge && !handedOn && (s.escaped || (stalled >= 3 && s.turns >= 4))) {
     s.escaped = true;
     if (speech && speech.trim()) {
       // STOP THE INSTANT A PERSON ANSWERS — and the earpiece is what says so. Pressing 0 at a person
@@ -1375,7 +1396,7 @@ async function recordConfirmAsked(chainId: number, retailerId: number, door?: st
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }>; knownMenuLines?: string[] }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }>; knownMenuLines?: string[]; chainMenuKnown?: boolean }): Promise<{ id?: string; error?: string }> {
   // A LISTEN-ONLY CHECK WITH NOTHING TO WALK NEVER DIALS (fix pass 5). Such a check has no answers to
   // give and no route to finish, so it can never arm its ring hang-up — it would sit on the line
   // until somebody picked up, and then hang up on them. Refusing it here makes troubling Staff
@@ -1392,7 +1413,8 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
   const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors,
     // THE JUDGE'S FIRST LAYER: this store's own menu as heard before. Nothing on file = the store's
     // FIRST check, which listens to everything and hangs up on nothing.
-    knownMenuLines: extra?.knownMenuLines, firstEverCall: !(extra?.knownMenuLines || []).length };
+    knownMenuLines: extra?.knownMenuLines, chainMenuKnown: extra?.chainMenuKnown,
+    firstEverCall: !(extra?.knownMenuLines || []).length };
   sessions.set(id, session);
   session.why = extra?.why;
   // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses
