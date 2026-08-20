@@ -501,6 +501,46 @@ reply keeps building behind it and the engine always plays the two words first.
   plays while they are still talking, the two words land under three seconds from their return, the
   clip was recorded fresh for that check, and the store really hears it.
 
+## OUR OWN BRAIN, BUILT AND DIALED (owner's go, 08-20): check 427, 2.8¢, one red row
+**The road**: NOT the blocked one. The provider refuses a custom brain on any agent using a quick
+voice clone, so we run the conversation ourselves and their PLAIN SPEECH service says each finished
+line in the same voice — the identical machinery the fresh "Oh, hey!" uses. `src/voice/ourbrain-session.ts`
+is a session that speaks the provider's own message protocol (`on`/`emit`/`send`/`close`/`readyState`),
+so `bridge.ts` cannot tell the two apart and every rule in it runs unchanged. `wireTheSession()` is
+the one place both lanes are wired. Echo remains the whole of his hearing on this lane, so every
+fresh Staff line is handed as their turn (their greeting never is, nor their walking-away line).
+- **CHECK 427**: TEST FAILED on ONE red row, awake on hold 7s. **Everything else green or yellow.**
+  Meter 31s on the record, 27s graded, under the 31 line. Answer gap worst turn **2s GREEN** (it was
+  7s red on the hosted lane). Echo's handover 1s green. Profit **89%**. Card verdict PASS, status
+  in_stock, and the harness reported EVERY SCENARIO HELD — including "the screen and the record say
+  the same thing", red on every dial since 08-07.
+- **COST: 2.8¢ against 9.5¢ (423), 11.1¢ (424) and 11.9¢ (417) the old way.** Charlie's own bucket
+  reads 0.0¢ because there is no metered session of theirs: `charliePaidSeconds` (events.ts) is what
+  the cost engine now prices, and a stretch our brain ran contributes none of it.
+- **HIS FIRST SOUND 4.1s after they came back** (their voice 36.545, "Oh, hey!" 40.638), and **his
+  full reply 1.4s after their words ended** (their line ended 52.575, he spoke at 53.983). The
+  record stamps every reply: `brain_reply` carries the model, the milliseconds to write and the
+  milliseconds to speak (427: claude-sonnet-4-6, 1.5-2.1s to write, 0.25-0.28s to speak).
+- **THE FALLBACK IS LAW AND IS WIRED**: `onStumble` sets `brainFellBack`, emits `brain_fell_back`,
+  and reopens the hosted agent mid call in the same voice, saying nothing out loud. Proven in
+  test-ourbrain (model down and voice down, both hand back with no sound made).
+- **FOUR FAULTS THE DIALS FOUND, ALL FIXED**: 425 wrote both replies (1.5s and 1.1s) and the store
+  heard NEITHER — the comeback shut his mouth again unless the reconnect feed still held the pieces,
+  and the joined line absorbs that feed a beat earlier; and the ack guard only knew our wording
+  while his instructions tell him to say that sentiment in his own words. 426 never settled a status
+  at all, because every settling door asks the provider for the outcome and there is no conversation
+  of theirs — the id is `ours:<room>` now and `getConversation` answers it off our own record, so all
+  three doors keep working and the reader still decides from the words. 426 also handed him Staff's
+  walking-away line as a turn when they came back, and read a tool's name out loud ("have a good
+  one! end_call").
+- **STILL OPEN, NAMED**: on the comeback his FULL reply to that first turn does not play — the
+  two-word hello goes out and then nothing until Staff's next line. 427 still got the right answer
+  because Staff volunteered the detail. It is the early-turn hold-and-release interacting with the
+  brain's reply arriving after the three-second backstop; next chat's first job.
+- **THE SWITCH IS BACK OFF** (Admin → policy flag `ourBrain`), as ruled: on for test dials only.
+- Suites: ourbrain 31 · delta-clip 420 · hold-wake 26 · behaved 109 · call-events 124 · prompts 262
+  · meter 93 · bridge 13 · dropped-call 33 · clip-stability 10 · tsc clean.
+
 ## WHAT IS LEFT
 1. **Echo 3's order, tasks TWO and THREE**: the recorded goodbye, then the own-brain switch with
    §8's dropped call (finish line: the loud classic music's meter under 31 with the switch ON).
