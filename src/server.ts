@@ -1480,8 +1480,8 @@ app.get("/api/calls/:id/receipt", async (c) => {
   // agree with), so this route and the by-room one can never answer differently about the same call.
   const sums: Rollup = live ? rollup(live) : rollupFromRow(call, timeline);
   const cost = live
-    ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
-    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, sttUsd: call.costSttUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charlieConnectedSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
+    ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charliePaidSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
+    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, sttUsd: call.costSttUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charliePaidSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
 
   return c.json({
     call: {
@@ -6669,7 +6669,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   const live = getReceipt(room);
   if (live && !live.closed) {
     const sums = rollup(live);
-    const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
+    const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charliePaidSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
     const timeline = oneSlowestReplyRow(live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })));
     return c.json({
       room, live: true, stamped: true,

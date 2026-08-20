@@ -51,6 +51,7 @@ run "unit: clips are the same recording every check" "$ENV $TSX scripts/test-cli
 run "unit: call-events (the cost buckets sum)" "$ENV $TSX scripts/test-call-events.ts"
 run "unit: listen-nav (the ear)" "$ENV $TSX scripts/test-listen-nav.ts"
 run "unit: the wake rule, on his own recordings" "$ENV $TSX scripts/test-hold-wake.ts"
+run "unit: our own brain writes and his voice speaks" "$ENV $TSX scripts/test-ourbrain.ts"
 run "unit: every way Staff say they are stepping away" "$ENV $TSX scripts/test-going-to-check.ts"
 run "unit: robot store words" "$ENV $TSX scripts/test-robot-store.ts"
 run "unit: No clear answer, the new status" "$ENV $TSX scripts/test-no-straight-answer.ts"

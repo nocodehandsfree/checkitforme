@@ -531,6 +531,9 @@ export interface Rollup {
   talkSeconds: number | null;
   /** Session open, total. THIS is what we are billed. */
   charlieConnectedSeconds: number;
+  /** Of those, the seconds the voice provider's own conversation service really billed. Equal to
+   *  `charlieConnectedSeconds` on every hosted check; smaller on one our own brain ran. */
+  charliePaidSeconds: number;
   /** Of that, seconds somebody was actually speaking. Connected minus this is the waste. */
   charlieTalkingSeconds: number;
   /** The waste, spelled out so nobody has to subtract. */
@@ -609,6 +612,14 @@ export function rollup(r: Receipt): Rollup {
   // miss by a second, which on a dashboard reads as a bug in the meter. So the two measured parts
   // round, and dead air is whatever is left — it is the derived number, not a measured one.
   const charlieSecs = sec(charlieMs);
+  // WHAT THE VOICE PROVIDER ACTUALLY BILLS US FOR (owner's go, 08-20). Their conversation service
+  // meters by the second, and a stretch run by OUR OWN BRAIN has no such session on it at all: his
+  // words are written on our account and spoken by the plain speech service, which is billed by the
+  // character in the clips bucket. Pricing those seconds at the hosted rate would print a cost that
+  // was never spent and hide the whole saving. Every stretch is hosted until one is not.
+  const hostedMs = r.segments.filter((s) => s.closeMs !== null && s.brain !== "ours")
+    .reduce((t, s) => t + Math.max(0, (s.closeMs as number) - s.openMs), 0);
+  const charliePaidSecs = r.segments.length ? Math.min(charlieSecs, sec(hostedMs)) : charlieSecs;
   const speakingSecs = Math.min(sec(speakingMs), charlieSecs);
   const listeningSecs = Math.min(sec(listeningMs), charlieSecs - speakingSecs);
   const silentSecs = charlieSecs - speakingSecs - listeningSecs;
@@ -622,6 +633,7 @@ export function rollup(r: Receipt): Rollup {
     navSeconds: m.humanMs !== null ? sec(m.humanMs) : null,
     talkSeconds: m.humanMs !== null ? Math.max(0, callSecs - sec(m.humanMs)) : null,
     charlieConnectedSeconds: charlieSecs,
+    charliePaidSeconds: charliePaidSecs,
     charlieTalkingSeconds: speakingSecs + listeningSecs,
     charlieSilentSeconds: silentSecs,
     speakingSecs,
@@ -720,6 +732,11 @@ export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string;
     navSeconds: call.navSeconds ?? null,
     talkSeconds: call.talkSeconds ?? null,
     charlieConnectedSeconds: stamped ? call.charlieConnectedSeconds! : 0,
+    // A FINISHED ROW DOES NOT CARRY THE SPLIT. It is read back off the record's own stretches: a
+    // check every stretch of which our own brain ran had no metered session at all.
+    charliePaidSeconds: stamped
+      ? (call.brain === "ours" ? 0 : call.charlieConnectedSeconds!)
+      : 0,
     charlieTalkingSeconds: stamped ? (call.charlieTalkingSeconds ?? 0) : 0,
     charlieSilentSeconds: stamped ? (call.charlieSilentSeconds ?? 0) : 0,
     speakingSecs: stamped ? (call.charlieSpeakingSeconds ?? 0) : 0,

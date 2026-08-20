@@ -3306,6 +3306,83 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ OUR OWN BRAIN DRIVES A WHOLE CHECK, through the real engine (owner's go, 08-20)");
+{
+  // The blocked road pointed the voice provider's conversation service at our endpoint, and they
+  // refuse that on any agent using a quick-made voice copy. This is the other road: WE run the
+  // conversation and their plain speech service says each line in the same voice. What is proven
+  // HERE is that the engine cannot tell the difference — every rule in it still runs, because the
+  // session our side opens speaks the provider's own message protocol.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-ourbrain";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  const beforeStub = globalThis.fetch;
+  let askedOurBrain = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    if (/anthropic|chat\/completions|\/v1\/messages/.test(url)) {
+      askedOurBrain++;
+      return new Response(`data: ${JSON.stringify({ type: "content_block_delta", delta: { text: "Oh nice, is it a pack or a box?" } })}\n\ndata: [DONE]\n\n`,
+        { status: 200, headers: { "content-type": "text/event-stream" } });
+    }
+    return (beforeStub as typeof globalThis.fetch)(input, init);
+  }) as typeof globalThis.fetch;
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?", category: "Pokemon cards", personality: "warm" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    voiceId: "voice_test",
+    ourBrain: true,
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  } as never);
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_ob", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(700);
+  const evs = () => getReceipt(room)?.events || [];
+  const step = (n: string) => evs().filter((e) => (e.detail as { step?: string } | null)?.step === n);
+  const join = evs().find((e) => e.kind === "charlie_join");
+  ok(!!join, "his session is up with no agent of the provider's opened at all");
+  ok(((join?.detail || {}) as { brain?: string }).brain === "ours",
+    "…and the record says which brain is behind it, on the stretch itself", ((join?.detail || {}) as { brain?: string }).brain);
+  ok(f.sockets.length === 0, "…and not one conversation session was opened at the voice provider", f.sockets.length);
+  // THEIR HELLO IS THE RECORDING'S TO ANSWER, never his — the same rule on both lanes.
+  echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now());
+  await sleep(200);
+  ok(askedOurBrain === 0, "their hello is never handed to him: the recorded question answers it", askedOurBrain);
+  // STAFF ANSWER. Echo writes it down and hands it over exactly as it always has.
+  const outBefore = tw.outMedia().length;
+  echoHeardStaff(room, "Yeah, we've got a few of those.", Date.now());
+  await sleep(700);
+  ok(askedOurBrain >= 1, "their words are answered by OUR OWN brain", askedOurBrain);
+  ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Agent" && /pack or a box/.test(l.text)),
+    "…his reply is written down as his own line");
+  ok(tw.outMedia().length > outBefore, "…and the store really hears it", { before: outBefore, now: tw.outMedia().length });
+  ok(step("brain_reply").length === 1, "…and the record stamps WHICH brain wrote that reply", step("brain_reply").length);
+  {
+    const d = (step("brain_reply")[0]?.detail || {}) as { brain?: string; thinkMs?: number; speakMs?: number };
+    ok(d.brain === "ours" && typeof d.thinkMs === "number" && typeof d.speakMs === "number",
+      "…with how long it took to write and how long to say", d);
+  }
+  // AND THE COST IS NOT PRICED AS IF THE PROVIDER HAD BEEN RUNNING HIM. Their conversation service
+  // meters by the second and there was no session of theirs on this call at all.
+  {
+    const r = rollup(getReceipt(room)!);
+    ok(r.charliePaidSeconds === 0, "not one second of this stretch is billed at the provider's conversation rate", r.charliePaidSeconds);
+    ok(r.charlieConnectedSeconds >= 0, "…while his own clock still measures what it always did", r.charlieConnectedSeconds);
+  }
+  globalThis.fetch = beforeStub;
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ CHECK 399'S MOMENT: his private note never reaches the line (owner, 08-19)");
 {
   // 31 seconds into check 399 the store's advert had been handed to him as if Staff had spoken, and

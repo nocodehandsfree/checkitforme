@@ -87,7 +87,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       const last = r.events[r.events.length - 1];
       if (!last) return;
       const c0 = costCall({
-        callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds,
+        callSecs: sums.callSecs, charlieSecs: sums.charliePaidSeconds,
         avoidableSecs: sums.charlieSilentSeconds,
         forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))],
       }, rates);
@@ -100,7 +100,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
     // runs from the hand-off to the end. Counting only one of them was undercounting every call.
     const cost = costCall({
       callSecs: sums.callSecs,
-      charlieSecs: sums.charlieConnectedSeconds,
+      charlieSecs: sums.charliePaidSeconds,
       avoidableSecs: sums.charlieSilentSeconds,
       forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))],
     }, rates);

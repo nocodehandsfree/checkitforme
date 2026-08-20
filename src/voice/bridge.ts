@@ -17,6 +17,7 @@ import { TUNING_DEFAULTS, type CallTuning } from "../calls/tuning";
 // Delta's opening question: our own line, our own voice, already in phone format and already paid
 // for. The bridge only PLAYS it — synthesis and caching live outside the call path (clip-cache.ts).
 import { toMediaFrames, phoneClip } from "../calls/clip-cache";
+import { openOurBrainSession, OurBrainSession } from "./ourbrain-session";
 // The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
@@ -403,6 +404,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // below overlays the check's own numbers IN PLACE the moment the room is known (check 364).
   const tune: CallTuning = { ...(contexts.get(room)?.tuning ?? TUNING_DEFAULTS) };
   let eleven: WebSocket | null = null;
+  /** The same session when OUR OWN BRAIN is behind it (owner's go, 08-20), kept beside `eleven` so
+   *  the record can name which brain wrote each reply and how long it took. Null on a hosted call. */
+  let ourBrain: OurBrainSession | null = null;
   let ready = false;
   let frames = 0;
   let ended = false;
@@ -2461,6 +2465,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (!ready) missedWhileClosed.push(txt);
       else handTheirTurn([txt], "the line finished writing after he reconnected");
     }
+    // OUR OWN BRAIN HAS NO EARS (owner's go, 08-20). On the provider's lane his session is fed the
+    // store's audio and hears every sentence itself, so a line Echo writes while he is open is one
+    // he already has. Our lane is handed WORDS ONLY — Echo is the whole of his hearing, which is
+    // exactly why it costs nothing to listen with — so every fresh Staff line has to reach him as
+    // their turn or he would sit in silence through the answer. Their greeting is never one of
+    // them: the recorded question answers that, and handing it over would have him greet back.
+    else if (fromEcho && fresh && ourBrain && eleven === (ourBrain as unknown as WebSocket) && ready
+      && !onHold && !alreadyHisToAnswer(txt) && !playedAtUs.has(keyOf(txt))
+      && (theirFirstLine == null || keyOf(txt) !== keyOf(theirFirstLine))) {
+      handTheirTurn([txt], "our own brain hears only what Echo writes down");
+    }
     // HE HEARD IT HIMSELF is recorded AT THE HANDOVER, never worked out from what happened to be
     // open when Echo's copy landed (owner task 08-15): that inference is exactly what lost the no on
     // check 366. A line is his only when his own session's transcript delivered it (marked in the
@@ -2522,9 +2537,48 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // request, so choosing it is choosing which agent to open. The joining agent wins when a clip is
     // playing: never speaking over the question matters more than where the thinking happens, and
     // the ladder below will move to our brain on the next call rather than risk this one.
-    const useOurs = !!c.ourBrain && !!c.ourBrainAgentId && !joining && !brainFellBack;
+    // WHICH BRAIN (owner's go, 08-20). The old road pointed the provider's own conversation service
+    // at our endpoint, and they refuse that on any agent using a quick-made voice copy — every voice
+    // we call with is one, so that road is closed and he ruled we do not take it again. This is the
+    // other road, the one his fresh "Oh, hey!" already proved: WE run the conversation and their
+    // PLAIN SPEECH service says each finished line in the same voice. It needs no agent of its own,
+    // only his voice, and everything below is untouched because the session it opens speaks the same
+    // message protocol the hosted one speaks.
+    // JOINING IS A PROMPT, NOT AN AGENT, ON THIS ROAD. The provider needed a SECOND configured agent
+    // for a Charlie who joins mid call, so choosing our brain used to mean giving that up. Our own
+    // session is handed the same standing rule as text, so both can be true at once.
+    const useOurs = !!c.ourBrain && !brainFellBack && !!c.voiceId;
     segmentBrain = useOurs ? "ours" : "hosted";
-    const agentId = joining ? c.midCallAgentId! : useOurs ? c.ourBrainAgentId! : c.agentId;
+    let ws: WebSocket;
+    if (useOurs) {
+      opening = false;
+      if (onHold && !reconnectingEarly) { log(`connectEleven refused (our own brain, ${segmentWhy ?? "clip path"}): Staff stepped away while we were opening`); return; }
+      // OUR SIDE STUMBLING IS NEVER THE STORE'S PROBLEM (spec §7, rung two, and the owner's law
+      // today): the call goes back to the provider's hosted agent, in the same voice, mid call.
+      const stumble = (why: string) => {
+        if (ended || brainFellBack) return;
+        brainFellBack = true;
+        emit(room, "unknown", "Our own brain stumbled, so the call went back to the provider's, in the same voice",
+          { step: "brain_fell_back", why, notASound: true });
+        log(`brain: ${why} -> handing the call back to the hosted agent`);
+        const dying = eleven;
+        eleven = null; ready = false; connecting = false;   // set FIRST, so its close is a stale one
+        try { dying?.close(); } catch { /* torn down */ }
+        void connectEleven("our own brain stumbled");
+      };
+      ourBrain = openOurBrainSession({
+        dynamicVars: joining && clipText ? { ...c.dynamicVars, opening_line: clipText } : c.dynamicVars,
+        voiceId: c.voiceId!, voiceTuning: c.voiceTuning, apiKey: c.apiKey, joining, log, onStumble: stumble,
+      });
+      // It answers `on`, `emit`, `send`, `close` and `readyState` — every member this file touches on
+      // a session — so from here the two lanes are the same code.
+      ws = ourBrain as unknown as WebSocket;
+      log("connectEleven: opening OUR OWN brain, his voice spoken by the plain speech service");
+      eleven = ws;
+      wireTheSession(ws, c, joining, segmentWhy);
+      return;
+    }
+    const agentId = joining ? c.midCallAgentId! : c.agentId;
     const url = await signedUrl(agentId, c.apiKey);
     opening = false;   // the handshake is decided; from here `eleven` itself is the guard
     // …AND THE SAME QUESTION AGAIN, because time passed. Fetching the address to open him with takes
@@ -2550,8 +2604,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       return;
     }
     log("connectEleven: opening ElevenLabs WS");
-    const ws = new WebSocket(url);
+    ws = new WebSocket(url);
     eleven = ws;
+    ourBrain = null;   // this stretch is the provider's own, whatever the last one was
+    wireTheSession(ws, c, joining, segmentWhy);
+  }
+
+  /** EVERYTHING A SESSION OF HIS IS WIRED TO, whichever brain is behind it (owner's go, 08-20).
+   *  The provider's own socket and our own brain's session both arrive here and are treated
+   *  identically from this line down, which is the whole reason our side wears their message
+   *  protocol: one set of rules, one place, no second copy to drift. */
+  function wireTheSession(ws: WebSocket, c: BridgeContext, joining: boolean, segmentWhy?: string): void {
     ws.on("open", () => {
       // Each session gets its own one-shot echo allowance: a reopened session is handed the recorded
       // question as context again and reports it as its own line again (open fault 4).
@@ -2583,7 +2646,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       }
       ws.send(JSON.stringify(init));
     });
-    eleven.on("message", (data: Buffer) => {
+    ws.on("message", (data: Buffer) => {
       let m: { type?: string; audio_event?: { audio_base_64?: string }; ping_event?: { event_id?: number }; conversation_initiation_metadata_event?: { conversation_id?: string }; user_transcription_event?: { user_transcript?: string }; agent_response_event?: { agent_response?: string } };
       try { m = JSON.parse(data.toString()); } catch { return; }
       if (m.type === "conversation_initiation_metadata") {
@@ -3084,6 +3147,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         const hisStart = (hisTurnOpen && !hisTurnStartSpent && hisTurnAudioStartMs > 0 && Date.now() - hisTurnAudioStartMs < 20_000)
           ? hisTurnAudioStartMs : undefined;
         hisTurnStartSpent = true;
+        // WHICH BRAIN WROTE THIS ONE (owner's go, 08-20). Stamped on the reply itself, not just on
+        // the stretch, so the record answers "who wrote each line" line by line, with what it cost
+        // in time on both halves: writing the words, and making the sound of them.
+        if (txt && ourBrain && eleven === (ourBrain as unknown as WebSocket)) {
+          emit(room, "unknown", "Our own brain wrote that reply and the plain speech service said it in his voice",
+            { step: "brain_reply", brain: "ours", model: ourBrain.brainModelUsed,
+              thinkMs: ourBrain.lastThinkMs, speakMs: ourBrain.lastSpeakMs, notASound: true });
+        }
         if (txt && recordLine(room, "Agent", String(txt), hisStart)) {
           hisTurnLineWritten = true;
           hisEndWaitingForWords = 0;
@@ -3106,7 +3177,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         agentPlayingUntil = 0; // Twilio's playout buffer was cleared — nothing of ours is on the line now
       }
     });
-    eleven.on("close", (code: number) => {
+    ws.on("close", (code: number) => {
       // ONLY THE SESSION THAT IS ACTUALLY OURS MAY END THE CHECK. This close belongs to one specific
       // session, and by the time it arrives that session may already have been replaced: we close him
       // for a wait, Staff come back FAST, a fresh session is opened — and only then does the old
@@ -3141,7 +3212,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       }
       signalEnd(); if (twilio.readyState === 1) twilio.close();
     });
-    eleven.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));
+    ws.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));
   }
 
   // Bridge-injected keypad presses (see BridgeContext.dtmf). Press happens in code at a fixed

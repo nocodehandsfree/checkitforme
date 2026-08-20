@@ -210,6 +210,38 @@ export async function brainCompletion(body: {
   return { stream, model };
 }
 
+/**
+ * ONE FINISHED REPLY FROM OUR OWN ACCOUNT (owner's go, 08-20).
+ *
+ * The blocked road was letting the voice provider CALL us mid conversation, which they refuse on
+ * any agent using a quick-made voice copy. This is the other road, and it is the one his fresh
+ * "Oh, hey!" already proved: WE run the conversation, and their plain speech service says each
+ * finished line in his voice. So what is needed here is not a stream in their wire format, it is a
+ * sentence — this returns that, using the same model, the same accounts and the same one-retry
+ * ladder the streaming endpoint above uses.
+ *
+ * NO CONVERSATION TEXT IS KEPT. What goes in is the transcript the check already holds and what
+ * comes out is the line to say; neither is written to disk, to a log or to the receipt.
+ */
+export async function brainReply(
+  system: string,
+  turns: Array<{ role: string; content: string }>,
+  maxTokens = 120,
+): Promise<{ text: string; model: string; ms: number }> {
+  const model = await brainModel();
+  const started = Date.now();
+  const ask: Ask = { system, turns, maxTokens };
+  let upstream: AsyncGenerator<string>;
+  try { upstream = await openStream(model, ask); }
+  catch (e) {
+    console.error("[brain] first try failed, one immediate retry:", String(e).slice(0, 160));
+    upstream = await openStream(model, ask);
+  }
+  let text = "";
+  for await (const piece of upstream) text += piece;
+  return { text: text.trim(), model, ms: Date.now() - started };
+}
+
 interface Ask { system: string; turns: Array<{ role: string; content: string }>; maxTokens: number; temperature?: number }
 
 /** Which account a model id names. Same `groq:` prefix convention the rest of the app already uses,
