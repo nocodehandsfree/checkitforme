@@ -233,9 +233,11 @@ console.log("\n▶ THE SPEED TEST — pressing earlier works on the approved men
 
 console.log("\n▶ THE MENU IS OFF UNLESS IT IS SWITCHED ON");
 {
-  ok(isMenuVariant("plain") && isMenuVariant("ring_out") && !isMenuVariant("whatever"),
-    "only the five menus he named can be picked");
-  ok(Object.keys(MENU_VARIANTS).length === 5, "five menus, and no sixth invented one");
+  ok(isMenuVariant("plain") && isMenuVariant("ring_out") && isMenuVariant("talks") && !isMenuVariant("whatever"),
+    "only the menus he named can be picked");
+  // The sixth, the one that TALKS instead of reading a list, was added 08-20 after CVS Branford:
+  // its own bench lives in scripts/test-talking-menu.ts.
+  ok(Object.keys(MENU_VARIANTS).length === 6, "six menus, and no seventh invented one");
   const src = readFileSync("src/calls/tapedeck.ts", "utf8");
   ok(/const menu = opts\?\.greeting \? null : await menuPick\(\);/.test(src),
     "a call answers with a menu only when one is switched on");

@@ -30,7 +30,8 @@ import { db } from "./../db/client";
 import { chains, retailers } from "../db/schema";
 import { getSetting, setSetting, allSettings } from "../db/settings";
 import { isCallingPaused } from "../redis";
-import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, pickedDoorFrom, questionBeforePick, doorsAskedAt, NavRecipe, NavStep } from "./navigator";
+import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, pickedDoorFrom, questionBeforePick, doorsAskedAt, NAV_MODEL, NavRecipe, NavStep } from "./navigator";
+import { llm } from "../llm";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
 import { openState } from "../store-hours";
@@ -91,7 +92,10 @@ export interface MapperRun {
   lockedRecipe?: NavRecipe | null;
   /** ROUND ONE HAS BEEN RUN AT THIS STORE and its menu is written down (owner 08-20). Cleared with
    *  the store, so a fresh store listens first all over again. */
-  menuHeard?: boolean;  // the chain's recipe as read at start
+  menuHeard?: boolean;
+  /** THE ANSWERS, WORKED OUT BETWEEN THE ROUNDS off what round one heard. Round two speaks these the
+   *  moment it recognises a question, with nothing to think about on the line. */
+  answerPlan?: Array<{ q: string; say: string }>;  // the chain's recipe as read at start
   pinnedStoreId?: number;           // owner-named store for the whole run (was opts.storeId)
   mapMisses?: number;               // mapping-menu checks where nobody answered (was loop-local)
   menuNumber?: number;              // which menu this run is learning — marks expire with it
@@ -472,6 +476,58 @@ async function storeOpenNow(storeId: number): Promise<boolean> {
   } catch { return true; } // a lookup hiccup must not strand a run — the pick gate already screened
 }
 
+/** WORK OUT THE ANSWERS BETWEEN THE ROUNDS, NEVER DURING A CALL (owner 08-20).
+ *
+ *  Round one writes down every line this store's menu said. This is asked ONCE, off the phone, with
+ *  all the time in the world: for each question the store asks, what exactly do we say? Round two
+ *  then recognises a question the moment it is heard and speaks its answer with nothing to think
+ *  about.
+ *
+ *  WHY IT EXISTS: round two used to ask the model at the moment each question was heard, which takes
+ *  ten to twenty seconds. CVS Branford's assistant gives up in about three, so it had already said
+ *  "sorry, I'm not understanding" before our answer arrived, on all four checks and every question.
+ *
+ *  A question this returns nothing for is not a failure: round two falls through to the slow path for
+ *  it and its words are written down, so the next round holds it.
+ */
+export async function planAnswers(opts: {
+  questions: string[]; target?: string; provenDoors?: string[]; deadDoors?: string[]; product?: string;
+}): Promise<Array<{ q: string; say: string }>> {
+  const questions = opts.questions.map((q) => String(q || "").trim()).filter(Boolean).slice(0, 12);
+  if (!questions.length) return [];
+  const target = (opts.target || "").trim() || "customer service, the front of the store";
+  const proven = (opts.provenDoors || []).filter(Boolean);
+  const dead = (opts.deadDoors || []).filter(Boolean);
+  const prompt = `A store's phone menu was recorded on an earlier call. For EACH line below, say exactly what a caller should say out loud to move toward a real human at "${target}".
+
+WHO YOU ARE: a regular SHOPPER ringing to ask whether a product is on the shelf. You are NOT a patient, NOT a healthcare or insurance provider, NOT a vendor. "Are you a healthcare provider?" is always no. At a pharmacy or any store with departments, ALWAYS head for the FRONT of the store, the general store or the operator, and NEVER the pharmacy, which dead-ends in date-of-birth checks.
+
+ANSWER IN THE MENU'S OWN WORDS, word for word as the line offers them ("front store services", not "front"). A yes or no question gets "yes" or "no". An open question from an automated assistant gets a short routing phrase of under five words, never yes or no.
+${proven.length ? `\nDOORS ALREADY PROVEN at this chain, head for these when offered: ${proven.join(", ")}.` : ""}${dead.length ? `\nDOORS PROVEN WRONG, never choose them: ${dead.join(", ")}.` : ""}
+
+A line that is NOT a question and asks nothing of the caller (a greeting, an emergency notice, hold music, "transferring you now") gets an EMPTY answer. Never invent an answer for a line that did not ask anything.
+
+The lines, in the order they were heard:
+${questions.map((q, i) => `${i + 1}. "${q}"`).join("\n")}
+
+Return ONLY JSON: {"answers":[{"n":<line number>,"say":"<exact words, or empty>"}]}`;
+  try {
+    const txt = await llm(NAV_MODEL, prompt, { job: "map-plan-answers", json: true, temperature: 0, maxTokens: 500 });
+    const j = JSON.parse(txt) as { answers?: Array<{ n?: number; say?: string }> };
+    const out: Array<{ q: string; say: string }> = [];
+    for (const a of j.answers || []) {
+      const i = Number(a?.n) - 1;
+      const say = String(a?.say || "").trim().slice(0, 60);
+      if (i >= 0 && i < questions.length && say) out.push({ q: questions[i], say });
+    }
+    return out;
+  } catch (e) {
+    // A planner that cannot answer costs nothing: round two simply runs the slow path it always ran.
+    console.error("[mapper] planAnswers", String(e).slice(0, 120));
+    return [];
+  }
+}
+
 /** Start (or resume) mapping a chain until locked. Fire-and-forget; poll mapperState(). */
 export async function startMapper(chainId: number, opts: { storeId?: number } = {}): Promise<{ started?: boolean; error?: string; benchmark?: number | null }> {
   if (!chainId) return { error: "chainId required" };
@@ -576,6 +632,7 @@ function driveMapper(run: MapperRun): void {
         run.usedStores.push(picked.id); run.rotate = false;
         run.mapMisses = 0; run.doorProven = false; run.lastLines = undefined; run.settleTries = 0;
         run.menuHeard = false;   // a store we have never rung gets its listening round first
+        run.answerPlan = undefined;   // and its own answers, worked out from its own menu
       }
       const store = run.store;
 
@@ -678,6 +735,9 @@ function driveMapper(run: MapperRun): void {
           // THE JUDGE'S FIRST LAYER: what this store has said before. Nothing on file makes this the
           // store's first check — pure listening, hang up on nothing.
           knownMenuLines: known, listenOnly: listening,
+          // The answers worked out between the rounds ride onto every check that talks, so a question
+          // this store already asked us is answered the instant it is heard.
+          answerPlan: listening ? undefined : run.answerPlan,
           // This loop folds its own calls into the map at the lock. `finish` must not fold them.
           callerRecords: true,
           why: `Mapping ${run.chainName} (${stageWord}, check ${run.attempt})` },
@@ -729,7 +789,15 @@ function driveMapper(run: MapperRun): void {
         if (lines.length) {
           // Heard. Round two answers with the store's OWN words instead of guessing at its questions.
           run.menuHeard = true;
-          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `listened to the whole menu, ${lines.length} line${lines.length === 1 ? "" : "s"} written down`, seconds: menuSecs });
+          // AND THE ANSWERS ARE WORKED OUT NOW, between the rounds, off the phone, with all the time
+          // in the world. Round two then speaks them the moment it recognises a question.
+          run.answerPlan = await planAnswers({
+            questions: lines, target: run.target, product,
+            provenDoors: (run.lockedRecipe?.steps || []).map((st) => String(st.value || "")).filter(Boolean),
+            deadDoors: run.doorsDead,
+          });
+          const prepared = (run.answerPlan || []).length;
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `listened to the whole menu, ${lines.length} line${lines.length === 1 ? "" : "s"} written down, ${prepared} answer${prepared === 1 ? "" : "s"} ready before the next call`, seconds: menuSecs });
         } else {
           // Nothing was said to us at all. A store that answers with a person has no menu to hear, so
           // there is nothing to listen for a second time — round two goes ahead on what we hold.

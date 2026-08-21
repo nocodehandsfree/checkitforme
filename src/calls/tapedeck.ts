@@ -614,6 +614,10 @@ export interface RobotScene { n: number; name: string; greeting?: string; acts: 
   /** WHERE THE STAFF SCENE IS SPLICED IN. The menu walks the caller to the front of the store, and
    *  from that label on the robot's own Staff scene plays, on the same live call. */
   staffAt?: string;
+  /** THIS MENU ASKS INSTEAD OF READING A LIST, and gives up after TALK_WINDOW_SEC of silence: it says
+   *  it did not understand and asks the same question again (owner 08-20, CVS Branford's shape). */
+  talksAndGivesUp?: true;
+  gaveUpLine?: string;
   /** Which of the owner's 16 locked test cards this scene runs (behaved.ts TEST_CARDS). The card is
    *  what the Testing screen names the check by; the scene is only how the robot plays it. */
   card: string;
@@ -672,6 +676,20 @@ const MENU_HOME_SUPPLIES = "Home supplies.";
 const MENU_COSMETICS = "Our cosmetics department is open ten to six.";
 const MENU_HOURS = "We are open nine to nine, seven days a week. You can find us at 4200 Woodland Hills Drive.";
 
+// ---- THE TALKING MENU (owner 08-20) ------------------------------------------------------------
+// The five menus above all read a list and wait for a KEY. Not one of them talks, and a talking menu
+// is exactly what beat us: CVS Branford has no press one, press two at all. It ASKS, and it gives up
+// after about three seconds of silence. Its three questions, in its own shape:
+const TALK_HEALTHCARE = "Are you a healthcare provider?";
+const TALK_DEPARTMENT = "Pharmacy, or front of store services?";
+const TALK_OPEN = "I can help with photo services, cosmetics, and general store inquiries. Just say what you'd like.";
+/** What it says when nobody answers inside its window. It is not a question and nothing may be
+ *  prepared for it, so it doubles as the check that the planner leaves a non-question alone. */
+const TALK_GAVE_UP = "Sorry, I'm not understanding.";
+/** HOW LONG THIS MENU WAITS. Measured off CVS Branford's own calls on 08-20: it asked, and had
+ *  already given up before an answer that took ten to twenty seconds to think about arrived. */
+export const TALK_WINDOW_SEC = 3;
+
 /** Six seconds of nothing pressed and the whole list plays again from the top of the options. The
  *  first mapping check listens all the way through before it acts, and that free repeat is the second
  *  sample that proves a recording with certainty. */
@@ -685,13 +703,14 @@ const MENU_MAX_LOOPS = 8;
 
 /** The five menus the owner's tests name. `plain` is his script as written; each of the others
  *  differs from it in exactly one way. */
-export type MenuVariant = "plain" | "no_option_fits" | "menu_changed" | "press_ignored" | "ring_out";
+export type MenuVariant = "plain" | "no_option_fits" | "menu_changed" | "press_ignored" | "ring_out" | "talks";
 export const MENU_VARIANTS: Record<MenuVariant, string> = {
   plain: "the menu as approved",
   no_option_fits: "option 0 is left out of the read list, so nothing matches cards",
   menu_changed: "the front desk moves from key 0 to key 5, and 0 reaches the pharmacy",
   press_ignored: "a press before the options finish is swallowed and the menu reads on",
   ring_out: "the front desk rings eight times, nobody answers, and the menu returns from the top",
+  talks: "it asks questions instead of reading a list, and gives up after three seconds of silence",
 };
 export const isMenuVariant = (v: string): v is MenuVariant => Object.prototype.hasOwnProperty.call(MENU_VARIANTS, v);
 /** WHICH KEY OPENS THE FRONT OF THE STORE. It is 0 everywhere except the changed menu, where the
@@ -699,6 +718,9 @@ export const isMenuVariant = (v: string): v is MenuVariant => Object.prototype.h
 export const menuFrontKey = (v: MenuVariant) => (v === "menu_changed" ? "5" : "0");
 /** The options this menu reads out, in order. */
 export function menuOptions(v: MenuVariant): string[] {
+  // THE TALKING MENU HAS NO LIST OF KEYS. It asks three questions in order, and the third is an open
+  // one, so what it "reads out" is the questions themselves.
+  if (v === "talks") return [TALK_HEALTHCARE, TALK_DEPARTMENT, TALK_OPEN];
   const front = v === "menu_changed" ? OPT_FRONT_5 : OPT_FRONT_0;
   const lines = [OPT_PHARMACY, OPT_COSMETICS, OPT_HOME, OPT_HOURS, front, OPT_REPEAT];
   // NO OPTION FITS: the front of the store is simply never offered, so a caller looking for cards
@@ -712,6 +734,25 @@ const menuSay = (say: string): RobotAct => ({ sayAs: "menu", say });
  *  table, each branch ending back at the top of the options — which is also where six seconds of
  *  nothing, and a key he never listed, both land. */
 export function menuScene(v: MenuVariant): RobotScene {
+  // THE TALKING MENU IS ITS OWN SHAPE (owner 08-20). It asks one question at a time and listens after
+  // each; answer inside its window and it moves on, stay quiet and it says it did not understand and
+  // asks again. After the third answer it puts the caller through to the front of the store, where the
+  // Staff scene takes the same live call exactly as it does on every other menu.
+  if (v === "talks") {
+    const ask = (q: string): RobotAct[] => [menuSay(q), { listen: true }];
+    return {
+      n: 0, card: "", name: `Phone menu — ${MENU_VARIANTS.talks}`, expect: "in_stock", greeting: "",
+      acts: [
+        { label: "greeting" }, ...MENU_GREETING.map(menuSay),
+        { label: "options" },
+        ...ask(TALK_HEALTHCARE), ...ask(TALK_DEPARTMENT), ...ask(TALK_OPEN),
+        { label: "front" }, { ring: menuRingSecs(3) }, menuSay(MENU_FRONT_DESK),
+      ],
+      // It answers to WORDS, not keys, so it has no key table. Nothing pressed inside its window is
+      // its own affair: it says it did not understand and asks the same question again.
+      keysElse: "options", staffAt: "front", talksAndGivesUp: true, gaveUpLine: TALK_GAVE_UP,
+    };
+  }
   const front = menuFrontKey(v);
   const acts: RobotAct[] = [
     { label: "greeting" },
@@ -1203,7 +1244,11 @@ interface RobotState { run: RobotRun; acts: RobotAct[]; act: number; clips: (Buf
    *  `loops` stops a forgotten call reading the menu for ever on a real line. */
   sentMs?: number; sentParts?: Array<{ act: number; secs: number }>; saidFrom?: number; held?: string | null; loops?: number;
   /** The menu this call is playing, and its key table, read once when the call was answered. */
-  menu?: MenuVariant; keys?: Record<string, string>; keysElse?: string; holdLabel?: string; swallowEarly?: boolean }
+  menu?: MenuVariant; keys?: Record<string, string>; keysElse?: string; holdLabel?: string; swallowEarly?: boolean;
+  /** A TALKING MENU'S OWN WINDOW. It asks, and if nothing is said inside TALK_WINDOW_SEC it says it
+   *  did not understand and asks the same question again. `askedAct` is the beat it is waiting on, so
+   *  the same question is re-asked rather than the whole menu starting over. */
+  talks?: boolean; gaveUpLine?: string; askedAct?: number; givenUp?: number }
 const robotCalls = new Map<string, RobotState>();
 
 /** Which scene the next inbound call plays, and (optionally) which greeting. Stored as "7" or "7:2"
@@ -1336,7 +1381,8 @@ export async function robotAnswer(callSid: string, from?: string, opts?: {
   };
   robotRuns.unshift(run); while (robotRuns.length > 40) robotRuns.pop();
   const st: RobotState = { run, acts, act: 0, clips, quiet: 0, saidHello: false,
-    ...(menuSc ? { menu: menu as MenuVariant, keys: menuSc.keys, keysElse: menuSc.keysElse, holdLabel: menuSc.holdKeysUntil, swallowEarly: !!menuSc.swallowEarlyKeys, held: null, loops: 0 } : {}) };
+    ...(menuSc ? { menu: menu as MenuVariant, keys: menuSc.keys, keysElse: menuSc.keysElse, holdLabel: menuSc.holdKeysUntil, swallowEarly: !!menuSc.swallowEarlyKeys, held: null, loops: 0,
+      talks: !!menuSc.talksAndGivesUp, gaveUpLine: menuSc.gaveUpLine } : {}) };
   robotCalls.set(callSid, st);
   setTimeout(() => robotCalls.delete(callSid), 15 * 60 * 1000);
   console.log(menuSc
@@ -1385,8 +1431,14 @@ function robotPlay(callSid: string, st: RobotState, lead = ""): string {
       st.act++; continue;
     }
     if ("goto" in a) { st.act = labelAt(st, a.goto); continue; }
-    // The menu waits the owner's six seconds for a key; Staff wait the ten they always have.
-    if ("listen" in a) { st.act++; parts.push(robotGather(callSid, menuOf(st) ? MENU_NO_PRESS_SEC : 10)); break; }
+    // A TALKING MENU waits its own three seconds, the window CVS Branford really gives; a keyed menu
+    // waits the owner's six for a key; Staff wait the ten they always have.
+    if ("listen" in a) {
+      if (st.talks) st.askedAct = st.act;
+      st.act++;
+      parts.push(robotGather(callSid, st.talks ? TALK_WINDOW_SEC : menuOf(st) ? MENU_NO_PRESS_SEC : 10));
+      break;
+    }
     if ("silence" in a) { st.sentParts.push({ act: st.act, secs: a.silence }); st.act++; ahead += Math.round(a.silence); parts.push(`<Pause length="${Math.round(a.silence)}"/>`); continue; }
     // A COMMITTED RECORDING, PLAYED WHOLE. Its length is the measured one from ROBOT_CLIPS, because
     // the clock has to move by what the caller really hears: a line spoken after 15 seconds of hold
@@ -1480,7 +1532,7 @@ export function robotStep(callSid: string, speech: string, digits?: string): str
   const isMenu = !!st.keys;
   const key = (digits || "").trim().slice(0, 1);
   // A KEY, at a scene that has a key table. Everything else ignores keys exactly as it always has.
-  if (key && isMenu) { st.quiet = 0; return menuKey(callSid, st, key); }
+  if (key && isMenu && !st.talks) { st.quiet = 0; return menuKey(callSid, st, key); }
   const said = (speech || "").trim();
   if (said) {
     st.run.heard.push(said.slice(0, 300));
@@ -1499,6 +1551,17 @@ export function robotStep(callSid: string, speech: string, digits?: string): str
   }
   // NOTHING PRESSED AT A MENU is the owner's six seconds: the whole list plays again from the top,
   // unless a key was held from the greeting, which acts the moment the options would have started.
+  // A TALKING MENU GIVES UP AND ASKS AGAIN (owner 08-20). It does not start the whole menu over: it
+  // says it did not understand and repeats the question the caller just missed, which is exactly what
+  // CVS Branford did to us four calls in a row.
+  if (st.talks) {
+    st.quiet = 0;
+    st.givenUp = (st.givenUp ?? 0) + 1;
+    if (st.givenUp > MENU_MAX_LOOPS) return twiml("<Hangup/>");
+    if (st.gaveUpLine) st.run.said.push({ text: st.gaveUpLine, atSec: Math.round((Date.now() - st.run.startedAt) / 1000), voice: "menu" });
+    st.act = Math.max(0, (st.askedAct ?? 1) - 1);   // the question it just asked, then its listen again
+    return robotPlay(callSid, st);
+  }
   if (isMenu) { st.quiet = 0; return menuTop(callSid, st); }
   // NOBODY SAID ANYTHING, AND THE SCRIPT MUST NOT PAPER OVER IT (owner + PM, 08-08). The robot used
   // to play its next line anyway after two quiet listens, so a Charlie who had gone silent still got
@@ -1555,7 +1618,8 @@ export function _menuRig(variant: MenuVariant, opts: { scenario?: number; lineSe
   const run: RobotRun = { id: callSid, callSid, scenario: scene.n, sceneName: m.name, greeting: "", startedAt: Date.now(), said: [], heard: [], menu: variant, keys: [] };
   robotRuns.unshift(run); while (robotRuns.length > 40) robotRuns.pop();
   const st: RobotState = { run, acts, act: 0, clips: acts.map(() => null), quiet: 0, saidHello: false,
-    menu: variant, keys: m.keys, keysElse: m.keysElse, holdLabel: m.holdKeysUntil, swallowEarly: !!m.swallowEarlyKeys, held: null, loops: 0 };
+    menu: variant, keys: m.keys, keysElse: m.keysElse, holdLabel: m.holdKeysUntil, swallowEarly: !!m.swallowEarlyKeys, held: null, loops: 0,
+    talks: !!m.talksAndGivesUp, gaveUpLine: m.gaveUpLine };
   robotCalls.set(callSid, st);
   const first = robotPlay(callSid, st, `<Pause length="1"/>`);
   // Every line on the bench runs for the same made-up length, so a test can place a key exactly.

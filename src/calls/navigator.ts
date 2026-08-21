@@ -67,6 +67,10 @@ export interface NavStep {
    *  reads the route may count it: as a plain press step it read as the door we picked, so the wrong
    *  door got marked wrong, and it was written into the store's saved route as "press 123". */
   knock?: boolean;
+  /** THE QUESTION THIS ANSWER WAS PREPARED FOR (owner 08-20). An answer worked out between the rounds
+   *  is spoken the moment its question is recognised; this says which question it belonged to, so the
+   *  same prepared answer is never fired twice at the same question. */
+  plannedFor?: string;
 }
 // One choice the store offered us, and what it routes to. Best-effort from messy speech-to-text.
 // `digit` is set on a keypad menu ("press 2 for guest services"). `say` is set on a SPOKEN menu, where
@@ -172,6 +176,13 @@ export interface NavSession {
   firstLine?: string;
   /** Round one really heard the menu from end to end, so round two can answer with its own words. */
   listenHeardWholeMenu?: boolean;
+  /** THE ANSWERS, WORKED OUT BEFORE THE CALL (owner 08-20). Round one writes down every question this
+   *  store asks; between the rounds the model is asked ONCE, off the phone, what to say to each. Round
+   *  two then recognises a question the moment it is heard and speaks its answer with no thinking on
+   *  the line at all. WHY: asking the model mid-call takes ten to twenty seconds, and CVS Branford's
+   *  assistant gives up in about three, so a thought-out answer always arrived too late. A question
+   *  not on this list still falls through to the slow path, so nothing is ever guessed at fast. */
+  answerPlan?: Array<{ q: string; say: string }>;
   /** No line of this store's menu is on file yet: record everything, hang up on nothing. */
   firstEverCall?: boolean;
   /** LAYER 4 — we stayed silent for a beat to see whether the line kept reading (a recording) or
@@ -822,6 +833,30 @@ async function navTurn(id: string, speech: string): Promise<string> {
       if (s.menuPrompts.length > 12) s.menuPrompts = s.menuPrompts.slice(-12);
     }
   }
+  // A QUESTION WE ALREADY PREPARED FOR IS ANSWERED ON THE SPOT (owner 08-20), before anything else on
+  // this turn. Round one wrote this store's questions down and the answers were worked out between the
+  // rounds, off the phone, so when one of them is heard the words go out immediately with no thinking
+  // on the line. That is the whole fix for CVS Branford: its assistant gives up after about three
+  // seconds, and asking the model at the moment the question was heard took ten to twenty.
+  //
+  // IT SITS ABOVE THE KEYS AND ABOVE THE SILENCE TEST, and that is the point. Both of those exist to
+  // work out who is on the line, and each one costs a whole question: measured on the robot store's
+  // talking menu, the beep ate its first question and the silence test ate its second, which is
+  // exactly the "sorry, I'm not understanding" CVS Branford came back with. A line round one already
+  // recorded needs neither test — we know what it is, because we heard it on the listening round.
+  //
+  // A question NOT on the list falls through to everything below, exactly as before, and its words are
+  // written down for the next round to prepare for. Nothing is ever guessed at fast.
+  if (speech && speech.trim() && (s.answerPlan || []).length) {
+    const hit = (s.answerPlan || []).find((a) => a.say && sameMenu(a.q, speech));
+    if (hit && !s.steps.some((st) => st.who === "us" && st.action === "say" && st.plannedFor === hit.q)) {
+      s.type = s.type ?? "voice";
+      s.steps.push({ who: "us", text: `said "${hit.say}"`, atSec, action: "say", value: hit.say, plannedFor: hit.q, earPrompts: s.ear?.recordings });
+      s.lastActTurn = s.turns; s.pauseTested = false; s.keptTalkingAfterPause = undefined;
+      emit(s.id, "bravo_say", `Said "${hit.say}" the moment the question ended, off the answers worked out before the call`, { phrase: hit.say, atSec, prepared: true });
+      return twiml(`<Say voice="Polly.Joanna">${esc(hit.say)}</Say>${gather(id)}`);
+    }
+  }
   // THE KNOCK (owner 08-07). On a number whose menu we do NOT already hold, press a few keys the
   // moment the store says its first thing, before any options are read. A person hears the beeps in
   // their ear and stops. A recording reads straight on, and reading on is a machine with certainty.
@@ -1426,7 +1461,7 @@ async function recordConfirmAsked(chainId: number, retailerId: number, door?: st
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }>; knownMenuLines?: string[]; listenOnly?: boolean }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }>; knownMenuLines?: string[]; listenOnly?: boolean; answerPlan?: Array<{ q: string; say: string }> }): Promise<{ id?: string; error?: string }> {
   // A LISTEN-ONLY CHECK WITH NOTHING TO WALK NEVER DIALS (fix pass 5). Such a check has no answers to
   // give and no route to finish, so it can never arm its ring hang-up — it would sit on the line
   // until somebody picked up, and then hang up on them. Refusing it here makes troubling Staff
@@ -1443,7 +1478,7 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
   const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors,
     // THE JUDGE'S FIRST LAYER: this store's own menu as heard before. Nothing on file = the store's
     // FIRST check, which listens to everything and hangs up on nothing.
-    knownMenuLines: extra?.knownMenuLines, listenOnly: extra?.listenOnly,
+    knownMenuLines: extra?.knownMenuLines, listenOnly: extra?.listenOnly, answerPlan: extra?.answerPlan,
     firstEverCall: !(extra?.knownMenuLines || []).length };
   sessions.set(id, session);
   session.why = extra?.why;
