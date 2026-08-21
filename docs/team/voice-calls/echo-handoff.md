@@ -1,32 +1,44 @@
-# ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-20, Echo 4)
+# ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-21 night, Echo 4)
 
-## THE ADVERT FAULT IS FIXED AND PROVEN LIVE (check 432, 08-21) — AND 432 FOUND THE NEXT ONE
+## WHERE THIS STANDS RIGHT NOW
 
-**HIS FOUR ITEMS ARE ALL IN (commit e7c60266).** 1 a piece of a sentence still being said decides
-nothing: the wake waits for their voice to stop or a 4 second ceiling, then asks about EVERYTHING
-Echo has written of that turn. 2 "thanks for holding" is off `ADDRESSED_TO_US` ("this is <name>" and
-"<name> speaking" were checked for the same trap and kept, reason written beside them). 3 every wake
-writes a `wake_read` row saying person / recording / no_answer. 4 `spokeOverTheRecording` (meter.ts)
-FAILS a check where he talked over the store's own recording, our own clips excluded by name and by
-moment. Replay: `scripts/replay-430.ts` runs 427, 428 and 430's own committed records on every build.
+**STAGING IS GREEN AND SERVING `bddffbec`. The scene 22 test PASSES both halves on check 434** —
+the test card and the money — which is the first clean pass on "Hold: music with advert" since 428.
+434: 57 seconds end to end, Charlie on the clock 29s (spoke 3), **8.3¢** against 433's 11.4, 432's
+15.4 and 428's 7.2, profit 67%, no silence anywhere, and the store's advert refused again
+(`not_a_person` at 28.9s). His six items of 08-21 are all built, all pushed, all under the replay
+gate — the section below spells out each one and where it lives.
 
-**CHECK 432 PROVES THE ADVERT FAULT IS GONE.** 20.1s the piece "Thanks for holding." reached him and
-NOTHING was decided on it · 25.9s he was dropped again · 27.1s `wake_read` **recording** on the whole
-sentence and `not_a_person` · he never said one word into the advert. On 430 he spoke into it at 19.1s.
+### THE ONLY THING STILL OPEN, AND IT IS HIS ITEM 6
+**The customer's screen says "Left on hold" on a check the record settles as `in_stock`.** Seen on
+433 AND 434, and it is the 08-07 fault that has been called intermittent since. What has already
+been done: `statusFromTheRecord` now TAKES the key back when the record shows the hold ended, and
+BOTH `/pub/result` doors that hand a customer the row's own key (the `bridge:<room>` door and the
+completed-row door) ask the gatekeeper first and run that same decider. The key still got out.
+**So stop reasoning about it and read the record: `screenSaid` (server.ts) stamps `result_screen`
+on every check with the DOOR that answered a customer and the key it handed them.** Dial scene 22
+once, open the record, read that row, and the door names itself. Nothing else on the six is open.
 
-**AND 432 FAILED ON THE NEXT FAULT IN THE SAME WINDOW, which is now the top job.** After his two word
-hello at 41.9s the store heard NOTHING from him until 67.8s. The record names it: `hello_reply_held`
-— "Charlie went to answer their hello, which the recording had already answered, so it was not
-spoken". His reply was generated inside the longer held window and its audio was dropped by the
-`!charlieMaySpeak` branch of the audio door, after the earlyTurn branches had let it through. Nothing
-re-asks him, so he sat silent until the robot said "Hello?" at 60.7s. Cost: meter 57s on the record
-(50 graded) against his 31 line, 15.4¢, profit 38% real / 43% graded, wasted 7.7¢. THE CARD'S METER
-HALF FAILS, correctly and loudly, which is the grade doing its job.
-**WHERE TO LOOK:** the audio door in `bridge.ts` — while `earlyTurn` is alive and fed, his frames
-must be HELD, never fall through to `hello_reply_held`; and a reply whose audio was dropped has to be
-asked for again rather than leaving him silent. Same family as 427.
-- The 41.9s wake read `no_answer`: the reader timed out and the measured sound stood in. That fallback
-  is still there and is still the owner's open risk; the record now names it every time.
+### THE ONE THING FOUND AND DELIBERATELY NOT BUILT
+On check 433, Staff really answered at 35.9s, Echo wrote it down and it was handed to him at 39.4s
+— and at 42.3s `wordless_rejoin` dropped him again because no words were written AFTER `ears_back`,
+so he stayed silent 23 seconds and the robot said "Hello?" at 60.4s. `heardWordsSinceEarsBack` only
+ever looks forward; **a turn already in his hands IS words.** It did not recur on 434, so it is a
+race, not a certainty. NOT BUILT: his order was one dial at the end, so this is his call to give.
+
+### THE STANDING ONE, NOT YET RUN
+ONE staging check at the owner's **Fun store** with the Admin `ourBrain` switch ON, and ONLY when he
+says he is standing at that phone ready to answer it himself. The switch goes OFF the moment the
+call ends. This is the first live proof of the Anthropic writing charge on a real check.
+
+### HOW TO WORK HERE
+`bash scripts/verify-live.sh` before any dial — never dial code staging is not serving. The dial is
+`NODE_OPTIONS=--use-openssl-ca SSL_CERT_FILE=/root/.ccr/ca-bundle.crt ADMIN_TOKEN=… node
+scripts/robot-check.mjs 22` (plain node fetch fails TLS through the agent proxy without those two).
+`src/voice/**` is machine-locked: repo-root `.unlock` holding exactly `src/voice/**`, and DELETE it
+the moment you are done. **The replay gate is the first thing you run and the last:**
+`./node_modules/.bin/tsx scripts/replay-gate.ts` — seven real records, four things each.
+
 
 ## WHERE ECHO 4 GOT TO — FOUR FIXES DIALLED (CHECK 428 PASSED), THEN HIS THREE RECORD FAULTS FIXED
 
@@ -54,7 +66,7 @@ NOT about the record and was NOT caused by any of today's work.
   tell those two apart, and that is the next thing to make it say.**
 - The 08-07 screen fault is still there: the customer's screen said left on hold, the record in_stock.
 
-## HIS SIX ITEMS, 08-21 (commits 0e35f93f + da2ab45b on staging; dialled as check 433)
+## HIS SIX ITEMS, 08-21 (commits 0e35f93f · da2ab45b · bddffbec on staging; dialled as 433 then 434)
 
 **1 THE REPLAY GATE — `scripts/replay-gate.ts`, and it is the first thing to read.**
 Six whole records live in `scripts/replay-records/` (427, 428, 430, 431, 432, 433) with a
