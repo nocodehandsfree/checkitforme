@@ -1056,9 +1056,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** The words a held decision is about, kept so the moment their voice stops can ask about the SAME
    *  turn even when Echo has written nothing further of it since the piece that started the hold. */
   let heldWakeLine = "";
-  /** HOW LONG THE WAKE QUESTION WAITS ON THE READER once it asks. Unchanged at a second and a half —
-   *  what changed is that by the time it asks, the reader has usually been running for seconds. */
-  const WAKE_READ_MS = 1500;
+  /** HOW LONG THE WAKE QUESTION WAITS ON THE READER once it asks (owner's order, 08-21 late: "if it
+   *  is comfortably under 1.5s once it has a head start, leave the timeout alone. If it is not,
+   *  raise it, because the wake is now released by Staff's voice stopping, not by that stopwatch").
+   *
+   *  MEASURED ON CHECK 437, the first check that ever wrote the number down: the reader took 1068ms
+   *  on the advert and 1601ms on Staff's answer. It is NOT comfortably under a second and a half —
+   *  the 1601 is over it — and that one number is the whole of why 432, 434, 435 and 436 all read
+   *  "could not answer in time". On 437 the wait spent 1435 of its 1500 and only just made it.
+   *  So it is raised, per his rule. Nothing about this can hold the wake open: the four second
+   *  ceiling above is still the backstop, and it is what bounds the wait, not this. */
+  const WAKE_READ_MS = 2500;
   /**
    * THE READER IS STARTED WHEN THERE IS SOMETHING TO READ, NOT WHEN THE ANSWER IS NEEDED
    * (owner's order, 08-21 late).

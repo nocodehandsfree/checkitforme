@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-21T21:27:26.019Z",
+  "at": "2026-08-21T22:18:20.236Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -22,7 +22,7 @@
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
           "pass": true,
-          "detail": "Calling → Talking to Staff → Getting results"
+          "detail": "Calling → Getting through the menu → Talking to Staff → Getting results"
         },
         {
           "n": 4,
@@ -64,13 +64,13 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 24 looks · header held at 62px"
+          "detail": "0 bounce(s) over 26 looks · header held at 62px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 90px"
+          "detail": "19px → 113px"
         },
         {
           "n": 13,
@@ -94,7 +94,7 @@
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Fri, Aug 21 · 9:26 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you th"
+          "detail": " Result Fri, Aug 21 · 10:17 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you t"
         },
         {
           "n": 9.1,
@@ -121,8 +121,8 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787347545491,
-      "checkId": 436,
+      "startedAt": 1787350596187,
+      "checkId": 437,
       "cost": 0.072696,
       "costReadable": "7.3¢",
       "robotCost": null,
