@@ -3853,7 +3853,15 @@ console.log("\n▶ CHECK 434'S MOMENT: the held decision is asked when their voi
     "…and the answer is a person", step("wake_read").map((e) => (e.detail as { answer?: string }).answer));
   ok(step("wake_read").some((e) => String((e.detail as { text?: string }).text || "").includes("few of those")),
     "…asked about their turn as Echo has written it, not about the line before it");
-  await sleep(200);
+  // THE BENCH NUMBER (owner's order, 08-21 night): the gap he is watching, measured on a driven call
+  // rather than read off a recording. Their voice stops, and this is how long before Charlie's mouth
+  // is open. Printed so three runs in a row can be compared without reading the whole log.
+  let openedMs = -1;
+  for (let i = 0; i < 250 && openedMs < 0; i++) {
+    if (step("ears_back").length >= 1) openedMs = Date.now() - stopped;
+    else await sleep(20);
+  }
+  console.log(`  BENCH GAP: ${openedMs}ms from their voice stopping to his ears opening`);
   ok(evs().some((e) => e.kind === "hold_end"), "…so the wait ends on the same beat");
   ok(step("ears_back").length >= 1, "…and his ears come back, with his reply ready to go out");
   globalThis.fetch = beforeStub;
