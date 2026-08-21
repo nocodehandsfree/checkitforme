@@ -3777,6 +3777,87 @@ console.log("\n▶ CHECK 432'S FAULT: a reply of his that reached nobody is ASKE
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 434'S MOMENT: the held decision is asked when their voice STOPS, not four seconds later");
+{
+  // THE FAULT. 430's fix holds the person-or-recording question while Staff's sentence is still
+  // being said, and that fix is right. But nothing was watching for the sentence being OVER: the
+  // question was re-asked only when Echo wrote another piece, or when the four second ceiling fired.
+  // Staff answering us and then waiting produces neither, so the whole four seconds burned with
+  // Charlie's reply already written and his mouth held shut. On check 434 their line ended at 39.3
+  // seconds and he spoke at 43.6. The same fault stood mute 26 seconds on check 432.
+  // The scene is 430's, with ONE thing changed: it is a real person, and their voice stops.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-434-moment";
+  echoListening(room, true);
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0 }, "reopen");
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  const step = (n: string) => evs().filter((e) => (e.detail as { step?: string } | null)?.step === n);
+  // The same stubbed reader as 430's scene, answering the same way: the advert's own words are the
+  // store talking at us, and everything else is a person. What this scene proves is WHEN it is asked.
+  const beforeStub = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    if (!/chat\/completions|\/v1\/messages/.test(url)) return (beforeStub as typeof globalThis.fetch)(input, init);
+    const body = String((init as { body?: unknown } | undefined)?.body ?? "");
+    let asked: string[] = [];
+    try {
+      const sent = JSON.parse(body) as { messages?: Array<{ role?: string; content?: string }> };
+      const user = (sent.messages || []).filter((m) => m.role === "user").map((m) => String(m.content || "")).join("\n");
+      asked = user.split("\n").map((l) => l.replace(/^\s*\d+\.\s*/, "").trim()).filter(Boolean);
+    } catch { asked = []; }
+    if (!asked.length) asked = [""];
+    await new Promise((r) => setTimeout(r, 120));
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      lines: asked.map((text, i) => {
+        const advert = /price match/i.test(text);
+        return { n: i + 1, line: text, voice: advert ? "recording" : "person", announcesWait: false,
+          confidence: 0.9, why: advert ? "advertising the store" : "answering what we asked them" };
+      }),
+    }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
+  // Staff step away, the music declares the wait, he is dropped — 430's opening, unchanged.
+  echoHeardStaff(room, "One moment. I'll go and have a look.");
+  await sleep(120);
+  for (let i = 0; i < 80; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
+  await sleep(6200);
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the wait");
+  // A REAL PERSON comes back with the answer, and their voice is still going when Echo writes it.
+  quiet(tw, 130);
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(310);
+  const stillTalking = setInterval(() => { for (let i = 0; i < 12; i++) tw.media(frame(SPEECH(i))); }, 40);
+  echoHeardPiece(room, "Yeah. We've got a few of those.");
+  await sleep(700);
+  ok(step("early_turn").length === 1, "the piece reaches Charlie at once, so his reply is already being worked out");
+  ok(step("wake_read").length === 0,
+    "…and 430's rule still holds: nothing is decided while their sentence is still being said", step("wake_read").length);
+  // THEY FINISH, AND THEY WAIT. Nothing else is written and nothing else is said — the exact shape
+  // that used to burn the ceiling. The ear's own stop test is 0.8 seconds of quiet on the line.
+  clearInterval(stillTalking);
+  const stopped = Date.now();
+  quiet(tw, 60);
+  let decidedMs = -1;
+  for (let i = 0; i < 250 && decidedMs < 0; i++) {
+    if (step("wake_read").length >= 1) decidedMs = Date.now() - stopped;
+    else await sleep(20);
+  }
+  ok(decidedMs >= 0 && decidedMs < 1500,
+    "the held question is asked within a beat of their voice stopping, never at the four second ceiling", decidedMs);
+  ok(step("wake_read").some((e) => (e.detail as { answer?: string }).answer === "person"),
+    "…and the answer is a person", step("wake_read").map((e) => (e.detail as { answer?: string }).answer));
+  ok(step("wake_read").some((e) => (e.detail as { fromAPiece?: boolean }).fromAPiece === true),
+    "…asked about their turn as Echo has written it, not about the line before it");
+  await sleep(200);
+  ok(evs().some((e) => e.kind === "hold_end"), "…so the wait ends on the same beat");
+  ok(step("ears_back").length >= 1, "…and his ears come back, with his reply ready to go out");
+  globalThis.fetch = beforeStub;
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ THE METER IS OFF BY DEFAULT: nothing on the billing list, and it goes off on its own");
 {
   _reset();

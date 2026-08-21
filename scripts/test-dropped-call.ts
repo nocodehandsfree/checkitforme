@@ -106,6 +106,41 @@ async function main() {
     await db.delete(callEvents).where(eq(callEvents.room, room));
   }
 
+  console.log("\n▶ AND A CHECK THAT CAME BACK WITH AN ANSWER MAY NEVER SAY WE NEVER GOT ONE (08-21, item 5)");
+  {
+    // THE REST OF THE 08-07 SCREEN FAULT. The three doors above only ever ran on a check with NO
+    // answer, so a row carrying a real answer AND a near-miss key walked straight through them: the
+    // screen painted "Left on hold" off the key while the record beside it read in stock. That is
+    // the owner's sentence, word for word, and it is what these prove.
+    const room = "room-answer-outranks-the-key";
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+    // A check that really was held, really came back, and really answered. It ends on a hold_end,
+    // so nothing here is leaning on the timeline — this is the key contradicting the answer.
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 13144, atSec: 13, kind: "hold_start", note: "Staff stepped away, hold music", detail: JSON.stringify({ reason: "music" }) });
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 43641, atSec: 43, kind: "hold_end", note: "Staff came back", detail: JSON.stringify({ gapSec: 30 }) });
+    const yes = await statusFromTheRecord(room, true, "left_on_hold", "Agent: any Pokemon cards?\nClerk: yeah, we've got a few of those.");
+    ok(yes === "in_stock", `the record says in stock, so the screen may not say left on hold (${yes})`);
+    const no = await statusFromTheRecord(room, false, "left_on_hold", "Agent: any Pokemon cards?\nClerk: no, we're out.");
+    ok(no === "not_in_stock", `…and the same the other way, on a no (${no})`);
+    for (const k of ["too_busy", "language_barrier", "voicemail", "nobody_answered", "no_clear_answer", "no_straight_answer"]) {
+      const got = await statusFromTheRecord(room, true, k, "Agent: any?\nClerk: yeah.");
+      ok(got === "in_stock", `"${k}" cannot stand over an answer either (${got})`);
+    }
+    // THE ANSWERS THEMSELVES ARE NEVER TOUCHED. A no the store really gave us keeps the store's own
+    // word for it, and none of these is a reason we failed to get an answer.
+    for (const k of ["sold_out", "does_not_sell", "not_in_stock"]) {
+      const got = await statusFromTheRecord(room, false, k, "Agent: any?\nClerk: no.");
+      ok(got === k, `"${k}" is an answer, so it stands exactly as it was (${got})`);
+    }
+    ok((await statusFromTheRecord(room, true, "in_stock", "Agent: any?\nClerk: yeah.")) === "in_stock",
+      "…and in stock over in stock changes nothing");
+    // …and a check with NO answer still reads exactly as it did a moment ago: this changed one
+    // branch and left the three doors below it alone.
+    ok((await statusFromTheRecord(room, null, "left_on_hold", "Agent: hello?")) === "no_clear_answer",
+      "a check with no answer still runs the record's own three questions");
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+  }
+
   console.log("\n▶ Staff hanging up before an answer reads as Staff hung up (owner 08-04)");
   {
     const room = "room-staff-hung-up-test";
