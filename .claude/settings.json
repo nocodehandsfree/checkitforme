@@ -2,19 +2,41 @@
   "outputStyle": "Check Owner Reply",
   "permissions": {
     "allow": [
-      "Bash(git status:*)", "Bash(git log:*)", "Bash(git diff:*)", "Bash(git show:*)",
-      "Bash(git add:*)", "Bash(git commit:*)", "Bash(git checkout:*)", "Bash(git pull:*)",
-      "Bash(git fetch:*)", "Bash(git push:*)", "Bash(git merge:*)", "Bash(git branch:*)",
-      "Bash(pnpm:*)", "Bash(pnpm install:*)", "Bash(pnpm dev:*)", "Bash(pnpm check:*)", "Bash(pnpm typecheck:*)",
-      "Bash(npx tsc:*)", "Bash(npx tsx:*)", "Bash(node scripts/*)", "Bash(bash scripts/*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git push:*)",
+      "Bash(git merge:*)",
+      "Bash(git branch:*)",
+      "Bash(pnpm:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm check:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx tsx:*)",
+      "Bash(node scripts/*)",
+      "Bash(bash scripts/*)",
       "Bash(curl -s -X POST https://backboard.railway.app/*)",
-      "Bash(curl -s https://checkitforme.com/*)", "Bash(curl -s -X POST https://checkitforme.com/*)",
-      "Bash(curl -s https://staging.checkitforme.com/*)", "Bash(curl -s -X POST https://staging.checkitforme.com/*)",
-      "Bash(curl -s https://admin.checkitforme.com/*)", "Bash(curl -s -X POST https://admin.checkitforme.com/*)"
+      "Bash(curl -s https://checkitforme.com/*)",
+      "Bash(curl -s -X POST https://checkitforme.com/*)",
+      "Bash(curl -s https://staging.checkitforme.com/*)",
+      "Bash(curl -s -X POST https://staging.checkitforme.com/*)",
+      "Bash(curl -s https://admin.checkitforme.com/*)",
+      "Bash(curl -s -X POST https://admin.checkitforme.com/*)"
     ],
     "ask": [
-      "Bash(bash scripts/test-all.sh)", "Bash(bash scripts/test-all.sh:*)",
-      "Bash(sh scripts/test-all.sh)", "Bash(./scripts/test-all.sh)", "Bash(./scripts/test-all.sh:*)"
+      "Bash(bash scripts/test-all.sh)",
+      "Bash(bash scripts/test-all.sh:*)",
+      "Bash(sh scripts/test-all.sh)",
+      "Bash(./scripts/test-all.sh)",
+      "Bash(./scripts/test-all.sh:*)"
     ]
   },
   "hooks": {
@@ -86,11 +108,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/three-rules.sh\"",
-            "timeout": 10
-          },
-          {
-            "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/turn-counter.sh\"",
             "timeout": 10
           }
@@ -100,11 +117,6 @@
     "Stop": [
       {
         "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/reply-lock.sh\"",
-            "timeout": 120
-          },
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/doc-caps-stop.sh\"",
