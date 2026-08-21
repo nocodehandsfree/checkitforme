@@ -2,6 +2,30 @@
 
 ## WHERE ECHO 4 GOT TO — FOUR FIXES DIALLED (CHECK 428 PASSED), THEN HIS THREE RECORD FAULTS FIXED
 
+### THE DIAL THAT PROVED THEM: CHECK 430 — THE RECORD IS CLEAN, THE CALL IS NOT
+All three record faults are gone from a real check, and the same dial exposed a live one that is
+NOT about the record and was NOT caused by any of today's work.
+- **The menu row is gone.** Buckets read Foxtrot, Echo, Charlie, Status and sum EXACTLY to the total
+  (107095 = 107095). The phone line is back to its whole 14000.
+- **Every line has its own start and its own end**, and none sits inside another: Staff's "Pitch
+  black the booster boxes." 48708→52018 (3.3s of real length, where 428 gave 45420→45420), his set
+  question 41089→46347, his goodbye 53820→56376 — AFTER his question ended, never inside it.
+- **One answer by either name**: `bridge:` and `ours:` both read completed, in_stock, confirmed,
+  product "booster box · Pitch Black".
+- **THE LIVE FAULT THIS DIAL FOUND: CHARLIE ANSWERED THE ADVERT.** The wake check said PERSON about
+  the store's own recording — there is NO `not_a_person` row on 430, where 427 and 428 both had one.
+  So the wait ended at 18.842s ("Staff back after 8s") instead of running the advert out, and at
+  19.117s he said "Hey, no worries at all! Do you guys happen to have any Pokémon…" INTO the
+  recording, re-asking the question. Cost: meter 43s on the record against his 31 line (25s graded),
+  10.7¢ against 428's 7.2¢, profit 57% real against 71%, wasted 3.1¢. Awake on hold 3s green.
+  **The card still says TEST PASSED** (its five rows true, status right, and the advert forgiveness
+  grades the meter at 25s against a 56% floor), which is worth his eye: a check can pass its card
+  while really costing half as much again.
+  Nothing changed today touches the wake check; the reader either answered "person" about the advert
+  or could not answer in its 1.5 seconds and the measured sound rule stood in. **The record cannot
+  tell those two apart, and that is the next thing to make it say.**
+- The 08-07 screen fault is still there: the customer's screen said left on hold, the record in_stock.
+
 ## THE THREE RECORD FAULTS HE FOUND ON 428 (owner, 08-20 late; commit 2b4467dd on staging)
 None of them was the call itself. All three are about what the record SAYS about it.
 
