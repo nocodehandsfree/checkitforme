@@ -1,5 +1,33 @@
 # ECHO HANDOFF — read this and you ARE the rehearsal chat, mid stride (2026-08-20, Echo 4)
 
+## THE ADVERT FAULT IS FIXED AND PROVEN LIVE (check 432, 08-21) — AND 432 FOUND THE NEXT ONE
+
+**HIS FOUR ITEMS ARE ALL IN (commit e7c60266).** 1 a piece of a sentence still being said decides
+nothing: the wake waits for their voice to stop or a 4 second ceiling, then asks about EVERYTHING
+Echo has written of that turn. 2 "thanks for holding" is off `ADDRESSED_TO_US` ("this is <name>" and
+"<name> speaking" were checked for the same trap and kept, reason written beside them). 3 every wake
+writes a `wake_read` row saying person / recording / no_answer. 4 `spokeOverTheRecording` (meter.ts)
+FAILS a check where he talked over the store's own recording, our own clips excluded by name and by
+moment. Replay: `scripts/replay-430.ts` runs 427, 428 and 430's own committed records on every build.
+
+**CHECK 432 PROVES THE ADVERT FAULT IS GONE.** 20.1s the piece "Thanks for holding." reached him and
+NOTHING was decided on it · 25.9s he was dropped again · 27.1s `wake_read` **recording** on the whole
+sentence and `not_a_person` · he never said one word into the advert. On 430 he spoke into it at 19.1s.
+
+**AND 432 FAILED ON THE NEXT FAULT IN THE SAME WINDOW, which is now the top job.** After his two word
+hello at 41.9s the store heard NOTHING from him until 67.8s. The record names it: `hello_reply_held`
+— "Charlie went to answer their hello, which the recording had already answered, so it was not
+spoken". His reply was generated inside the longer held window and its audio was dropped by the
+`!charlieMaySpeak` branch of the audio door, after the earlyTurn branches had let it through. Nothing
+re-asks him, so he sat silent until the robot said "Hello?" at 60.7s. Cost: meter 57s on the record
+(50 graded) against his 31 line, 15.4¢, profit 38% real / 43% graded, wasted 7.7¢. THE CARD'S METER
+HALF FAILS, correctly and loudly, which is the grade doing its job.
+**WHERE TO LOOK:** the audio door in `bridge.ts` — while `earlyTurn` is alive and fed, his frames
+must be HELD, never fall through to `hello_reply_held`; and a reply whose audio was dropped has to be
+asked for again rather than leaving him silent. Same family as 427.
+- The 41.9s wake read `no_answer`: the reader timed out and the measured sound stood in. That fallback
+  is still there and is still the owner's open risk; the record now names it every time.
+
 ## WHERE ECHO 4 GOT TO — FOUR FIXES DIALLED (CHECK 428 PASSED), THEN HIS THREE RECORD FAULTS FIXED
 
 ### THE DIAL THAT PROVED THEM: CHECK 430 — THE RECORD IS CLEAN, THE CALL IS NOT
