@@ -1172,6 +1172,7 @@ __BRAND_HEAD__
   .locbtn:active{transform:translateY(-50%) scale(.9)}
   .locbtn.on{color:var(--green)}
   .locbtn.loading{opacity:.5;pointer-events:none}
+  button.loading,.cta.loading,.capsW.loading{opacity:.55;pointer-events:none}
   .valuebar{display:block;text-align:center;margin:14px 0 4px;color:#cfcfd8;font-size:13.5px;font-weight:600;line-height:1.4}
   .valuebar b{color:var(--accent,var(--green))}
   .modetabs{display:flex;gap:5px;background:#13131a;border:1px solid var(--border);border-radius:13px;padding:4px;margin-bottom:14px}
@@ -8048,8 +8049,14 @@ function autoDeleteAsk(id){ const s=autoById(id); const nm=(s&&s.store)||t('aler
   <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();autoDelete(${id})"><span style="color:#FF8A8A">${t('auto.del.yes','Delete it')}</span></button>
   <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('auto.del.no','Keep it')}</button>`); }
 async function autoDelete(id){
+  const was=(window.SCHEDS||[]).map(x=>({...x}));
+  window.SCHEDS=(window.SCHEDS||[]).filter(x=>x.id!==id);   // the row goes NOW, not when the server answers
+  try{ autoRowSync(); }catch(_){ }
+  if(window.__autoPaint) window.__autoPaint(window.SCHEDS);
+  toast(t('auto.deleted','Auto-check deleted'),'neutral');
   const r=await appApi('/app/schedules/'+id,{method:'DELETE'});
-  if(autoTake(r)){ track('schedule_cancel',{id:id}); toast(t('auto.deleted','Auto-check deleted'),'neutral'); } }
+  if(!r||r.error){ window.SCHEDS=was; try{ autoRowSync(); }catch(_){ } if(window.__autoPaint) window.__autoPaint(was); toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  track('schedule_cancel',{id:id}); autoTake(r); }
 // THE RECORD OF ONE AUTO-CHECK (owner 08-19: "each auto check is its own transaction and needs a
 // record and somebody needs to be able to see what happened with that record"). The week of day bars
 // is the Activity tab's own chart, the rows are that day's runs, and a row unfolds into the real
@@ -8210,22 +8217,49 @@ function openAutoEdit(id){
 }
 function autoEditDay(v,el){ if(!AUTO_EDIT) return; if(AUTO_EDIT.days.has(v)){ AUTO_EDIT.days.delete(v); el.classList.remove('sel'); } else { AUTO_EDIT.days.add(v); el.classList.add('sel'); } }
 async function saveAutoEdit(){
-  if(!AUTO_EDIT) return; const btn=$('ae_btn'); if(btn){ btn.disabled=true; btn.textContent=t('auto.edit.saving','Saving…'); }
-  const body={ daysOfWeek:[...AUTO_EDIT.days].join(','), timeLocal:($('ae_time')&&$('ae_time').value)||'10:00' };
-  const r=await appApi('/app/schedules/'+AUTO_EDIT.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(btn){ btn.disabled=false; btn.textContent=t('auto.edit.save','Save changes'); }
-  if(!autoTake(r)) return;
-  const id=AUTO_EDIT.id; closeAutoEdit();
-  if(AUTO_REPORT&&AUTO_REPORT.id===id&&$('autoRepOv')&&$('autoRepOv').classList.contains('on')) renderAutoReport();
+  if(!AUTO_EDIT) return;
+  const id=AUTO_EDIT.id, was=(window.SCHEDS||[]).map(x=>({...x}));
+  const days=[...AUTO_EDIT.days].sort().join(','), time=($('ae_time')&&$('ae_time').value)||'10:00';
+  // The new days and time are on the list, the sheet is closed and the pill is up before the server
+  // has answered. If it refuses, the old ones come back and the pill says so.
+  window.SCHEDS=(window.SCHEDS||[]).map(x=>x.id===id?{...x,daysOfWeek:days||null,timeLocal:time,nextDow:autoNextLocal(days,time)&&autoNextLocal(days,time).dow,nextToday:!!(autoNextLocal(days,time)||{}).today}:x);
+  if(window.__autoPaint) window.__autoPaint(window.SCHEDS);
+  closeAutoEdit();
+  if(AUTO_REPORT&&AUTO_REPORT.id===id&&$('autoRepOv')&&$('autoRepOv').classList.contains('on')) renderAutoReport(true);
   toast(t('auto.edit.done','Saved. We call on the new days now.'),'neutral');
+  const r=await appApi('/app/schedules/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({daysOfWeek:days,timeLocal:time})});
+  if(!r||r.error){ window.SCHEDS=was; if(window.__autoPaint) window.__autoPaint(was); toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  autoTake(r);
+  if(AUTO_REPORT&&AUTO_REPORT.id===id&&$('autoRepOv')&&$('autoRepOv').classList.contains('on')) renderAutoReport(true);
+}
+/** The next day one of these auto-checks is due, worked out on the phone so a screen never has to
+ *  wait for the server just to print "Next check Friday". The server's own answer replaces it the
+ *  moment the list lands. */
+function autoNextLocal(daysCsv,timeLocal){
+  const set=String(daysCsv||'').split(',').filter(Boolean).map(Number);
+  if(!set.length) return null;
+  const now=new Date(), d0=now.getDay();
+  const hhmm=(('0'+now.getHours()).slice(-2))+':'+(('0'+now.getMinutes()).slice(-2));
+  for(let i=0;i<8;i++){ const d=(d0+i)%7;
+    if(!set.includes(d)) continue;
+    if(i===0 && hhmm>=String(timeLocal||'10:00')) continue;   // today is spent
+    return {dow:d, today:i===0};
+  }
+  return null;
 }
 // THE SAVED SCREEN (owner 08-06: do not close the window — flip it in place, and put a button on it
 // that jumps straight into the auto-checks list where their first one is waiting).
-async function showScheduleSaved(id){
+async function showScheduleSaved(id, known){
+  paintScheduleSaved(autoById(id)||known||{});          // on screen NOW, from what he just filled in
   try{ await loadSchedules(); }catch(_){ }
-  const s=autoById(id)||{}; const so=autoStoreObj(s);
+  const fresh=autoById(id); if(fresh) paintScheduleSaved(fresh);   // the server's own next check
+}
+function paintScheduleSaved(s){
+  const so=autoStoreObj(s);
   const line=(lb,val,col)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.07)"><span style="font-size:14px;font-weight:600;color:#CDCDD8">${lb}</span><span style="font-size:14px;font-weight:800;color:${col||'#FFF'};text-align:right">${val}</span></div>`;
-  const nx=(s.nextDow!=null)?(s.nextToday?t('auto.todaycap','Today'):dowName(s.nextDow)):t('sched.shipday','shipment day');
+  const loc=(s.nextDow==null)?autoNextLocal(s.daysOfWeek,s.timeLocal):null;
+  const nd=(s.nextDow!=null)?{dow:s.nextDow,today:s.nextToday}:loc;
+  const nx=nd?(nd.today?t('auto.todaycap','Today'):dowName(nd.dow)):t('sched.shipday','shipment day');
   const card=`<div style="margin-top:16px;text-align:left;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
     <div style="display:flex;align-items:center;gap:11px;padding-bottom:12px">
       ${storeTile(so)}
@@ -9894,11 +9928,11 @@ async function submitSchedule(){
     ||((CATS.find(c=>(ASKED_CATS||[]).some(a=>a&&a.label&&String(a.label).toLowerCase()===String(c.label).toLowerCase()))||{}).id);
   const catId=SEL_CAT||SEL_CATS[0]||askedId||(BRAND_CAT&&BRAND_CAT.id)||null;
   if(!SEL_STORE||!SEL_STORE.id||!catId){ toast(t('sch.noproduct','Pick a store and a product first'),'neutral'); return; }
-  const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
+  const btn=$('sch_btn'); btn.disabled=true; btn.classList.add('loading'); btn.textContent=t('sch.setting','Setting it up…');
   const body={ retailerId:SEL_STORE.id, categoryId:catId, specificProduct:SEL_PRODUCT||undefined,
     daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined, lang:LANG };
   const r=await appApi('/app/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  btn.disabled=false; btn.textContent=t('sch.cta','Turn on auto-check →');
+  btn.disabled=false; btn.classList.remove('loading'); btn.textContent=t('sch.cta','Turn on auto-check →');
   if(r&&r.error==='members_only'){ closeSchedule(); openBuy('out'); return; }
   if(r&&r.error==='unauthorized'){ closeSchedule(); signIn(); return; }
   if(r&&r.error==='scheduling_off'){ toast(t('sch.off','Auto-checks are off right now'),'neutral'); return; }
@@ -9906,7 +9940,9 @@ async function submitSchedule(){
   track('schedule_set',{retailerId:SEL_STORE.id,days:[...SCH_DAYS].join(',')||'auto'});
   // No pill and no closing: the sheet stays open and flips to the saved screen (owner 08-06). The old
   // pill also pointed at "My Checks > Alerts", and auto-checks have their own row now.
-  showScheduleSaved(r.schedule&&r.schedule.id);
+  showScheduleSaved(r.schedule&&r.schedule.id, { retailerId:SEL_STORE.id, store:findStoreName(), storeFull:SEL_STORE.name,
+    category:findProductLabel(), specificProduct:SEL_PRODUCT||null, daysOfWeek:body.daysOfWeek||null, timeLocal:body.timeLocal,
+    logoUrl:SEL_STORE.logoUrl||null, logoWide:SEL_STORE.logoWide, logoDark:SEL_STORE.logoDark });
 }
 boot();
 </script>
