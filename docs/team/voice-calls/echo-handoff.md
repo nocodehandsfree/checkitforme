@@ -54,6 +54,62 @@ NOT about the record and was NOT caused by any of today's work.
   tell those two apart, and that is the next thing to make it say.**
 - The 08-07 screen fault is still there: the customer's screen said left on hold, the record in_stock.
 
+## HIS SIX ITEMS, 08-21 (commits 0e35f93f + da2ab45b on staging; dialled as check 433)
+
+**1 THE REPLAY GATE — `scripts/replay-gate.ts`, and it is the first thing to read.**
+Six whole records live in `scripts/replay-records/` (427, 428, 430, 431, 432, 433) with a
+`golden.json` beside them. Every one replays on EVERY change against FOUR things: the words that
+survive, their order, Charlie's meter as the card grades it, and the cost with the buckets summing
+exactly. `--show` prints what each reads now; `--write` moves the golden ON PURPOSE and the diff is
+the record of what moved. Wired into `test-all.sh`. His reason: 372's order fix broke the
+timestamps, that fix let Charlie answer the advert, the advert fix left him mute 26 seconds — all
+three live at the same instant and four different things read it.
+
+**2 THE METER IS OFF BY DEFAULT.** `whyHeIsStillBilling()` in bridge.ts is the whole list, each
+state with its own ceiling: his voice going out · a person talking to us · he owes them a word
+(`charlieThinkingMs`, 6s) · their turn being handed to him · the wake check deciding · he was told
+to close. `armTheBillingBackstop()` runs for as long as his session is open, needs nothing to arm
+it, and drops him after 4 seconds of nothing on the list. It sets `backstopFired` so `beginHold`
+cannot swallow it in the 08-08 unannounced-quiet gate — THAT gate is what really billed 432's 26
+seconds. The fast 1-second beat on the ear's voice-stop is untouched. Tried and rejected: "the
+recorded question has not been answered yet" held his meter open through the very silence the drop
+exists to catch.
+
+**3 A HELD REPLY IS RE-ASKED.** Every drop of his sound is stamped (it was once per check, so 432's
+costly one left no trace at all). `hisReplyWentNowhere` asks him again the moment there is anybody
+to hear it, twice a check at most, and NEVER while `onHold` — a reply dropped into the store's own
+recording is meant to die there.
+
+**4 OUR OWN VOICE IS KILLED BY THE CLOCK.** `ourVoiceWasPlaying` (events.ts, pure) + `ourSoundGoesOut`
+(bridge.ts), now the ONE door that moves the playout clock. A sentence that STARTS inside our own
+sound (tail 300ms) and is at least HALF covered by it is ours. Coverage on the real records: 431's
+two fake lines 87% and 52%, both dropped; Staff's "It's packs of" over the top of him 37% and 432's
+11-second advert 19%, both kept — and that advert line is what the whole advert grade reads, so
+dropping it would have silently killed the rule shipped the day before. A line with no measured end
+is never accused. Known cost, accepted by the owner: a short interruption wholly inside Charlie's
+own sentence is lost.
+
+**5 THE CARD CATCHES BOTH.** `wentQuietOnThem` (meter.ts, pure): the longest stretch with nothing
+said and nobody on hold. Green to 4, yellow to 6, red from 7 — sized off 428's own accepted 5.
+430 (12s) and 432 (19s) both said TEST PASSED and both fail now.
+
+**6 LEFT ON HOLD IS TAKEN BACK.** `statusFromTheRecord` only ever ADDED that key; the reader decides
+it off the WORDING of the last Staff line, so "one moment, I'll go and have a look" read as a check
+that ended on hold. When the record shows the hold ended, the key is dropped. **433 SHOWED THIS WAS
+NOT ENOUGH:** two `/pub/result` doors hand a row's own key straight to a customer with no gatekeeper
+and no shared decider, and the page pins the first keyed answer it is ever given. Both now ask both
+questions (da2ab45b). NOT PROVEN LIVE — it needs the next dial.
+
+### CHECK 433, THE DIAL
+Card PASSES, meter half fails by ONE second: 35s on the record, 31 graded, against the yellow 30.
+Cost 11.4¢ (432: 15.4¢ · 428: 7.2¢), 3.8¢ wasted, profit 54% real. No mute, no dropped reply, and
+the advert refused again (`wake_read` recording at 29.2s).
+**THE NEXT FAULT, OFF 433'S OWN RECORD:** Staff really answered at 35.9s, it was written down and
+handed to him at 39.4s, and at 42.3s `wordless_rejoin` dropped him again because no words were
+written AFTER `ears_back`. He sat off 23 seconds and the robot said "Hello?" at 60.4s.
+`heardWordsSinceEarsBack` looks only forward; a turn already in his hands IS words. That is why 433
+still ran 85 seconds. NOT BUILT — his order was one dial at the end, so it is his call.
+
 ## THE THREE RECORD FAULTS HE FOUND ON 428 (owner, 08-20 late; commit 2b4467dd on staging)
 None of them was the call itself. All three are about what the record SAYS about it.
 
