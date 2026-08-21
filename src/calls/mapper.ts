@@ -88,7 +88,10 @@ export interface MapperRun {
   navId?: string;
   // Everything below exists so a run SURVIVES a redeploy (owner 07-30: two runs shot in the back by
   // teammates shipping). These were loop-local variables; on the run they ride the saved copy.
-  lockedRecipe?: NavRecipe | null;  // the chain's recipe as read at start
+  lockedRecipe?: NavRecipe | null;
+  /** ROUND ONE HAS BEEN RUN AT THIS STORE and its menu is written down (owner 08-20). Cleared with
+   *  the store, so a fresh store listens first all over again. */
+  menuHeard?: boolean;  // the chain's recipe as read at start
   pinnedStoreId?: number;           // owner-named store for the whole run (was opts.storeId)
   mapMisses?: number;               // mapping-menu checks where nobody answered (was loop-local)
   menuNumber?: number;              // which menu this run is learning — marks expire with it
@@ -572,6 +575,7 @@ function driveMapper(run: MapperRun): void {
         run.store = { id: picked.id, name: picked.name, phone: picked.phone };
         run.usedStores.push(picked.id); run.rotate = false;
         run.mapMisses = 0; run.doorProven = false; run.lastLines = undefined; run.settleTries = 0;
+        run.menuHeard = false;   // a store we have never rung gets its listening round first
       }
       const store = run.store;
 
@@ -590,12 +594,20 @@ function driveMapper(run: MapperRun): void {
       }
 
       // ---- what kind of check is this? ----
-      const stageWord = run.phase === "map" ? "mapping menu" : "optimizing speed";
+      // ROUND ONE LISTENS AND NEVER TALKS (owner 08-20). The comment on this loop has said "LEARN
+      // MENU FIRST, ALWAYS" since 07-31 and the code never did it: the first check of the map phase
+      // walked the tree by ANSWERING the menu's questions and asking Staff, and the listening pass
+      // only ever ran after a door was already proven. CVS Branford died four times over because of
+      // it: its assistant asks a question, our answer arrived ten to twenty seconds later, and it had
+      // already given up on us. Round one now says nothing at all, hears the whole menu, and hands
+      // round two the store's own words to answer with.
+      const listening = run.phase === "map" && !run.menuHeard;
+      const stageWord = listening ? "listening to the menu" : run.phase === "map" ? "mapping menu" : "optimizing speed";
       // The learn stage's proving check asks Staff about the product. Staff are asked once per DOOR,
       // never more — the ask ledger is per door, so a spent or dead door is steered around and
       // hard-blocked while the STORE stays held, its other doors still askable. The store is only
       // ever abandoned when it never got us to a person (Update 3) or every door is burnt.
-      const proving = run.phase === "map" && !run.doorProven;
+      const proving = run.phase === "map" && !listening && !run.doorProven;
       // A PROVEN DOOR IS EXEMPT from the spent-ask block (round-3 item 3). The held recipe's own
       // doors were proven by a real answer — telling a re-map "doors that worked: X" and "never
       // choose X" in the same breath burned every proven chain's best door and failed the store.
@@ -624,16 +636,14 @@ function driveMapper(run: MapperRun): void {
       // During a first run the map holds nothing yet, so without the run's own lines the judge's
       // first layer is blind exactly when it is needed most (fix pass 6, item 6).
       const known = [...(await rememberedMenuLines(chainId, store.id)), ...(run.lastLines || [])];
-      // AND WHETHER WE KNOW THIS CHAIN'S MENU AT ALL. A held recipe means the chain's phone tree is
-      // already on file, so there is nothing the keys could tell us at a fresh store of that chain —
-      // and pressing costs a real question at any store whose system is listening (owner 08-20).
-      const chainMenuKnown = !!(run.lockedRecipe?.steps || []).length;
+
 
       // ---- place this stage's check ----
       run.attempt++; run.callsToday = await bumpDaily(chainId);
       // Speed walks the route with ONE change under test; a settle listen walks it exactly as proven;
       // the proving check has no plan — the model walks the tree on the menu's own questions.
-      const barge = run.phase === "speed" && ex && run.best ? { plan: planFor(run.best, ex) }
+      const barge = listening ? undefined
+        : run.phase === "speed" && ex && run.best ? { plan: planFor(run.best, ex) }
         : run.phase === "map" && run.doorProven && run.best ? { plan: planPlain(run.best) }
         : undefined;
       // The proving check: the model walks the tree answering each question with the FULL phrase,
@@ -660,14 +670,14 @@ function driveMapper(run: MapperRun): void {
           stage: run.phase === "map" ? "map" : "speed",
           // The proving check LEARNS whatever menu answers — no expected greeting, it is writing the
           // record. Every later check is graded against the menu the proof heard.
-          expectedGreeting: proving ? undefined : run.expectedGreeting,
+          expectedGreeting: (proving || listening) ? undefined : run.expectedGreeting,
           recipeSeconds: run.bestMenuSecs,
           // Burnt doors (wrong desk, or ask spent) are a HARD block in the navigator, not only a
           // sentence in the prompt.
           deadDoors: proving && blockedDoors.length ? blockedDoors : undefined,
           // THE JUDGE'S FIRST LAYER: what this store has said before. Nothing on file makes this the
           // store's first check — pure listening, hang up on nothing.
-          knownMenuLines: known, chainMenuKnown,
+          knownMenuLines: known, listenOnly: listening,
           // This loop folds its own calls into the map at the lock. `finish` must not fold them.
           callerRecords: true,
           why: `Mapping ${run.chainName} (${stageWord}, check ${run.attempt})` },
@@ -711,6 +721,25 @@ function driveMapper(run: MapperRun): void {
       }
 
       // ---- learn from the outcome ----
+      // ---- ROUND ONE'S OWN OUTCOME: the menu, written down, and nothing else claimed ----
+      if (listening) {
+        const lines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec, s?.humanAtSec, known);
+        run.lastLines = lines;
+        run.expectedGreeting = ((s?.steps || []) as NavStep[]).find((st) => st.who === "ivr" && st.text)?.text;
+        if (lines.length) {
+          // Heard. Round two answers with the store's OWN words instead of guessing at its questions.
+          run.menuHeard = true;
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `listened to the whole menu, ${lines.length} line${lines.length === 1 ? "" : "s"} written down`, seconds: menuSecs });
+        } else {
+          // Nothing was said to us at all. A store that answers with a person has no menu to hear, so
+          // there is nothing to listen for a second time — round two goes ahead on what we hold.
+          run.menuHeard = true;
+          run.mapMisses = (run.mapMisses ?? 0) + 1;
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: reason || "nothing was played to us, so there is no menu to write down" });
+        }
+        await sleep(GAP_SEC * 1000);
+        continue;
+      }
       if (run.phase === "map" && !run.doorProven) {
         if (graded && answered && recipe) {
           // THE DOOR IS PROVEN — a person at its end gave a real answer about the product. The route

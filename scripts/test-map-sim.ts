@@ -856,8 +856,14 @@ async function main() {
       "every run starts at mapping menu — LEARN FIRST, ALWAYS, held recipe or not (Update 1)");
     ok(!/lockedRecipe && hasPromptPlan \? "speed" : "map"/.test(eng),
       "the held-recipe shortcut straight to speed is deleted");
-    ok(/const proving = run\.phase === "map" && !run\.doorProven;/.test(eng),
-      "the learn stage's proving check is the only check that asks Staff");
+    // ROUND ONE LISTENS FIRST (owner 08-20). The proving check is still the ONLY check that asks
+    // Staff anything; it simply cannot run until the listening round has written the menu down.
+    ok(/const listening = run\.phase === "map" && !run\.menuHeard;/.test(eng),
+      "round one is a listening check at any store whose menu this run has not recorded");
+    ok(/const proving = run\.phase === "map" && !listening && !run\.doorProven;/.test(eng),
+      "the learn stage's proving check is the only check that asks Staff, and it waits its turn");
+    ok(/listenOnly: listening,/.test(eng) && /relisten: !proving,/.test(eng),
+      "and round one is placed as a listen-only check, with no route and nothing to ask");
     ok(/relisten: !proving,/.test(eng),
       "every other check hangs up on the second ring — settle listens and speed checks alike");
     ok(/proving \? \{ product \} : undefined,/.test(eng),
@@ -1176,8 +1182,15 @@ async function main() {
       "and a proven door with nothing to walk or settle locks WITHOUT dialing — no settle call can reach Staff");
     // FIX PASS 5 ITEM 2: the refusal is structural, in the dialer itself — a listening check with no
     // route can never arm its ring hang-up, so it may not be placed at all, whatever any judge says.
-    ok(/if \(extra\?\.relisten && !confirm && !\(barge\?\.plan\?\.length\) && !\(reactivePress\?\.max\)\) \{\s*\n\s*return \{ error: "a listening check with no route to walk is refused/.test(readFileSync("src/calls/navigator.ts", "utf8")),
-      "a listening check with no route to walk is refused before it dials");
+    // The refusal is structural, in the dialer itself: a listening check with no route can never arm
+    // its ring hang-up, so it may not be placed at all. ROUND ONE IS THE ONE EXEMPTION (owner 08-20)
+    // and it earns it by having an ending of its own — the menu coming back round to its opening
+    // line — and by hanging up the moment anybody speaks to it rather than reaching for them.
+    const navSrc = readFileSync("src/calls/navigator.ts", "utf8");
+    ok(/if \(extra\?\.relisten && !extra\?\.listenOnly && !confirm && !\(barge\?\.plan\?\.length\) && !\(reactivePress\?\.max\)\) \{\s*\n\s*return \{ error: "a listening check with no route to walk is refused/.test(navSrc),
+      "a listening check with no route to walk is still refused before it dials");
+    ok(/if \(s\.listenOnly\) \{\s*\n\s*s\.stopReason = "somebody answered on the listening check/.test(navSrc),
+      "and round one hangs up on whoever answers instead of reaching for them");
 
     // FIX PASS 4, FACE a: STAFF'S OWN WORDS ARE NEVER THE STORE'S MENU. Staff saying "sure, one
     // moment" reads exactly like the machine handing us on; honouring it stamped a handoff AFTER the

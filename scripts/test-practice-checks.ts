@@ -21,6 +21,7 @@ import { _test as engine, setMappingHandoff, navEnded, pickedDoorFrom, classifyM
 import { recipeFromCall } from "../src/calls/map-capture";
 import { emit, recordLine } from "../src/calls/events";
 import { heardWrongDepartment } from "../src/voice/prompts";
+import { MENU_GREETING, menuOptions } from "../src/calls/tapedeck";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -418,7 +419,7 @@ console.log("\n▶ PRACTICE CHECK 10 — CVS Avon, the check that pressed 0 at a
   // DRIVEN: the keys can never go out again once the menu has handed us on.
   {
     setMappingHandoff(async () => `<Response><Connect/></Response>`);
-    engine.open({ id: "avon-1", confirm: { product: "Pokémon cards" }, stage: "map", chainMenuKnown: true } as never);
+    engine.open({ id: "avon-1", confirm: { product: "Pokémon cards" }, stage: "map", knownMenuLines: [CVS_OPEN] } as never);
     engine.at("avon-1", 124);
     const s = engine.get("avon-1")!;
     (s as { transferAtSec?: number }).transferAtSec = 124;   // the menu said "Okay, transferring you now"
@@ -431,24 +432,97 @@ console.log("\n▶ PRACTICE CHECK 10 — CVS Avon, the check that pressed 0 at a
   }
 }
 
-console.log("\n▶ PRACTICE CHECK 11 — the keys are never pressed at a chain whose menu we hold");
+console.log("\n▶ PRACTICE CHECK 11 — the keys go out on the first sentence, and only a hand-over stops them");
 {
-  // The keys exist to find out whether a number is answered by a person or a recording. At a chain we
-  // have already mapped there is nothing to find out, and pressing costs a real question: CVS's
-  // assistant listens the whole time, so the beeps landed as an ANSWER and it replied "sorry, I'm not
-  // understanding" on two of the three CVS Avon checks (08-20).
+  // The beep on the store's very first sentence is the one signal that says MACHINE with certainty,
+  // and it goes out at every store, including one whose chain we have already mapped. An earlier pass
+  // on 08-20 silenced it at a mapped chain and that removed the only thing working at CVS, so it was
+  // put back the same day. The ONE thing that silences it is the menu having handed us on, because
+  // after that the beeps would go off in a real person's ear.
   setMappingHandoff(async () => null);
-  engine.open({ id: "known-1", confirm: { product: "Pokémon cards" }, chainMenuKnown: true } as never);
+  engine.open({ id: "known-1", confirm: { product: "Pokémon cards" } });
   engine.at("known-1", 6);
   const out = await engine.step("known-1", "Thank you for calling CVS, Pharmacy.");
-  ok(!/<Play digits="123"\/>/.test(out), "a store of a chain whose menu we hold is never knocked");
+  ok(/<Play digits="123"\/>/.test(out), "the keys go out on the store's first sentence, mapped chain or not");
   engine.end("known-1");
-  // A chain we hold nothing for still gets the keys, because there it is the only way to find out.
-  engine.open({ id: "unknown-1", confirm: { product: "Pokémon cards" } });
-  engine.at("unknown-1", 6);
-  const out2 = await engine.step("unknown-1", "Thanks for calling, this is Card Mart.");
-  ok(/<Play digits="123"\/>/.test(out2), "and a chain we know nothing about still gets them");
-  engine.end("unknown-1");
+}
+
+console.log("\n▶ PRACTICE CHECK 12 — round one listens and never talks, on the robot store's own menu");
+{
+  // THE FAULT THIS CLOSES (owner 08-20). Round one used to WALK the tree: it answered the menu's
+  // questions and asked Staff about the product. CVS Branford died four times over because of it.
+  // Its assistant asks "are you a healthcare provider?", our answer landed 20 seconds later, and it
+  // had already said "sorry, I'm not understanding" before we spoke. Round one now says nothing at
+  // all, lets the menu read through and come back to the top, writes every line down, and hangs up.
+  //
+  // Driven on the robot store's own approved menu, so the lines are the ones the owner signed off.
+  setMappingHandoff(async () => { throw new Error("round one must never hand a check to Charlie"); });
+  engine.open({ id: "listen-1", listenOnly: true, relisten: true, stage: "map" } as never);
+  const lines = [...MENU_GREETING, ...menuOptions("plain")];
+
+  engine.at("listen-1", 4);
+  const first = await engine.step("listen-1", lines[0]);
+  ok(/<Play digits="123"\/>/.test(first),
+    "the keys still go out on the store's very first sentence, which is the one thing that proves a machine");
+
+  let at = 8;
+  for (const line of lines.slice(1)) {
+    at += 4;
+    engine.at("listen-1", at);
+    const out = await engine.step("listen-1", line);
+    ok(!/<Say|<Play digits="[0-9]"\/>/.test(out), `nothing is said or pressed at "${line.slice(0, 34)}…"`);
+  }
+  const heard = (engine.get("listen-1")?.steps || []).filter((st) => st.who === "ivr").map((st) => String(st.text));
+  ok(heard.length === lines.length, `all ${lines.length} lines of the menu are written down, and every one of them`);
+  ok(heard.join(" ") === lines.join(" "), "in the store's own words, in the order it read them");
+  ok((engine.get("listen-1")?.steps || []).every((st) => st.who !== "us" || st.action === "press" && st.value === "123"),
+    "and the only thing we ever did on this check was the keys on the first sentence");
+
+  // THE MENU COMES BACK ROUND TO THE TOP. That is the whole menu heard, so we put the phone down.
+  at += 6;
+  engine.at("listen-1", at);
+  const looped = await engine.step("listen-1", lines[0]);
+  ok(/<Hangup\/>/.test(looped), "when the menu loops back to its opening line we hang up, having heard all of it");
+  ok(engine.get("listen-1")?.humanAtSec == null, "no person was ever reached on it");
+  ok(!engine.get("listen-1")?.confirm, "and Staff were never asked anything, because this check cannot ask");
+  engine.end("listen-1");
+  setMappingHandoff(async () => null);
+}
+
+console.log("\n▶ PRACTICE CHECK 13 — round one hangs up rather than trouble a person who answers");
+{
+  // A store that answers with a person has no menu to hear. Round one is not here to talk to anybody,
+  // so it puts the phone down instead of sitting on their line or handing them to Charlie.
+  setMappingHandoff(async () => { throw new Error("round one must never hand a check to Charlie"); });
+  engine.open({ id: "listen-2", listenOnly: true, relisten: true, stage: "map" } as never);
+  engine.at("listen-2", 3);
+  await engine.step("listen-2", "Card Mart, Dana speaking.");
+  engine.at("listen-2", 7);
+  const waiting = await engine.step("listen-2", "Hello? Are you still there?");
+  ok(!/<Say|<Play digits="[0-9]"\/>/.test(waiting),
+    "one line is not proof, so we stay silent rather than guess who is on the line");
+  engine.at("listen-2", 11);
+  const out = await engine.step("listen-2", "Hello? Anybody there?");
+  ok(/<Hangup\/>/.test(out), "once they have proved themselves a person we hang up rather than trouble them");
+  ok(!engine.get("listen-2")?.confirm, "and they are never asked about Pokemon on a listening check");
+  engine.end("listen-2");
+  setMappingHandoff(async () => null);
+}
+
+console.log("\n▶ PRACTICE CHECK 14 — the mapper runs listen, then prove, then speed, in that order");
+{
+  // The order the owner named: round one listens, round two proves the department with the store's own
+  // words in hand, round three works on speed. This reads the mapper's own source, because the order
+  // is a decision in the loop and the only honest way to assert it without dialing.
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync("src/calls/mapper.ts", "utf8");
+  ok(/const listening = run\.phase === "map" && !run\.menuHeard;/.test(src),
+    "round one is a listening check at any store whose menu this run has not recorded");
+  ok(/const proving = run\.phase === "map" && !listening && !run\.doorProven;/.test(src),
+    "the proving check cannot run while the listening round is still owed");
+  ok(/listenOnly: listening,/.test(src), "and that check is placed as a listen-only one, with no route and no ask");
+  ok(/run\.menuHeard = false;\s*\/\/ a store we have never rung gets its listening round first/.test(src),
+    "a fresh store listens all over again before it proves anything");
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

@@ -161,13 +161,17 @@ export interface NavSession {
    *  word, a person never does. Empty on a store's first check, which is why that check is pure
    *  listening and hangs up on nothing. */
   knownMenuLines?: string[];
-  /** WE ALREADY KNOW THIS CHAIN'S MENU, even at a store we have never rung (owner 08-20). The keys
-   *  exist to find out whether a number is answered by a person or a recording. At a chain whose menu
-   *  we hold there is nothing to find out, and pressing anyway costs a real question: CVS's assistant
-   *  listens the whole time, so our beeps landed as an ANSWER and it came back "sorry, I'm not
-   *  understanding" on two of three checks. The old guard read the STORE's own remembered lines, so a
-   *  fresh store of a mapped chain knocked every time. */
-  chainMenuKnown?: boolean;
+  /** ROUND ONE LISTENS AND NEVER TALKS (owner 08-20). The first check at a store whose menu we have
+   *  not recorded on this run says NOTHING: it lets the menu read all the way through, waits for it to
+   *  loop back to the top, writes down every line, and hangs up. No answers, no model, no Staff.
+   *  WHY: CVS Branford died four times because round one was a talking check. Its assistant asks a
+   *  question, we took ten to twenty seconds to answer, and it had already given up on us and moved
+   *  on. Listening first costs one call and hands round two the store's own words to answer with. */
+  listenOnly?: boolean;
+  /** The opening line, so a menu looping back to it is recognised as the whole menu having played. */
+  firstLine?: string;
+  /** Round one really heard the menu from end to end, so round two can answer with its own words. */
+  listenHeardWholeMenu?: boolean;
   /** No line of this store's menu is on file yet: record everything, hang up on nothing. */
   firstEverCall?: boolean;
   /** LAYER 4 — we stayed silent for a beat to see whether the line kept reading (a recording) or
@@ -832,11 +836,13 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // catches a recording repeating itself on a number we have never rung.
   // Never at a mailbox or a closed store: there is nobody there to hear the beeps, and the check is
   // about to end anyway.
-  // AND NEVER ONCE THE MENU HAS HANDED US ON (owner 08-20, found by the CVS Avon practice check). The
-  // keys ask who answered THIS number. After a hand-over the person on the line is not who answered
-  // the number, so the question is already settled and the beeps would go off in their ear.
+  // AND NEVER ONCE THE MENU HAS HANDED US ON (owner 08-20). The keys ask who answered THIS number.
+  // After a hand-over the person on the line is not who answered the number, so the question is
+  // already settled and the beeps would go off in their ear. THAT is the only thing that silences
+  // them: an earlier pass today also silenced them at a chain whose menu we hold, and at CVS that
+  // removed the one signal that was working (owner 08-20, reverted the same day).
   if (s.knockAtSec == null && s.transferAtSec == null && s.routedAtSec == null
-    && !(s.knownMenuLines || []).length && !s.chainMenuKnown && String(speech || "").trim()
+    && !(s.knownMenuLines || []).length && String(speech || "").trim()
     && !looksLikeADeadEnd(speech)) {
     s.knockAtSec = atSec;
     s.knockStepIdx = s.steps.push({ who: "us", text: "pressed a few keys to see whether the talking stops", atSec, action: "press", value: "123", knock: true }) - 1;
@@ -929,6 +935,13 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // ONLY THE EARPIECE'S WORD. The cold-pickup test used to overrule it here; it is evidence the
     // judge already weighs, and a second opinion beside the judge is exactly what this pass deletes.
     if (verdict.who === "person") {
+      // ROUND ONE NEVER TALKS TO ANYBODY (owner 08-20). A store that answers with a person has no
+      // menu to write down, so the listening check puts the phone down rather than sit on their line
+      // or hand them to Charlie. Every other check reaches them exactly as before.
+      if (s.listenOnly) {
+        s.stopReason = "somebody answered on the listening check, so we hung up rather than trouble them";
+        finish(s, "mapped"); return twiml(`<Hangup/>`);
+      }
       return await reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
     }
   }
@@ -937,6 +950,23 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // what a mailbox sounds like, and every check reads it (RULES line 11).
   if (speech && speech.trim() && looksLikeADeadEnd(speech)) { s.deadLine = true; finish(s, "failed"); return twiml(`<Hangup/>`); }
   s.status = "navigating";
+  // ROUND ONE: LISTEN, NEVER TALK (owner 08-20). By here the store's line is written down, the beep
+  // has gone out on the very first sentence, the silence test has had its say and a person would
+  // already have ended the check above. What is left is a menu talking, so this check simply keeps
+  // listening until the menu comes back round to its opening line, which means the whole of it has
+  // played. Nothing below this point can run on a listening check: no model is asked, no answer is
+  // given, no door is chosen, and Staff are never spoken to.
+  if (s.listenOnly) {
+    if (speech && speech.trim()) {
+      if (!s.firstLine) s.firstLine = speech.trim().slice(0, 300);
+      else if (s.greetingTwice || sameMenu(s.firstLine, speech)) {
+        s.stopReason = "the menu read all the way through and came back to the top";
+        s.listenHeardWholeMenu = true;
+        finish(s, "mapped"); return twiml(`<Hangup/>`);
+      }
+    }
+    return twiml(gather(id));
+  }
   // The listen-first block that used to sit here is DELETED (the contract's DELETE list — stage one
   // replaces it). The learn stage IS the listening: the model answers each question with the full
   // phrase when it is asked and sits quiet while a recording is still talking, so a separate
@@ -1396,12 +1426,12 @@ async function recordConfirmAsked(chainId: number, retailerId: number, door?: st
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }>; knownMenuLines?: string[]; chainMenuKnown?: boolean }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }>; knownMenuLines?: string[]; listenOnly?: boolean }): Promise<{ id?: string; error?: string }> {
   // A LISTEN-ONLY CHECK WITH NOTHING TO WALK NEVER DIALS (fix pass 5). Such a check has no answers to
   // give and no route to finish, so it can never arm its ring hang-up — it would sit on the line
   // until somebody picked up, and then hang up on them. Refusing it here makes troubling Staff
   // structurally impossible on these checks, whatever any judge decides about who is talking.
-  if (extra?.relisten && !confirm && !(barge?.plan?.length) && !(reactivePress?.max)) {
+  if (extra?.relisten && !extra?.listenOnly && !confirm && !(barge?.plan?.length) && !(reactivePress?.max)) {
     return { error: "a listening check with no route to walk is refused — it could only end on a person" };
   }
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
@@ -1413,7 +1443,7 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
   const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors,
     // THE JUDGE'S FIRST LAYER: this store's own menu as heard before. Nothing on file = the store's
     // FIRST check, which listens to everything and hangs up on nothing.
-    knownMenuLines: extra?.knownMenuLines, chainMenuKnown: extra?.chainMenuKnown,
+    knownMenuLines: extra?.knownMenuLines, listenOnly: extra?.listenOnly,
     firstEverCall: !(extra?.knownMenuLines || []).length };
   sessions.set(id, session);
   session.why = extra?.why;
