@@ -3949,6 +3949,96 @@ console.log("\n▶ CHECK 436'S FAULT: the reader is STARTED when there are words
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 437'S FAULT: one answer per turn, one row per turn, one call to the reader");
+{
+  // THE FAULT, ON 437'S OWN RECORD: two wake_read rows at the SAME millisecond, 27854, about the
+  // same advert, the same answer, the same reason — one fromAPiece true, one false — and the
+  // not_a_person row printed twice under them. Four rows on his screen where there should be two.
+  // The wake question is entered from two doors for one turn: from a piece, and again from the
+  // joined line once Echo writes that turn to the record. Nothing remembered the turn was already
+  // asked about. The duplicate CALL is the waste; the duplicate row is only how he noticed it.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-437-one-answer";
+  echoListening(room, true);
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0 }, "reopen");
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  const step = (n: string) => evs().filter((e) => (e.detail as { step?: string } | null)?.step === n);
+  let readerCalls = 0;
+  const beforeStub = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    if (!/chat\/completions|\/v1\/messages/.test(url)) return (beforeStub as typeof globalThis.fetch)(input, init);
+    readerCalls++;
+    const body = String((init as { body?: unknown } | undefined)?.body ?? "");
+    let asked: string[] = [];
+    try {
+      const sent = JSON.parse(body) as { messages?: Array<{ role?: string; content?: string }> };
+      const user = (sent.messages || []).filter((m) => m.role === "user").map((m) => String(m.content || "")).join("\n");
+      asked = user.split("\n").map((l) => l.replace(/^\s*\d+\.\s*/, "").trim()).filter(Boolean);
+    } catch { asked = []; }
+    if (!asked.length) asked = [""];
+    await new Promise((r) => setTimeout(r, 150));
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      lines: asked.map((text, i) => {
+        const advert = /price match/i.test(text);
+        return { n: i + 1, line: text, voice: advert ? "recording" : "person", announcesWait: false,
+          confidence: 0.9, why: advert ? "advertising the store" : "answering what we asked them" };
+      }),
+    }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
+  echoHeardStaff(room, "One moment. I'll go and have a look.");
+  await sleep(120);
+  for (let i = 0; i < 80; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
+  await sleep(6200);
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the wait");
+  // THE ADVERT, exactly as 437 played it: a piece of it while it is still talking, then the whole
+  // joined line once Echo finishes writing it — the two doors, one turn.
+  quiet(tw, 130);
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(310);
+  const ADVERT = "Thanks for holding. Did you know we price match any local competitor?";
+  const readsBefore = readerCalls;
+  const stillTalking = setInterval(() => { for (let i = 0; i < 12; i++) tw.media(frame(SPEECH(i))); }, 40);
+  echoHeardPiece(room, ADVERT);
+  await sleep(600);
+  // Their voice stops, so the held question is asked on the piece — door one.
+  clearInterval(stillTalking);
+  quiet(tw, 60);
+  await sleep(700);
+  ok(step("wake_read").length === 1, "the piece is answered, once", step("wake_read").length);
+  ok(step("not_a_person").length === 1, "…and the store's recording is refused, once", step("not_a_person").length);
+  const afterFirst = readerCalls;
+  // …AND NOW ECHO WRITES THE SAME TURN TO THE RECORD AS ONE LINE — door two, on 437 this printed
+  // everything all over again.
+  echoHeardStaff(room, ADVERT);
+  await sleep(900);
+  ok(step("wake_read").length === 1, "the joined line of a turn already asked NEVER re-asks", step("wake_read").length);
+  ok(step("not_a_person").length === 1, "…so the refusal is on his screen once, not twice", step("not_a_person").length);
+  ok(readerCalls === afterFirst, "…and the reader was not called a second time for it", { afterFirst, now: readerCalls });
+  ok(afterFirst - readsBefore <= 1, "one turn, one call to the reader", { readsBefore, afterFirst });
+  ok(!evs().some((e) => e.kind === "hold_end"), "the wait is still running, exactly as before");
+  // A DIFFERENT TURN IS STILL NOBODY'S BUSINESS BUT ITS OWN: a real person answers and gets an
+  // answer of their own, so nothing here was silenced by accident.
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(200);
+  const talking2 = setInterval(() => { for (let i = 0; i < 12; i++) tw.media(frame(SPEECH(i))); }, 40);
+  echoHeardPiece(room, "Yeah. We've got a few of those.");
+  await sleep(400);
+  clearInterval(talking2);
+  quiet(tw, 60);
+  await sleep(900);
+  ok(step("wake_read").length === 2, "a genuinely different turn gets its own answer", step("wake_read").length);
+  ok(step("wake_read").some((e) => (e.detail as { answer?: string }).answer === "person"),
+    "…and it is judged on its own words", step("wake_read").map((e) => (e.detail as { answer?: string }).answer));
+  ok(evs().some((e) => e.kind === "hold_end"), "…so the wait ends on the person, not on the advert");
+  globalThis.fetch = beforeStub;
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ THE METER IS OFF BY DEFAULT: nothing on the billing list, and it goes off on its own");
 {
   _reset();

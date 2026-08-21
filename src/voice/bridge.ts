@@ -1001,6 +1001,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (earsShutAtMs > 0) return;
     earsShutAtMs = atMs ?? Date.now();
     personSoundAtMs = 0;
+    // A NEW WAIT STARTS CLEAN. Whatever the last wait's turns were asked about belongs to that wait.
+    wakeAskedWords = "";
     // A SILENT SWITCH, MARKED AS ONE (owner, 08-19 evening). Nothing was said on the line at this
     // second: it is our own machinery moving, and the sheet reads it apart from the rows that are
     // sounds. Stamped at the moment the wait was recognised, never the moment the code ran.
@@ -1056,6 +1058,38 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** The words a held decision is about, kept so the moment their voice stops can ask about the SAME
    *  turn even when Echo has written nothing further of it since the piece that started the hold. */
   let heldWakeLine = "";
+  /**
+   * ONE ANSWER PER TURN, ONE ROW PER TURN, ONE CALL TO THE READER PER TURN (owner's order, 08-21,
+   * off check 437).
+   *
+   * WHAT THE RECORD SAID: two `wake_read` rows at the same millisecond, 27854, about the same
+   * advert, with the same answer and the same reason — one `fromAPiece` true, one false — and the
+   * `not_a_person` row printed twice under them. Four rows on his screen where there should be two.
+   *
+   * WHY: `maybeWakeCharlie` is entered from two doors for the SAME turn — from a piece, and again
+   * from the joined line once Echo writes that turn to the record — and nothing remembered that the
+   * turn had already been asked about. `askTheHeldWakeNow` has that guard; the ordinary path did not.
+   *
+   * So the words a turn was asked about are kept here, and they are claimed BEFORE the read starts,
+   * not after it answers — two doors half a second apart were both already reading by the time
+   * either had an answer, which is where the second call to the reader really went.
+   *
+   * His rule, exactly: a later piece of the same turn may re-ask ONLY if it adds words the earlier
+   * answer never saw; the joined line of a turn already asked never re-asks; and a genuinely
+   * different turn is nobody's business but its own.
+   */
+  let wakeAskedWords = "";
+  const plainly = (s: string) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+  function alreadyAskedThisTurn(next: string, fromAPiece: boolean): boolean {
+    if (!wakeAskedWords) return false;
+    const asked = plainly(wakeAskedWords), now = plainly(next);
+    if (!now) return true;
+    // Neither contains the other, so these are different words entirely: a new turn, and it gets an
+    // answer of its own.
+    if (!asked.includes(now) && !now.includes(asked)) return false;
+    if (!fromAPiece) return true;      // the joined line of a turn already asked never re-asks
+    return asked.includes(now);        // a piece re-asks only if it adds words the answer never saw
+  }
   /** HOW LONG THE WAKE QUESTION WAITS ON THE READER once it asks (owner's order, 08-21 late: "if it
    *  is comfortably under 1.5s once it has a head start, leave the timeout alone. If it is not,
    *  raise it, because the wake is now released by Staff's voice stopping, not by that stopwatch").
@@ -1124,6 +1158,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   async function maybeWakeCharlie(line: string, fromAPiece = false): Promise<void> {
     if (earsShutAtMs === 0 || ended) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
+    // …AND A TURN THAT WAS ALREADY ASKED ABOUT IS NOT ASKED ABOUT AGAIN (see `wakeAskedWords`).
+    if (alreadyAskedThisTurn(fromAPiece ? wakeWordsOf(line) : line, fromAPiece)) {
+      log(`wake: "${String(line).slice(0, 40)}" is the turn we already asked about — not asked twice`);
+      return;
+    }
     // A LINE STILL BEING TRANSCRIBED IS NOT A FINISHED LINE (owner's order, 08-21, off check 430).
     // Charlie starts working out his reply on Staff's FIRST written word, so this decision used to be
     // forced on whatever the transcriber happened to have cut by then. On check 428 that was the whole
@@ -1166,6 +1205,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // hand-over, so the reader is asked about the whole of what has been said so far. Judging
     // "Thanks for holding." alone is exactly how the advert passed for a person.
     const words = fromAPiece ? wakeWordsOf(line) : line;
+    // CLAIMED HERE, BEFORE THE READ, NOT AFTER THE ANSWER. On 437 both doors were already reading by
+    // the time either had an answer — that is where the second call to the reader went, and a guard
+    // that waits for an answer would never have caught it.
+    wakeAskedWords = words;
     // THE ANSWER IS USUALLY ALREADY HERE (owner's order, 08-21 late). Three shapes, and the record
     // says which one this was: it was read before we asked, it was still being read and we waited
     // out what was left, or nothing had been started and this is the old cold race.
@@ -1211,6 +1254,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // reading, we waited out what was left) or cold (nothing was started — the old way).
         readMs, waitedMs, how,
         ...(read ? { why: read.why, confidence: read.confidence } : {}), notASound: true });
+    // A TURN THE READER GAVE NOTHING FOR WAS ASKED ABOUT, NOT ANSWERED. The claim above exists to
+    // stop two doors reading the same turn at the same moment; it is not a rule that one failed read
+    // uses up a turn's only chance. So when the reader comes back with nothing, the turn is released
+    // and Echo's joined line may genuinely try again. One ANSWER per turn, which is what he asked
+    // for — not one attempt.
+    if (!read) wakeAskedWords = "";
     if (read) {
       // WHATEVER THE READER CALLED A RECORDING IN THAT WINDOW IS STRUCK, not only the newest line
       // (check 410: the reader could not answer about the advert as it played, so nothing struck
