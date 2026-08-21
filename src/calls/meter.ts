@@ -91,6 +91,63 @@ export interface MeterInput {
    *  the record's raw numbers, the real cost and the customer's charge change not at all, and the
    *  sheet prints the real number beside the graded one. Null = no proven recording, grade as ever. */
   advert?: { asWaitSec: number; gradedProfitPct?: number | null } | null;
+  /** HE TALKED WHILE THE STORE'S OWN RECORDING WAS STILL PLAYING (owner's order, 08-21, off check
+   *  430). The words he said over it, and the second he said them. Set = the check FAILS: nobody
+   *  heard him, we paid for every one of those seconds, and on 430 it cost 10.7¢ against 428's 7.2¢
+   *  and dropped the margin from 71% to 57% while the sheet still said the test passed. */
+  spokeOverRecording?: { text: string; atSec: number } | null;
+}
+
+/**
+ * DID CHARLIE TALK WHILE THE STORE'S OWN RECORDING WAS STILL PLAYING (owner's order, 08-21, off
+ * check 430)?
+ *
+ * Pure, and read off the finished record: the after-call reader names the lines the store PLAYED at
+ * us (`played_at_us`), every spoken line now carries its own start and its own end, so a line of his
+ * that overlaps one of theirs is simply an overlap in time. Nobody heard a word of it, we paid for
+ * every second of it, and on 430 he even asked his whole question again into the advert. It is not a
+ * grading nicety: a check where this happened has to FAIL, however well the rest of it reads.
+ *
+ * Returns the FIRST line of his that overlapped, or null. Null on an old record with no timed lines,
+ * because a check we cannot place cannot be accused.
+ */
+export function spokeOverTheRecording(
+  timeline: Array<{ kind: string; atMs?: number | null; detail?: Record<string, unknown> | null }>,
+  lines: Array<{ who: string; text: string; atMs: number | null; endMs?: number | null }> | null,
+): { text: string; atSec: number } | null {
+  const played = timeline.find((e) => (e.detail || {}).step === "played_at_us");
+  if (!played || !lines?.length) return null;
+  const norm = (t: string) => String(t || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 120);
+  const judged = (Array.isArray((played.detail || {}).lines) ? (played.detail!.lines as Array<Record<string, unknown>>) : [])
+    .map((l) => norm(String(l.line ?? ""))).filter(Boolean);
+  if (!judged.length) return null;
+  const isRecording = (t: string) => { const n = norm(t); return judged.some((j) => n.startsWith(j) || j.startsWith(n)); };
+  // Their recording's own stretches. A line with no measured end cannot place one, so it is skipped
+  // rather than guessed at.
+  const rec = lines.filter((l) => l.who !== "Agent" && l.atMs != null && l.endMs != null && l.endMs > l.atMs
+    && isRecording(l.text)) as Array<{ text: string; atMs: number; endMs: number }>;
+  if (!rec.length) return null;
+  // OUR OWN RECORDINGS ARE NOT HIM TALKING OVER THEM, and check 430's replay is why this is here in
+  // words rather than in a comment: our walk-away line "Sure, thanks!" plays ON PURPOSE the moment
+  // Staff announce a hold, 0.8 seconds into the store's own advert, and it was the first thing this
+  // caught. It is not Charlie speaking; it is a recording of ours doing exactly its job. The record
+  // names every clip we played, so they are read off it rather than guessed at by their words.
+  const clipRows = timeline.filter((e) =>
+    ["question_clip", "hold_ack_clip", "little_hello", "set_ask_clip"].includes(String((e.detail || {}).step ?? "")));
+  const ours = new Set(clipRows.map((e) => norm(String((e.detail || {}).text ?? ""))).filter(Boolean));
+  // A record written before those rows carried their words still knows WHEN each clip of ours
+  // played, and our clip's line files at that same moment, so the moment names it just as well.
+  const ourMoments = clipRows.map((e) => e.atMs).filter((m): m is number => m != null);
+  const isOurs = (l: { text: string; atMs: number }) =>
+    ours.has(norm(l.text)) || ourMoments.some((m) => Math.abs(m - l.atMs) <= 1200);
+  for (const his of lines) {
+    if (his.who !== "Agent" || his.atMs == null) continue;
+    if (isOurs({ text: his.text, atMs: his.atMs })) continue;
+    const from = his.atMs;
+    const to = his.endMs != null && his.endMs > from ? his.endMs : from;
+    if (rec.some((r) => from < r.endMs && to > r.atMs)) return { text: his.text, atSec: Math.round(from / 1000) };
+  }
+  return null;
 }
 
 /** What `advertAsWait` measured off the record, all on the call's own millisecond clock. */
@@ -264,6 +321,20 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     // himself ordered. These are TRUE seconds, measured on
     // the call itself while his session was open and billing with the store holding us: no
     // forgiveness of any kind is applied to this number, whatever the grade does elsewhere.
+    // HE TALKED WHILE THE STORE'S OWN RECORDING WAS STILL PLAYING (owner's order, 08-21, off check
+    // 430). Not a number to weigh: nobody heard a word of it and we paid for every second, so the
+    // check fails by name. It is graded last of the meter rows so the sheet reads the numbers first
+    // and then says the thing that killed it.
+    if (m.spokeOverRecording) {
+      toPass.push("never talks while the store's own recording is playing");
+      const said = m.spokeOverRecording.text.slice(0, 90);
+      rows.push({ label: "Talked over the store's own recording", value: `at ${m.spokeOverRecording.atSec}s`,
+        pass: false, tone: "r",
+        say: { pre: "Charlie talked ", num: `${m.spokeOverRecording.atSec}`, post: " seconds in, while the store's own recording was still playing." },
+        open: `Nobody heard a word of it and every second of it was paid for. He said: "${said}". The store was playing a recording at that moment, which the reader named after the call, so there was nobody on the line to hear him.` });
+      fails.push(`Charlie talked ${m.spokeOverRecording.atSec} seconds in, while the store's own recording was still playing, so nobody heard him.`);
+      shortFails.push("talked over the store's recording");
+    }
     if (m.awakeOnHoldSec != null) {
       const sec = m.awakeOnHoldSec;
       const tone: "g" | "y" | "r" = sec <= AWAKE_ON_HOLD_GREEN ? "g" : sec <= AWAKE_ON_HOLD_YELLOW ? "y" : "r";

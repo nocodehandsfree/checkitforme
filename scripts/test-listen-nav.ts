@@ -4,7 +4,7 @@
 // The detector's whole job: say "a prompt just ENDED" when a recording stops talking, so a mapped
 // step fires on the pause instead of on a stopwatch. These tests feed it synthetic frame energies —
 // no audio, no network — so the timing rules are provable.
-import { PromptDetector, ConversationEar, frameEnergy, looksLikeAPerson, _test, type HoldReason } from "../src/calls/listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy, looksLikeAPerson, judgeVoice, _test, type HoldReason } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -514,6 +514,28 @@ console.log("▶ …and one walk-away is reported once, however long the music r
   ok(said.includes("back"), "they come back");
   music(e, 2000);
   ok(heard.length === 2, "…and the NEXT time they walk off into music, that is its own report");
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// CHECK 430: "THANKS FOR HOLDING" IS NOT PROOF OF A PERSON (owner's order, 08-21).
+// It was on the list of phrases that say somebody is talking TO us, and it is also the first three
+// words of the hold advert the practice store plays: "Thanks for holding. Did you know we price
+// match any local competitor?" A store's recording says it as often as Staff do.
+console.log("\n▶ the phrase a hold recording says as often as a person proves nothing on its own");
+{
+  const base = { atSec: 30, pauseTested: true, keptTalkingAfterPause: false };
+  const person = judgeVoice({ ...base, text: "Hi, this is Larry, how can I help you?" });
+  ok(person.who === "person", `a person naming themselves and offering help is still a person (${person.who}: ${person.why})`);
+  const holding = judgeVoice({ ...base, text: "Thanks for holding." });
+  ok(holding.why !== "it is addressed to us, and the pause after it says a person",
+    `"Thanks for holding." no longer settles it by itself (${holding.who}: ${holding.why})`);
+  // …and the two name phrases on the same list were checked for the same trap and kept, because a
+  // store's recording announces the STORE, never a person's own name.
+  const named = judgeVoice({ ...base, text: "This is Larry." });
+  ok(named.who === "person", `"This is <name>" still says a person (${named.who}: ${named.why})`);
+  const speaking = judgeVoice({ ...base, text: "Larry speaking." });
+  ok(speaking.who === "person", `"<name> speaking" still says a person (${speaking.who}: ${speaking.why})`);
 }
 
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);

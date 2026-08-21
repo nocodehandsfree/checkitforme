@@ -7,7 +7,7 @@
 // check under the 67% floor fails the same way on the cards the owner has not exempted, the
 // 08-16 shape (43 seconds of meter, 9 waiting, every behavior row green) reads FAIL, and an old
 // check that never measured a number is not graded on it — nothing is invented.
-import { meterVerdict, advertAsWait, METER_GOAL_SEC, METER_YELLOW_MAX_SEC, PROFIT_FLOOR_PCT } from "../src/calls/meter";
+import { meterVerdict, advertAsWait, spokeOverTheRecording, METER_GOAL_SEC, METER_YELLOW_MAX_SEC, PROFIT_FLOOR_PCT } from "../src/calls/meter";
 import { TEST_CARDS } from "../src/calls/behaved";
 
 let pass = 0, fail = 0;
@@ -363,6 +363,58 @@ console.log("\n▶ THE WASTE FAILS THE CHECK (owner's ruling, 08-19 night, widen
     withAdvert.pass === false && withAdvert.shortFails.some((f) => /awake on hold, 9 seconds/.test(f)), withAdvert.shortFails);
   const none = meterVerdict(clearYes, { meterSec: 19, profitPct: 71 })!;
   ok("a check that never measured it is not graded on it", !none.rows.some((r) => r.label.includes("Awake")));
+}
+
+// -------------------------------------------------------------------------------------------
+// CHECK 430: CHARLIE TALKED INTO THE STORE'S OWN RECORDING (owner's order, 08-21).
+// He asked his whole question again at 19 seconds while the advert was still playing. Nobody heard
+// a word of it, every second of it was paid for, and the sheet still said TEST PASSED at 10.7¢
+// against check 428's 7.2¢ and 57% margin against 71%. A check where that happened has to fail.
+console.log("\n▶ TALKING OVER THE STORE'S OWN RECORDING FAILS THE CHECK (owner's order, 08-21)");
+{
+  const over = meterVerdict(TEST_CARDS.hold_music_advert, { meterSec: 43, speakingSec: 9, listeningSec: 17,
+    profitPct: 57, awakeOnHoldSec: 3, advert: { asWaitSec: 18, gradedProfitPct: 70 },
+    spokeOverRecording: { text: "Hey, no worries at all! Do you guys happen to have any Pokémon cards in stock?", atSec: 19 } })!;
+  ok("a check where he talked over the store's recording FAILS", over.pass === false, over.shortFails);
+  ok("…and it says so in plain words, with the second he did it",
+    over.fails.some((f) => /talked 19 seconds in, while the store's own recording was still playing/.test(f)), over.fails);
+  ok("…and the pill wears it", over.shortFails.some((f) => /talked over the store's recording/.test(f)), over.shortFails);
+  ok("…and the row is red and failing",
+    over.rows.some((r) => r.label.includes("Talked over") && r.tone === "r" && r.pass === false));
+  ok("…and it opens with the words nobody heard",
+    over.rows.some((r) => r.label.includes("Talked over") && /no worries at all/.test(r.open ?? "")));
+  // THE FORGIVENESS CANNOT SAVE IT. The advert ruling grades those seconds as a wait, which is why
+  // 430 read as passed; talking into the recording is not a number to forgive.
+  ok("…and the advert forgiveness does not save it", over.pass === false);
+  // The same check without it passes, so this row and nothing else is what failed it.
+  const clean = meterVerdict(TEST_CARDS.hold_music_advert, { meterSec: 43, speakingSec: 9, listeningSec: 17,
+    profitPct: 57, awakeOnHoldSec: 3, advert: { asWaitSec: 18, gradedProfitPct: 70 } })!;
+  ok("the identical check with nobody talked over passes", clean.pass === true, clean.shortFails);
+  ok("…and draws no such row at all", !clean.rows.some((r) => r.label.includes("Talked over")));
+}
+
+console.log("\n▶ AND THE OVERLAP IS MEASURED OFF THE RECORD, never guessed");
+{
+  const ADVERT = "Thanks for holding. Did you know we price match any local competitor?";
+  const tl = [{ kind: "unknown", atMs: 57000, detail: { step: "played_at_us", lines: [{ line: ADVERT }] } }];
+  const lines = [
+    { who: "Clerk", text: ADVERT, atMs: 12508, endMs: 24838 },
+    { who: "Agent", text: "Hey, no worries at all! Do you guys happen to have any Pokémon cards in stock?", atMs: 19117, endMs: 23000 },
+    { who: "Clerk", text: "Yeah. We've got a few of those.", atMs: 33908, endMs: 36628 },
+    { who: "Agent", text: "Oh nice, do you know the name of the set?", atMs: 41089, endMs: 46347 },
+  ];
+  const hit = spokeOverTheRecording(tl, lines);
+  ok("the line of his that landed inside their recording is found", hit?.atSec === 19, hit);
+  ok("…and it is his words, not theirs", /no worries at all/.test(hit?.text ?? ""), hit?.text);
+  // The line he said AFTER their recording finished is not an overlap, and neither is the recording
+  // itself. Only his own voice inside their recording's own seconds counts.
+  ok("a line of his after the recording ended is not an overlap",
+    spokeOverTheRecording(tl, [lines[0], lines[3]]) === null);
+  ok("a check with no proven recording can never be accused",
+    spokeOverTheRecording([], lines) === null);
+  ok("…and neither can an old record with no measured ends",
+    spokeOverTheRecording(tl, [{ who: "Clerk", text: ADVERT, atMs: 12508, endMs: null },
+      { who: "Agent", text: "Hey, no worries at all!", atMs: 19117, endMs: 23000 }]) === null);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

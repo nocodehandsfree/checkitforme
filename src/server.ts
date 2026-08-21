@@ -46,7 +46,7 @@ import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, last
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, type BehavedRow } from "./calls/behaved";
-import { meterVerdict, advertAsWait } from "./calls/meter";
+import { meterVerdict, advertAsWait, spokeOverTheRecording } from "./calls/meter";
 import { listSimRuns, readSimRun, fileSimRun, type SimRunIn, type SimCallIn } from "./calls/simulations";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
@@ -6652,6 +6652,12 @@ app.get("/api/admin/receipt/:room", async (c) => {
         // THE WASTE, ITS OWN NUMBER ON THE SHEET (owner's order, 08-19, fix 4): the seconds his
         // session was awake and billing while the store had us on hold, measured on the call.
         awakeOnHoldSec: sums?.awakeOnHoldSeconds ?? null,
+        // HE TALKED WHILE THE STORE'S OWN RECORDING WAS STILL PLAYING (owner's order, 08-21, off
+        // check 430). Read off the finished record: the after-call reader names what the store
+        // played at us, every spoken line carries its own start and end, and an overlap is an
+        // overlap. Set = the check fails, whatever else the sheet reads.
+        spokeOverRecording: spokeOverTheRecording(
+          timeline as Array<{ kind: string; atMs?: number | null; detail?: Record<string, unknown> | null }>, spokenLines ?? null),
         // THE SET-ASIDE IS GONE (owner, 08-17 evening: "we already have a system, I didn't ask to
         // change shit"). A hold test is priced and graded exactly like every other check: the real
         // profit the check made, against the 67% floor, and no second number of any kind.

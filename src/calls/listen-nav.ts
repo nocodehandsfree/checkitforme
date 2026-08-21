@@ -280,7 +280,17 @@ export function looksLikeADeadEnd(text: string): boolean {
 const CHECKING_ON_US = /\bhello\?|are you (still )?there|you still there|can you hear me|anybody there|anyone there/i;
 /** Somebody talking TO US: offering to help, asking what we need, giving their own name. A menu
  *  offers choices; a person offers themselves. */
-const ADDRESSED_TO_US = /how (can|may) i help|can i help you|what can i (do|help)|what do you need|how can i assist you|this is \w+|\w+ speaking|thanks for holding|thank you for holding|what'?s up/i;
+// "THANKS FOR HOLDING" IS NOT PROOF OF A PERSON (owner's order, 08-21, off check 430). It was on this
+// list, and it is also the first three words of the hold advert the practice store plays: "Thanks for
+// holding. Did you know we price match any local competitor?" A store's recording says it as often as
+// Staff do, so on its own it proves nothing and it is gone from here. It is still perfectly good
+// EVIDENCE inside a whole sentence, which is what the after-call reader weighs; what it may never do
+// is decide by itself.
+// CHECKED ON THE SAME LIST FOR THE SAME TRAP, and kept: "this is <name>" and "<name> speaking" are
+// how a person names themselves answering a phone. A store's recording announces the STORE ("thank
+// you for calling …"), not a person's own name, and neither phrase appears in any hold recording we
+// hold. They stay, and this note is here so the next agent does not have to re-derive it.
+const ADDRESSED_TO_US = /how (can|may) i help|can i help you|what can i (do|help)|what do you need|how can i assist you|this is \w+|\w+ speaking|what'?s up/i;
 /** News about the product — a yes, a no, a where. An answer, whatever else rides along with it. */
 const ABOUT_THE_PRODUCT = /\b(yes|yeah|yep|no|nope|we do|we don'?t|sold out|out of stock|in stock|we have|we'?ve got|we got|we carry|aisle|section|shelf|by the|near the|next to|over (by|there|here)|behind the|up front)\b/i;
 

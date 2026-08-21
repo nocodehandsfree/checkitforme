@@ -3176,6 +3176,11 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
   // pieces; the FIRST piece goes to Charlie at once so he is already working out his reply, and to
   // the wake check at once so it is already proving them. His sound is held until it says person.
   await sleep(250);   // his session finishes opening on the sound, exactly as on a real check
+  // THEIR SENTENCE ENDS BEFORE ECHO WRITES IT, which is what really happens: check 428's own piece
+  // "Yeah." landed 0.4 seconds AFTER their sound had stopped. The quiet frames are the line going
+  // quiet, and on a real check they never stop arriving, so the scene feeds them too.
+  quiet(tw, 40);
+  await sleep(60);
   const beforeHisReply = tw.outMedia().length;
   echoHeardPiece(room, "Yeah.");
   ok(step("early_turn").length === 1,
@@ -3442,6 +3447,9 @@ console.log("\n▶ CHECK 427'S MOMENT: his words are in, his sound is still bein
   quiet(tw, 130);
   for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
   await sleep(310);
+  // Their sentence ends before Echo writes it, exactly as on check 428.
+  quiet(tw, 40);
+  await sleep(60);
   const beforeHisReply = tw.outMedia().length;
   echoHeardPiece(room, "Yeah.");
   ok(step("early_turn").length === 1,
@@ -3482,6 +3490,88 @@ console.log("\n▶ CHECK 427'S MOMENT: his words are in, his sound is still bein
     ok(his >= 0 && theirsAfter <= 2,
       "…and it is his own turn, not an answer to a second thing Staff had to say", { at: his, clerkLinesBefore: theirsAfter });
   }
+  globalThis.fetch = beforeStub;
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CHECK 430'S MOMENT: three words of a sentence still being said decide nothing");
+{
+  // THE FAULT. Charlie starts working out his reply on Staff's FIRST written word, so the person or
+  // recording decision was forced on whatever the transcriber had cut by then. On check 428 that was
+  // the whole sentence, "Thanks for holding. Did you know we price match any local competitor?", and
+  // it was rightly called the store's recording. On 430 it was the first three words alone, "Thanks
+  // for holding.", which is exactly what a person says coming back, so it was rightly called a
+  // person: the wait ended at 18.842s and at 19.117s he spoke into the advert and re-asked his
+  // question. Neither answer was wrong. The question was asked too early.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-430-moment";
+  echoListening(room, true);
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0 }, "reopen");
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  const step = (n: string) => evs().filter((e) => (e.detail as { step?: string } | null)?.step === n);
+  // THE READER, STUBBED, and it answers what it really answers about these two windows: three words
+  // that a person says is a person; the whole advert is a recording. Its accuracy on real lines is
+  // the workbench's job — what this scene proves is WHEN the engine asks it.
+  const beforeStub = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    if (!/chat\/completions|\/v1\/messages/.test(url)) return (beforeStub as typeof globalThis.fetch)(input, init);
+    // It is asked about a numbered list of lines and answers about EVERY one of them, the way the
+    // real reader does, so the newest line always has an answer of its own.
+    const body = String((init as { body?: unknown } | undefined)?.body ?? "");
+    let asked: string[] = [];
+    try {
+      const sent = JSON.parse(body) as { messages?: Array<{ role?: string; content?: string }> };
+      const user = (sent.messages || []).filter((m) => m.role === "user").map((m) => String(m.content || "")).join("\n");
+      asked = user.split("\n").map((l) => l.replace(/^\s*\d+\.\s*/, "").trim()).filter(Boolean);
+    } catch { asked = []; }
+    if (!asked.length) asked = [""];
+    await new Promise((r) => setTimeout(r, 120));
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      lines: asked.map((text, i) => {
+        // The whole advert is the store talking at us. Three words that a person also says are not.
+        const advert = /price match/i.test(text);
+        return { n: i + 1, line: text, voice: advert ? "recording" : "person", announcesWait: false,
+          confidence: 0.9, why: advert ? "advertising the store" : "greets us and offers help" };
+      }),
+    }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
+  // Staff step away, the music declares the wait, he is dropped.
+  echoHeardStaff(room, "One moment. I'll go and have a look.");
+  await sleep(120);
+  for (let i = 0; i < 80; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
+  await sleep(6200);
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the wait");
+  // THE ADVERT STARTS. Its sound is speech-shaped and it keeps going, exactly as a real advert does.
+  quiet(tw, 130);
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(310);
+  // Echo writes its first three words while the advert is STILL TALKING.
+  const keepTalking = setInterval(() => { for (let i = 0; i < 12; i++) tw.media(frame(SPEECH(i))); }, 40);
+  echoHeardPiece(room, "Thanks for holding.");
+  await sleep(700);
+  ok(step("early_turn").length === 1, "the piece still reaches Charlie at once, so he is already thinking");
+  ok(step("wake_read").length === 0,
+    "…but NOTHING is decided on three words of a sentence still being said", step("wake_read").length);
+  ok(!evs().some((e) => e.kind === "hold_end"), "…so the wait does not end on them");
+  ok(step("ears_back").length === 0, "…and his ears stay shut");
+  // The rest of the advert lands, and the advert KEEPS TALKING, which is what an advert does. So
+  // its voice never stops, and the ceiling is what makes the decision happen: at four seconds we
+  // decide on everything written by then, which by now is the whole sentence.
+  echoHeardPiece(room, "Did you know we price match any local competitor?");
+  await sleep(4200);
+  clearInterval(keepTalking);
+  await sleep(300);
+  ok(step("wake_read").length >= 1, "the whole sentence is judged", step("wake_read").length);
+  ok(step("wake_read").some((e) => (e.detail as { answer?: string }).answer === "recording"),
+    "…and the record says WHICH answer it was, in the reader's own words",
+    step("wake_read").map((e) => (e.detail as { answer?: string }).answer));
+  ok(step("not_a_person").length >= 1, "…the store played that at us, so he stays off");
+  ok(!evs().some((e) => e.kind === "hold_end"), "…and the wait is still running");
   globalThis.fetch = beforeStub;
   echoListening(room, false);
   restore(); tw.close(); f.close();

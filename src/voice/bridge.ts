@@ -1027,18 +1027,78 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  IF THE READER CANNOT ANSWER (no key, too slow, refused), the sound rule stands in: word-scale
    *  speech with real silence in its gaps, on a line clear of the music. Never nothing, because a
    *  real person left unheard costs the whole check. */
+  /** HOW LONG THE DECISION MAY WAIT FOR THE SENTENCE TO FINISH (owner's order, 08-21, off check 430).
+   *  A person's sentence ends in well under a second, so this is only the safety net for an ear that
+   *  never reports the stop. Past it we decide on whatever has been written, which by then is far
+   *  more than the three words that fooled us. */
+  const WAKE_SENTENCE_CEILING_MS = 4000;
+  let wakeCeilingTimer: NodeJS.Timeout | null = null;
+  let wakeHeldSinceMs = 0;
   async function maybeWakeCharlie(line: string, fromAPiece = false): Promise<void> {
     if (earsShutAtMs === 0 || ended) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
+    // A LINE STILL BEING TRANSCRIBED IS NOT A FINISHED LINE (owner's order, 08-21, off check 430).
+    // Charlie starts working out his reply on Staff's FIRST written word, so this decision used to be
+    // forced on whatever the transcriber happened to have cut by then. On check 428 that was the whole
+    // sentence, "Thanks for holding. Did you know we price match any local competitor?", and it was
+    // rightly called the store's recording. On 430 it was the first three words alone, "Thanks for
+    // holding.", which is exactly what a real person says coming back, so it was rightly called a
+    // person — and Charlie spoke into the advert and asked his question all over again.
+    // Neither answer was wrong. The question was asked too early. So a piece waits for their voice
+    // to stop, which IS the sentence ending, or for the ceiling above, whichever comes first. On a
+    // real comeback their voice has already stopped by the time the piece is written (check 428's
+    // own "Yeah." landed 0.4s after their sound ended), so this costs a live person nothing.
+    if (fromAPiece && theirVoiceOn) {
+      // THE CEILING COUNTS FROM WHEN WE FIRST HELD, never from the last sound (found driving this on
+      // the rig). A voice that keeps talking reports itself again every few frames, so anchoring on
+      // the latest sound meant the ceiling never arrived at all and a person who simply talks for
+      // more than four seconds would have been left waiting for ever.
+      if (wakeHeldSinceMs === 0) wakeHeldSinceMs = Date.now();
+      if (Date.now() - wakeHeldSinceMs < WAKE_SENTENCE_CEILING_MS) {
+        log(`wake: "${String(line).slice(0, 40)}" is only part of a sentence still being said, so nothing is decided on it yet`);
+        // …AND THE CEILING HAS TO FIRE BY ITSELF. Echo's next piece and its joined line both ask
+        // again, but a voice that simply keeps going would leave nobody asking, so it is armed here
+        // and asks with everything written by then.
+        if (!wakeCeilingTimer) {
+          const waited = Date.now() - wakeHeldSinceMs;
+          wakeCeilingTimer = setTimeout(() => {
+            wakeCeilingTimer = null;
+            // Asked about the SAME turn, with everything written of it by now — never about the line
+            // before it, which is all the record holds while a sentence is still being said.
+            void maybeWakeCharlie(openTurnPieces.length ? openTurnPieces.join(" ") : line, true);
+          }, Math.max(200, WAKE_SENTENCE_CEILING_MS - waited));
+        }
+        return;
+      }
+    }
+    wakeHeldSinceMs = 0;
+    if (wakeCeilingTimer) { clearTimeout(wakeCeilingTimer); wakeCeilingTimer = null; }
     // A PIECE IS NOT ON THE RECORD YET (owner, 08-19 night). Echo writes the record when the whole
     // sentence is joined, and the wake check reads the record's newest Staff line — so a piece has
     // to be handed in as that newest line, or the reader would be asked about the sentence BEFORE
     // this one and answer about the wrong words entirely.
     const window = (getReceipt(room)?.transcript ?? []).slice(-4)
       .map((l) => ({ who: l.who === "Agent" ? "Agent" : "Clerk", text: l.text }));
-    if (fromAPiece) window.push({ who: "Clerk", text: line });
+    // EVERYTHING ECHO HAS WRITTEN OF THIS TURN, not the one piece in hand (owner's order, 08-21,
+    // off check 430). The pieces of a sentence still being said are already kept together for the
+    // hand-over, so the reader is asked about the whole of what has been said so far. Judging
+    // "Thanks for holding." alone is exactly how the advert passed for a person.
+    if (fromAPiece) window.push({ who: "Clerk", text: openTurnPieces.length ? openTurnPieces.join(" ") : line });
     const read = await isSomebodyTalkingToUs(window).catch(() => null);
     if (earsShutAtMs === 0 || ended) return;   // it ended while the reader was thinking
+    // WHICH ANSWER IT REALLY WAS, ON THE RECORD, EVERY TIME (owner's order, 08-21, off check 430).
+    // Three things can happen here and 430's record could not tell two of them apart: the reader said
+    // a person, the reader said the store played it at us, or the reader ran out of its second and a
+    // half and the measured sound rule answered instead. Only the middle one ever wrote a row, so a
+    // check that woke him wrongly looked exactly like a check that woke him rightly. Now every
+    // decision writes down which of the three it was, in the reader's own words.
+    emit(room, "unknown",
+      !read ? "The reader could not answer in time about who was talking, so the measured sound decided"
+        : read.person ? "The reader says a real person is talking to us"
+          : "The reader says the store played that at us",
+      { step: "wake_read", answer: !read ? "no_answer" : read.person ? "person" : "recording",
+        text: String(line).slice(0, 160), fromAPiece,
+        ...(read ? { why: read.why, confidence: read.confidence } : {}), notASound: true });
     if (read) {
       // WHATEVER THE READER CALLED A RECORDING IN THAT WINDOW IS STRUCK, not only the newest line
       // (check 410: the reader could not answer about the advert as it played, so nothing struck
@@ -2226,7 +2286,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     spokeThisSession = true;   // he has had his say: the quiet that follows is Staff walking away
     recordLine(room, "Agent", clip.text, undefined, undefined, undefined, Date.now() + clip.ms);
     try { relayLine?.(room, "Agent", clip.text); } catch { /* the screen is best-effort */ }
-    emit(room, "unknown", "The hold reply played as a recording", { step: "hold_ack_clip", ms: clip.ms, language: es ? "es" : "en" });
+    // ITS WORDS RIDE THE ROW (owner's order, 08-21). The grade has to tell OUR own recording apart
+    // from Charlie talking, and the only honest way is the record naming what we played.
+    emit(room, "unknown", "The hold reply played as a recording", { step: "hold_ack_clip", ms: clip.ms, text: clip.text, language: es ? "es" : "en" });
     log(`hold ack: our recording played (${clip.ms}ms), no wait on the outside voice service`);
   }
 
