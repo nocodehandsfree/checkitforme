@@ -3834,8 +3834,8 @@ app.get("/pub/result/:cid", async (c) => {
   // …AND A CHECK WE CANNOT EVEN FIND MAY NOT BE GIVEN A VERDICT AT ALL. This is the shape check 435
   // really hits: at a comeback Charlie reconnects as a NEW conversation, so for a beat the page is
   // asking by an id the row is not pointed at yet, no row answers to it, and there is no record to
-  // ask. There is nothing to check the provider's key against, so the honest answer is the progress
-  // and none of the four fields that would paint a verdict on the page.
+  // ask. There is nothing here to check the provider's key against, so the honest answer is the
+  // progress and none of the four fields that would paint a verdict on the page.
   if (o) {
     const { statusKey: _k, confirmed: _c, soldOut: _s, doesNotSell: _d, ...progress } = o as unknown as Record<string, unknown>;
     return c.json({ ...progress, ts: undefined });
