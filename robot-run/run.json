@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-21T22:18:20.236Z",
+  "at": "2026-08-21T22:51:31.435Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -27,14 +27,14 @@
         {
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
-          "pass": true,
-          "detail": "live view showed: \"Larry Vásquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
+          "pass": false,
+          "detail": "live view showed: \"Vázquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 5,
           "name": "the greeting is its own line, never welded to their answer",
-          "pass": true,
-          "detail": "one line, nothing else in it"
+          "pass": false,
+          "detail": "it carries more than the greeting: \"Vázquez. How can I help you?\""
         },
         {
           "n": 12,
@@ -45,20 +45,20 @@
         {
           "n": 4.1,
           "name": "Staff's greeting is the first line of the written conversation",
-          "pass": true,
-          "detail": "first written line: \"Clerk: Larry Vásquez. How can I help you?\""
+          "pass": false,
+          "detail": "first written line: \"Clerk: Vázquez. How can I help you?\""
         },
         {
           "n": 5.1,
           "name": "the written greeting is its own line",
-          "pass": true,
-          "detail": "written: \"Larry Vásquez. How can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
+          "pass": false,
+          "detail": "written: \"Vázquez. How can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": true,
-          "detail": "3 lines, all exact"
+          "pass": false,
+          "detail": "\"Larry Vasquez, how can I help you?\" → missing"
         },
         {
           "n": 7,
@@ -76,7 +76,7 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": true,
-          "detail": "we signed off: \"Perfect, thank you so much, have a good one!\""
+          "detail": "we signed off: \"No worries, thanks so much, have a good one!\""
         },
         {
           "n": 14,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 54 seconds and the line closed at 54 — 0 seconds of nothing"
+          "detail": "the answer was in at 69 seconds and the line closed at 69 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Fri, Aug 21 · 10:17 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you t"
+          "detail": " Result Fri, Aug 21 · 10:50 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you t"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 7.3¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 9.2¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/22-live.png",
         "./robot-run/22-result.png"
       ],
-      "startedAt": 1787350596187,
-      "checkId": 437,
-      "cost": 0.072696,
-      "costReadable": "7.3¢",
+      "startedAt": 1787352571524,
+      "checkId": 438,
+      "cost": 0.091973,
+      "costReadable": "9.2¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"
