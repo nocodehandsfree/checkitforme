@@ -3604,6 +3604,18 @@ async function canReadTranscript(c: { req: { header: (n: string) => string | und
   const u = await verifyClerkToken(c.req.header("authorization"));
   return !!u && u.id === row.finderUserId;
 }
+// WHICH DOOR ANSWERED A CUSTOMER, AND WITH WHAT (owner's item 6, 08-21; checks 433 and 434 both
+// painted "Left on hold" on a check the record settled as in stock, after every door on this route
+// was made to ask the record first). The screen is fed by exactly one route and it is this one, so
+// the record now names the door and the key it handed over. One line on the timeline, no behaviour
+// changed: the next dial says which door it is instead of leaving it to be reasoned about.
+const screenSaid = (room: string | null | undefined, door: string, statusKey: string | null | undefined, confirmed: boolean | null | undefined) => {
+  if (!room || !statusKey) return;
+  try {
+    emit(room, "unknown", `The customer's screen was told ${statusKey}`,
+      { step: "result_screen", door, statusKey, confirmed: confirmed ?? null, notASound: true });
+  } catch { /* a diagnostic may never break a result */ }
+};
 app.get("/pub/result/:cid", async (c) => {
   let cid = c.req.param("cid");
   if (!(await canReadTranscript(c, cid))) return c.json({ error: "unauthorized" }, 401);
@@ -3631,6 +3643,7 @@ app.get("/pub/result/:cid", async (c) => {
         // …AND THE RECORD'S FACTS DECIDE OVER THE READER HERE AS WELL (law 11: the whole family, not
         // one door). Same shared decider as the sweep, the settle and the webhook.
         const key = await statusFromTheRecord(row.room, row.confirmed, row.statusKey ?? undefined, row.transcript);
+        screenSaid(row.room, "the row itself, before any conversation existed", key, row.confirmed);
         // ts rides EVERY result branch — the verdict page shows the call's date/time on all statuses (owner 07-16).
         return c.json({ status: row.status, confirmed: row.confirmed, statusKey: key, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "", ts: (row.startedAt || 0) * 1000 });
       }
@@ -3733,6 +3746,7 @@ app.get("/pub/result/:cid", async (c) => {
     // usually already settled through the same decider; a row stamped by an older build, or by a
     // path that only ever added `left_on_hold`, is corrected here rather than shown to a customer.
     const rowKey = await statusFromTheRecord(row.room, row.confirmed, row.statusKey ?? undefined, row.transcript);
+    screenSaid(row.room, "the settled row", rowKey, row.confirmed);
     return c.json({
       ...(o ?? {}),
       status: row.status,
@@ -3767,6 +3781,7 @@ app.get("/pub/result/:cid", async (c) => {
     // mid-hold, our own cap, Staff hanging up, the never-a-straight-answer word — one shared
     // decider, statusFromTheRecord, the same rules the sweep has always run.
     const settledKey = await statusFromTheRecord(row.room, consensus.confirmed, consensus.statusKey, o.transcript);
+    screenSaid(row.room, "the on-demand settle at the end of the call", settledKey, consensus.confirmed);
     await db.update(callResults).set({
       status: o.status, confirmed: consensus.confirmed, statusKey: settledKey,
       shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary,

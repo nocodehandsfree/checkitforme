@@ -128,6 +128,7 @@ const RECORDS: Array<[string, string]> = [
   ["431", "the owner's own Fun store: our own voice came back off his speaker and was written down as Staff"],
   ["432", "the advert is refused, and he then stood mute for 26 seconds while a person waited"],
   ["433", "the first check on the inverted meter: 35 seconds where 432 ran 57, and no mute at all"],
+  ["434", "all six items live: 57 seconds end to end, 8.3\u00a2, no silence anywhere, the advert refused"],
 ];
 
 // THE GOLDEN: what all four of those things read today, on the fixed engine, for every record. A
