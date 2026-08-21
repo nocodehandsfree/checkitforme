@@ -1313,11 +1313,30 @@ export async function diedOnAHold(room: string | null | undefined): Promise<bool
  *  door and kept the reader's "no clear answer" over a check that died mid-hold. The reader reads
  *  the words; these facts are the check's own timeline, and they only ever speak over an answer we
  *  do not have: if Staff came back and answered, that answer stands. */
+/** THE KEYS THAT ALL MEAN THE SAME ONE THING: this check never came back with an answer. Every one
+ *  of them is a reason we did not get one — they kept us waiting, they were too busy, we could not
+ *  understand each other, a machine picked up, nobody picked up, or they never said anything
+ *  straight. None of them can be true of a check that came back with an answer. */
+const NEVER_GOT_AN_ANSWER = new Set([
+  "left_on_hold", "too_busy", "language_barrier", "voicemail",
+  "nobody_answered", "no_clear_answer", "no_straight_answer",
+]);
 export async function statusFromTheRecord(
   room: string | null | undefined, confirmed: boolean | null, statusKey: string | undefined,
   transcript: string | null | undefined,
 ): Promise<string | undefined> {
-  if (confirmed !== null) return statusKey;
+  // AN ANSWER IN HAND OUTRANKS A KEY THAT SAYS WE NEVER GOT ONE (owner's order, 08-21, item 5 — the
+  // 08-07 screen fault, still open after the three doors below were fixed). Those doors only ever
+  // ran on a check with NO answer, so a row carrying a real answer AND a near-miss key walked
+  // straight through them: the screen painted "Left on hold" off the key while the record beside it
+  // read in stock. The near-miss keys all say one thing — the check never came back with an answer —
+  // and that is a thing the record can simply be asked. If it came back with one, it came back with
+  // one, and the screen says so. A "no" the store really gave us keeps its own word for it (sold
+  // out, does not sell, not in stock): those are answers, not near-misses, and none of them is here.
+  // Billing is untouched by this: `billableOutcome` charges on `definitive` before it ever reads a
+  // key, and a check with an answer is definitive.
+  if (confirmed !== null)
+    return NEVER_GOT_AN_ANSWER.has(statusKey ?? "") ? (confirmed ? "in_stock" : "not_in_stock") : statusKey;
   if (await weHungUpOnAHold(room) || await diedOnAHold(room)) return "left_on_hold";
   if (await staffHungUpOn(room)) return "staff_hung_up";
   // …AND IT TAKES ONE BACK, TOO (owner's order, 08-21, item 6, the 08-07 screen fault, seen again

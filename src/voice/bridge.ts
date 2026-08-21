@@ -1053,6 +1053,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const WAKE_SENTENCE_CEILING_MS = 4000;
   let wakeCeilingTimer: NodeJS.Timeout | null = null;
   let wakeHeldSinceMs = 0;
+  /** The words a held decision is about, kept so the moment their voice stops can ask about the SAME
+   *  turn even when Echo has written nothing further of it since the piece that started the hold. */
+  let heldWakeLine = "";
   async function maybeWakeCharlie(line: string, fromAPiece = false): Promise<void> {
     if (earsShutAtMs === 0 || ended) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
@@ -1073,6 +1076,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // the latest sound meant the ceiling never arrived at all and a person who simply talks for
       // more than four seconds would have been left waiting for ever.
       if (wakeHeldSinceMs === 0) wakeHeldSinceMs = Date.now();
+      heldWakeLine = line;
       if (Date.now() - wakeHeldSinceMs < WAKE_SENTENCE_CEILING_MS) {
         log(`wake: "${String(line).slice(0, 40)}" is only part of a sentence still being said, so nothing is decided on it yet`);
         // …AND THE CEILING HAS TO FIRE BY ITSELF. Echo's next piece and its joined line both ask
@@ -1090,7 +1094,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         return;
       }
     }
-    wakeHeldSinceMs = 0;
+    wakeHeldSinceMs = 0; heldWakeLine = "";
     if (wakeCeilingTimer) { clearTimeout(wakeCeilingTimer); wakeCeilingTimer = null; }
     // A PIECE IS NOT ON THE RECORD YET (owner, 08-19 night). Echo writes the record when the whole
     // sentence is joined, and the wake check reads the record's newest Staff line — so a piece has
@@ -1170,6 +1174,34 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // opening his ears hands it straight over as their turn.
     if (!alreadyHisToAnswer(line)) missedWhileClosed.push(line);
     openCharliesEars("the sound and the words both say a person");
+  }
+  /** THE HELD DECISION IS ASKED THE INSTANT THEIR VOICE STOPS (owner's order, 08-21, off check 434).
+   *
+   *  A piece that lands mid sentence holds the person-or-recording question until the sentence is
+   *  over — that is the 430 fix and it stays. But NOTHING WAS WATCHING FOR THE SENTENCE BEING OVER.
+   *  The held question was re-asked only when Echo wrote another piece, or when the four second
+   *  ceiling fired. A turn that ENDS in silence — which is every turn where Staff answer us and then
+   *  wait — produces neither, so it burned the whole four seconds with Charlie's reply already
+   *  worked out and his mouth held shut. Check 434: Staff's line ended at 39.3 seconds, he spoke at
+   *  43.6, and the record says the reader was not even asked until the ceiling let it be. The same
+   *  fault cost 26 seconds on check 432.
+   *
+   *  The moment their voice stops is ALREADY KNOWN, and already used: it is the same instant his
+   *  little hello waits for. So the question is asked right there, about everything Echo has written
+   *  of their turn by then — which is the same words the ceiling would have asked about, only
+   *  seconds earlier. Nothing else about the hold changes: the ceiling stays exactly where it is,
+   *  now purely as the backstop for an ear that never reports a stop at all. */
+  function askTheHeldWakeNow(why: string): void {
+    // The armed ceiling IS the record of a decision being held. No timer, nothing held, and this
+    // moment belongs to somebody else — never re-ask a turn that was already answered.
+    if (!wakeCeilingTimer) return;
+    clearTimeout(wakeCeilingTimer); wakeCeilingTimer = null;
+    // EVERYTHING WRITTEN OF THEIR TURN BY NOW, exactly as the ceiling itself asks it, falling back to
+    // the piece the hold started on when Echo has joined nothing yet.
+    const line = openTurnPieces.length ? openTurnPieces.join(" ") : heldWakeLine;
+    if (!line) return;
+    log(`wake: ${why}, so the held question is asked now rather than waiting the ceiling out`);
+    void maybeWakeCharlie(line, true);
   }
   const REJOIN_WORDLESS_MS = 4000;
   let wordlessRejoinTimer: NodeJS.Timeout | null = null;
@@ -4102,6 +4134,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         armTheMeterOff("their voice stopped and it is their turn");
         // THE PAUSE HIS LITTLE HELLO WAITS FOR (owner, 08-20): it may never play over them.
         maybeSayTheLittleHello("their voice stopped");
+        // …AND THE SAME PAUSE IS WHERE A HELD WAKE DECISION IS ASKED (owner's order, 08-21, off
+        // check 434). Their voice stopping IS their sentence ending, which is the one thing the
+        // held question was waiting for; see `askTheHeldWakeNow`.
+        askTheHeldWakeNow("their voice stopped");
         if (reconnectFeed && !reconnectFeed.voiceStopped) {
           reconnectFeed.voiceStopped = true;
           // ONE HAND-OVER, EVER (owner, 08-17 evening, off check 373: the handed words step printed
