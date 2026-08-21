@@ -116,5 +116,30 @@
    "totalUsd": 151464,
    "buckets": "foxtrot,echo,charlie"
   }
+ },
+ "433": {
+  "words": [
+   "Clerk: Larry Vásquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: One moment. I'll go and have a look.",
+   "Agent: Sure, thanks!",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Clerk: Yeah. We've got a few of those.",
+   "Clerk: Hello?",
+   "Agent: Oh nice, do you know the name of the set, like Chaos Rising,",
+   "Clerk: Pitch black the booster boxes.",
+   "Agent: Thanks so much, Larry, have a good one."
+  ],
+  "meter": {
+   "pass": false,
+   "shortFails": [
+    "Charlie meter time, 35 seconds",
+    "profit 54% under the 56% floor"
+   ]
+  },
+  "cost": {
+   "totalUsd": 111498,
+   "buckets": "foxtrot,echo,charlie"
+  }
  }
 }

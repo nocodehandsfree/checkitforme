@@ -3622,8 +3622,17 @@ app.get("/pub/result/:cid", async (c) => {
       // theirs at all. Either id finds the same one check.
       const row = await findCheckRow(cid);
       if (row && row.status !== "dialing" && row.status !== "in_progress" && row.status !== "queued") {
+        // NO ANSWER WHILE THE LINE IS STILL UP, AT THIS DOOR TOO (owner's order, 08-21, item 6, the
+        // 08-07 screen fault). This is the only door on the route that hands the row's own key
+        // straight to a customer without asking the gatekeeper first — and the customer's page pins
+        // the FIRST keyed answer it is given and never repaints it (the 08-06 no-flicker rule). So
+        // one early answer here is the answer forever, whatever the check settles as afterwards.
+        if (await isCheckAlive(cid)) return c.json({ status: "in_progress", transcript: row.transcript ?? "", summary: "" });
+        // …AND THE RECORD'S FACTS DECIDE OVER THE READER HERE AS WELL (law 11: the whole family, not
+        // one door). Same shared decider as the sweep, the settle and the webhook.
+        const key = await statusFromTheRecord(row.room, row.confirmed, row.statusKey ?? undefined, row.transcript);
         // ts rides EVERY result branch — the verdict page shows the call's date/time on all statuses (owner 07-16).
-        return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "", ts: (row.startedAt || 0) * 1000 });
+        return c.json({ status: row.status, confirmed: row.confirmed, statusKey: key, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "", ts: (row.startedAt || 0) * 1000 });
       }
       // THE CHECK IS OVER AND NOBODY EVER SETTLED IT (owner's order, 08-20). The live map that ties a
       // room to a conversation dies with the process, so after a restart this answered "still in
@@ -3720,11 +3729,15 @@ app.get("/pub/result/:cid", async (c) => {
     } catch { /* narration is best-effort — never block a result on it */ }
   }
   if (row && row.status === "completed") {
+    // THE RECORD'S FACTS DECIDE OVER THE READER AT THIS DOOR TOO (item 6, law 11). The row is
+    // usually already settled through the same decider; a row stamped by an older build, or by a
+    // path that only ever added `left_on_hold`, is corrected here rather than shown to a customer.
+    const rowKey = await statusFromTheRecord(row.room, row.confirmed, row.statusKey ?? undefined, row.transcript);
     return c.json({
       ...(o ?? {}),
       status: row.status,
       confirmed: row.confirmed,
-      statusKey: row.statusKey,
+      statusKey: rowKey,
       ts: (row.startedAt || 0) * 1000,       // call start (ms) — the status page shows date + time (owner 07-10)
       productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
       shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),

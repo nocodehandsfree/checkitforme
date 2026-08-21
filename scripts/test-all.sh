@@ -46,11 +46,11 @@ run "unit: bridge"     "$ENV $TSX scripts/test-bridge.ts"
 # The new engine's seven (wired 08-05, owner's OK): without these the green mark never exercises it.
 run "unit: behaved (the test cards + Charlie's rows)" "$ENV $TSX scripts/test-behaved.ts"
 run "unit: meter (the card's money-and-clock half)" "$ENV $TSX scripts/test-meter.ts"
-# THE REPLAY GATE (owner's order, 08-21, item 1). Every recorded check — 427, 428, 430, 431 and 432 —
+# THE REPLAY GATE (owner's order, 08-21, item 1). Every recorded check — 427, 428, 430, 431, 432, 433 —
 # replays against every change, and each one has to still come out right on FOUR things: the words,
 # their order, Charlie's meter and the cost. Their records are committed beside the script, so this
 # needs no network and no key and can never drift.
-run "replay gate: five real records, four things each" "$ENV $TSX scripts/replay-gate.ts"
+run "replay gate: six real records, four things each" "$ENV $TSX scripts/replay-gate.ts"
 run "unit: simulations (the build contract walls)" "$ENV $TSX scripts/test-simulations.ts"
 run "unit: clips are the same recording every check" "$ENV $TSX scripts/test-clip-stability.ts"
 run "unit: call-events (the cost buckets sum)" "$ENV $TSX scripts/test-call-events.ts"
