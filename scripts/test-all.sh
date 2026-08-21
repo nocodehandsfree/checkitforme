@@ -68,6 +68,7 @@ run "GATES: one ear · every dial writes a receipt · no audio stored" "$ENV $TS
 run "SPEC, statement by statement" "env DATABASE_URL=file:./.t-sp.db $ENV $TSX scripts/test-spec-line-by-line.ts; rm -f .t-sp.db"
 run "drive: Delta asks, the agent joins" "$ENV $TSX scripts/test-delta-clip.ts"
 run "unit: runtime spec (segments · brain · outcome)" "env DATABASE_URL=file:./.t-rs.db $ENV $TSX scripts/test-runtime-spec.ts; rm -f .t-rs.db"
+run "smoke: the screen never says we got no answer while a check runs" "env DATABASE_URL=file:./.t-screen.db PORT=8796 $ENV $TSX scripts/test-screen-status.ts; rm -f .t-screen.db"
 run "db: the dropped call charges nobody" "env DATABASE_URL=file:./.t-dc.db $ENV $TSX scripts/test-dropped-call.ts; rm -f .t-dc.db"
 run "unit: delta"      "$ENV $TSX scripts/test-delta.ts"
 run "unit: one question, then wrap (live agent)" "$ENV $TSX scripts/test-one-question.ts"

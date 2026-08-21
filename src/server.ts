@@ -3809,7 +3809,38 @@ app.get("/pub/result/:cid", async (c) => {
     return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: settledKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: (row.transcript && row.transcript.trim()) || o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
-  return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
+  //
+  // AND THAT IS EXACTLY WHAT THIS LINE PROMISED AND DID NOT DO (owner's item 5, the 08-07 screen
+  // fault, caught live on check 435). `o` is ElevenLabs' own raw read of a conversation that ENDED,
+  // and Charlie's conversation ends on EVERY hold — that is the only thing that stops his meter. So
+  // `o` carries THEIR `statusKey`, which they decide off the wording of the last thing Staff said,
+  // and "One moment. I'll go and have a look." is left_on_hold to them every single time. Spreading
+  // `o` whole handed that key to a customer with the phone still in somebody's hand, and the page
+  // PINS the first keyed answer it is ever given and never repaints it (the 08-06 no-flicker rule),
+  // so the screen read "Left on hold" for ever while the record settled in stock seconds later.
+  // It is the one door on this route that hands a key without going through the record, which is
+  // why the door-naming row added on 08-21 never caught it: it never called that.
+  //
+  // THE RECORD ANSWERS HERE TOO, or nobody does. Aliveness is NOT what this door got wrong — the
+  // gatekeeper above is the witness and it stays the witness. What was wrong is that this one door
+  // handed out a key nobody had checked against the check's own timeline.
+  if (o && row) {
+    const key = await statusFromTheRecord(row.room, row.confirmed,
+      (o as { statusKey?: string }).statusKey ?? row.statusKey ?? undefined,
+      row.transcript ?? (o as { transcript?: string }).transcript);
+    screenSaid(row.room, "the raw outcome, on a check the settled doors did not serve", key, row.confirmed);
+    return c.json({ ...o, statusKey: key, ts: row.startedAt ? row.startedAt * 1000 : undefined });
+  }
+  // …AND A CHECK WE CANNOT EVEN FIND MAY NOT BE GIVEN A VERDICT AT ALL. This is the shape check 435
+  // really hits: at a comeback Charlie reconnects as a NEW conversation, so for a beat the page is
+  // asking by an id the row is not pointed at yet, no row answers to it, and there is no record to
+  // ask. There is nothing to check the provider's key against, so the honest answer is the progress
+  // and none of the four fields that would paint a verdict on the page.
+  if (o) {
+    const { statusKey: _k, confirmed: _c, soldOut: _s, doesNotSell: _d, ...progress } = o as unknown as Record<string, unknown>;
+    return c.json({ ...progress, ts: undefined });
+  }
+  return c.json({ status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
 app.get("/pub/live/:cid", async (c) => {
