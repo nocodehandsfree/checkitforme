@@ -84,6 +84,41 @@ function order(r: Rec): string[] {
   return bad;
 }
 
+/** 5 THE GAP AT THE COMEBACK (owner's order, 08-21 night). His words: "That is the number that has
+ *  moved on every dial and nobody was watching it."
+ *
+ *  Staff finish talking, and this is how long they stand on a quiet line before Charlie makes a
+ *  sound. It is the whole of what four rounds of work have been moving around: 434 4.4s · 435 1.5s ·
+ *  436 3.3s · 437 1.4s · 438 6.1s. Measured the same way every time, off the record's own stamps:
+ *  the first line of HIS that starts at or after the wait ended, minus the end of the Staff line
+ *  before it. A record with no wait in it, or no line of his after one, has no comeback and no gap.
+ *
+ *  WHAT THIS CAN AND CANNOT CATCH, said plainly so nobody trusts it for more than it is: a replay
+ *  re-reads a RECORDED check, so this locks the number each record shows and catches anything that
+ *  changes how the gap is read or lets a record be edited. It cannot catch a live-timing change on
+ *  its own — nothing in a replay re-runs the engine. The bench in `scripts/test-delta-clip.ts`
+ *  measures the gap on a driven call, and that is what proves a timing change. */
+function comebackGapMs(r: Rec): number | null {
+  // THE FIRST COMEBACK, which is the one his numbers name. Check 438 waited three times: taking the
+  // LAST wait read 2.3s for a check whose real comeback cost 6.1, and taking the WORST read 16.4s by
+  // anchoring on a Staff line sixteen seconds older than the wait it was measuring. The first
+  // comeback is the moment Staff came back and answered, and it reproduces his own five numbers
+  // exactly: 434 4372 · 435 1528 · 436 3293 · 437 1439 · 438 6114.
+  const backs = r.timeline.filter((e) => e.kind === "hold_end" && e.atMs != null).map((e) => e.atMs as number);
+  if (!backs.length) return null;
+  const timed = r.lines.filter((l) => l.atMs != null).slice().sort((a, b) => (a.atMs as number) - (b.atMs as number));
+  for (const backAt of backs.slice().sort((a, b) => a - b)) {
+    const his = timed.find((l) => l.who === "Agent" && (l.atMs as number) >= backAt);
+    if (!his) continue;
+    // The Staff line they were still finishing when the wait ended: the last one that ENDS before he
+    // opens his mouth. A line with no measured end cannot anchor a gap and is skipped.
+    const theirs = timed.filter((l) => l.who !== "Agent" && l.endMs != null && (l.endMs as number) <= (his.atMs as number)).pop();
+    if (!theirs) continue;
+    return Math.max(0, (his.atMs as number) - (theirs.endMs as number));
+  }
+  return null;
+}
+
 /** 3 THE METER: exactly what the sheet grades, off the record's own numbers. */
 function meter(r: Rec) {
   const v = meterVerdict(TEST_CARDS.hold_music_advert, {
@@ -129,28 +164,33 @@ const RECORDS: Array<[string, string]> = [
   ["432", "the advert is refused, and he then stood mute for 26 seconds while a person waited"],
   ["433", "the first check on the inverted meter: 35 seconds where 432 ran 57, and no mute at all"],
   ["434", "all six items live: 57 seconds end to end, 8.3\u00a2, no silence anywhere, the advert refused"],
+  ["435", "the held wake asked at their voice stop: the gap falls from 4.4s to 1.5s"],
+  ["436", "the same fix on a turn whose voice ran on: 3.3s, and the screen fault caught live"],
+  ["437", "the reader ANSWERS for the first time, and its own time is on the record: 1601ms"],
+  ["438", "one row per turn, and Echo's bad night — a 6.1s gap at 9.2\u00a2 and 63% profit"],
 ];
 
 // THE GOLDEN: what all four of those things read today, on the fixed engine, for every record. A
 // number in here only ever moves in a commit that says why — that is the whole gate.
 const goldenPath = join(dir, "golden.json");
 const WRITE = process.argv.includes("--write");
-type Golden = { words: string[]; meter: { pass: boolean; shortFails: string[] }; cost: { totalUsd: number; buckets: string } };
+type Golden = { words: string[]; meter: { pass: boolean; shortFails: string[] }; cost: { totalUsd: number; buckets: string }; gapMs: number | null };
 const GOLDEN: Record<string, Golden> = WRITE ? {} : JSON.parse(readFileSync(goldenPath, "utf8"));
 
 for (const [n, why] of RECORDS) {
   const r = load(n);
-  const w = words(r), o = order(r), m = meter(r), c = cost(r);
-  if (WRITE) { GOLDEN[n] = { words: w, meter: m, cost: { totalUsd: c.totalUsd, buckets: c.buckets } }; continue; }
-  if (SHOW) { console.log(`\n▶ CHECK ${n}`); console.log(JSON.stringify({ words: w, order: o, meter: m, cost: c }, null, 1)); continue; }
-  const g = GOLDEN[n];
+  const w = words(r), o = order(r), m = meter(r), c = cost(r), g = comebackGapMs(r);
+  if (WRITE) { GOLDEN[n] = { words: w, meter: m, cost: { totalUsd: c.totalUsd, buckets: c.buckets }, gapMs: g }; continue; }
+  if (SHOW) { console.log(`\n▶ CHECK ${n}`); console.log(JSON.stringify({ words: w, order: o, meter: m, cost: c, gapMs: g }, null, 1)); continue; }
+  const gold = GOLDEN[n];
   console.log(`\n▶ CHECK ${n} — ${why}`);
-  if (!g) { ok("this record has a golden to be held to", false, n); continue; }
-  ok("1 the words, and only the words really said", JSON.stringify(w) === JSON.stringify(g.words), w);
+  if (!gold) { ok("this record has a golden to be held to", false, n); continue; }
+  ok("1 the words, and only the words really said", JSON.stringify(w) === JSON.stringify(gold.words), w);
   ok("2 the order: every line where the store really heard it", o.length === 0, o);
-  ok("3 the meter grades the same as it did", JSON.stringify(m) === JSON.stringify(g.meter), m);
+  ok("3 the meter grades the same as it did", JSON.stringify(m) === JSON.stringify(gold.meter), m);
   ok("4 the cost is the same, and the buckets sum to it exactly",
-    c.totalUsd === g.cost.totalUsd && c.summed === c.totalUsd && c.buckets === g.cost.buckets, c);
+    c.totalUsd === gold.cost.totalUsd && c.summed === c.totalUsd && c.buckets === gold.cost.buckets, c);
+  ok("5 the gap Staff stand through before he speaks", g === gold.gapMs, { gapMs: g, was: gold.gapMs });
 }
 
 if (WRITE) {

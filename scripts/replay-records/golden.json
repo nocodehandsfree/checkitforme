@@ -22,7 +22,8 @@
   "cost": {
    "totalUsd": 27800,
    "buckets": "foxtrot,echo"
-  }
+  },
+  "gapMs": 1373
  },
  "428": {
   "words": [
@@ -44,7 +45,8 @@
   "cost": {
    "totalUsd": 69580,
    "buckets": "foxtrot,echo,charlie"
-  }
+  },
+  "gapMs": 1931
  },
  "430": {
   "words": [
@@ -70,7 +72,8 @@
   "cost": {
    "totalUsd": 105675,
    "buckets": "foxtrot,echo,charlie"
-  }
+  },
+  "gapMs": 6609
  },
  "431": {
   "words": [
@@ -88,7 +91,8 @@
   "cost": {
    "totalUsd": 68417,
    "buckets": "foxtrot,echo,charlie"
-  }
+  },
+  "gapMs": null
  },
  "432": {
   "words": [
@@ -115,7 +119,8 @@
   "cost": {
    "totalUsd": 151464,
    "buckets": "foxtrot,echo,charlie"
-  }
+  },
+  "gapMs": 2351
  },
  "433": {
   "words": [
@@ -140,7 +145,8 @@
   "cost": {
    "totalUsd": 111498,
    "buckets": "foxtrot,echo,charlie"
-  }
+  },
+  "gapMs": 4969
  },
  "434": {
   "words": [
@@ -162,6 +168,99 @@
   "cost": {
    "totalUsd": 80096,
    "buckets": "foxtrot,echo,charlie"
-  }
+  },
+  "gapMs": 4372
+ },
+ "435": {
+  "words": [
+   "Clerk: Larry Vásquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: One moment. I'll go and have a look.",
+   "Agent: Sure, thanks!",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Clerk: Yeah. We've got a few of those.",
+   "Agent: Oh, hey!",
+   "Agent: Oh nice, do you know the name of the set, like Chaos Rising,",
+   "Clerk: Pitch black the booster boxes.",
+   "Agent: Perfect, thanks so much, have a good one!"
+  ],
+  "meter": {
+   "pass": true,
+   "shortFails": []
+  },
+  "cost": {
+   "totalUsd": 76211,
+   "buckets": "foxtrot,echo,charlie"
+  },
+  "gapMs": 1528
+ },
+ "436": {
+  "words": [
+   "Clerk: Larry Vásquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: One moment. I'll go and have a look.",
+   "Agent: Sure, thanks!",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Clerk: Yeah. We've got a few of those.",
+   "Agent: Oh, hey!",
+   "Agent: Oh nice, do you know the name of the set, like Chaos Rising,",
+   "Clerk: Pitch black the booster boxes.",
+   "Agent: Perfect, thank you so much, have a good one!"
+  ],
+  "meter": {
+   "pass": true,
+   "shortFails": []
+  },
+  "cost": {
+   "totalUsd": 70270,
+   "buckets": "foxtrot,echo,charlie"
+  },
+  "gapMs": 3293
+ },
+ "437": {
+  "words": [
+   "Clerk: Larry Vásquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: One moment. I'll go and have a look.",
+   "Agent: Sure, thanks!",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Clerk: Yeah. We've got a few of those.",
+   "Agent: Oh, hey!",
+   "Agent: Oh nice, do you know the name of the set, like Chaos Rising,",
+   "Clerk: Pitch black the booster boxes.",
+   "Agent: Perfect, thank you so much, have a good one!"
+  ],
+  "meter": {
+   "pass": true,
+   "shortFails": []
+  },
+  "cost": {
+   "totalUsd": 70270,
+   "buckets": "foxtrot,echo,charlie"
+  },
+  "gapMs": 1439
+ },
+ "438": {
+  "words": [
+   "Clerk: Vázquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: One moment. I'll go and have a look.",
+   "Agent: Sure, thanks!",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Clerk: Yeah. We've got a few of those.",
+   "Agent: Oh nice, do you know the name of the set, like Chaos Rising,",
+   "Agent: Perfect, thanks so much Vázquez, have a good one.",
+   "Clerk: Sorry. That's all I know.",
+   "Agent: No worries, thanks so much, have a good one!"
+  ],
+  "meter": {
+   "pass": true,
+   "shortFails": []
+  },
+  "cost": {
+   "totalUsd": 89547,
+   "buckets": "foxtrot,echo,charlie"
+  },
+  "gapMs": 6114
  }
 }
