@@ -3,29 +3,27 @@
 > The consumer web app `public/checkit.html` + consumer routes in `src/server.ts`, design and ALL copy.
 > Charter: `handoff.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines. History is in git.
 
-## 08-19 — AUTO-CHECKS ARE BUILT AND ON STAGING (@312c4151, verify-live LIVE; he looks next).
-- **The list** `openAutoChecks` copies the Alerts sheet piece for piece (`alrow`/`alsw`/`alpause`) plus
-  an edit pen; the row opens that store's report. **The My Checks row** sits between Check history and
-  Alerts (`AUTO_ICO`); `#acctScheds` + `renderAcctScheds` are DELETED into the sheet. **Manage Zones →
-  Zones** (`acct.row.zones`; every new string ships its ES twin).
-- **The saved screen** does not close: `sch_form`/`sch_done` copy the `sr_body`/`sr_done` flip,
-  `showScheduleSaved` awaits `loadSchedules()` so the card prints the real Next check, its button goes
-  to the list, and the "Manage in My Checks > Alerts" pill is gone. **The report** `openAutoReport` =
-  the Activity week bars + that day's rows, landing on the newest day with a run; `autoExpand` is
-  zoneExpand's twin (deriveVerdict + combinedTimelineHTML).
-- **Every run is a record (owner 08-19).** Checks already carried `customerScheduleId`; the days that
-  could NOT run were silent, so `customer_schedule_skips` (one per schedule per store-local day, cleared
-  if the check later runs) carries store_off + no_checks, and `GET /app/schedules/:id/runs` serves checks
-  in /app/history's exact shape plus those skips. New: PATCH `/app/schedules/:id` (active · days · time,
-  week-ordered) + POST `/app/schedules/pause-all` (`accounts.auto_checks_paused_at`), both answering
-  with the whole list.
-- **The ping is IN STOCK ONLY** (owner 08-19) in `notifyAutoCheckResult`; everything else still lands on
-  the record. **The In stock screen now offers the auto-check** (`up.keep`), which `canNotify` hid.
-- **Two faults found on the rig:** `loadSchedules` demanded `subscription==='active'`, so a comp account
-  could save an auto-check and never see it; and the tick read `isComp(email)` where the save endpoint
-  reads `isCompAccount`, so a phone-first comp account had every day written off as "out of checks".
-  `test-schedules.ts` covers edit, pause-all, skips (16 pass). Driving STAGING found a third: a failed
-  list fetch emptied the row and the screen, so only an ARRAY answer now overwrites `window.SCHEDS`.
+## 08-19 — AUTO-CHECKS ARE BUILT AND ON STAGING (@1a2c0193; he is testing on his phone).
+Contract + his rulings: `docs/tasks/site-auto-checks.md`. The pieces, all copied not invented:
+- **List** `openAutoChecks` = the Alerts sheet piece for piece (`alrow`/`alsw`/`alpause`) + an edit pen;
+  the row opens the report. **My Checks row** between Check history and Alerts (`AUTO_ICO`);
+  `#acctScheds`/`renderAcctScheds` DELETED into it. **Manage Zones → Zones.** ES twin on every string.
+- **Saved screen** = the `sr_body`/`sr_done` flip, painted from the form (`autoNextLocal`) and corrected
+  when the list lands. **Report** `openAutoReport(rebuild)` = the Activity week bars + that day's rows,
+  repainting its PARTS only (a full rebuild let the list sheet flash through); a day with no run is not
+  a button; `autoExpand` is zoneExpand's twin.
+- **Every run is a record.** Checks carry `customerScheduleId`; the days one could NOT run were silent,
+  so `customer_schedule_skips` (one per schedule per store-local day, cleared if it later runs) holds
+  store_off + no_checks and `GET /app/schedules/:id/runs` serves both. New: PATCH `/app/schedules/:id`
+  and POST `/app/schedules/pause-all` (`accounts.auto_checks_paused_at`), both answering with the list.
+- **The ping is IN STOCK ONLY**; everything else still lands on the record. The In stock screen offers
+  the auto-check (`up.keep`), which `canNotify` hid.
+- **EVERY WRITE PAINTS FIRST**, server catches up, reverts with a pill if refused; the tapped button
+  wears `.loading` (dim + untappable). Rig slowed to 1.2s: dim at 60ms, deleted row gone at 50ms.
+- **Four faults his testing found:** the save died silently with no product picked (falls back to the
+  check's own product now) · a comp account could save one and never see it · the tick judged comp by
+  email where the save endpoint uses `isCompAccount` · a failed list fetch emptied the screen. Alerts:
+  ONE per store now, and both pills are short enough to read. `test-schedules.ts` 16 pass.
 
 ## Verify recipe (07-26, refined 08-19)
 A local rig needs NO Railway secrets: `STAGING=1 COMP_PHONES=<e164> ELEVENLABS_API_KEY=x
