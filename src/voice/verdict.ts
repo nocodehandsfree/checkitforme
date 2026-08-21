@@ -208,24 +208,46 @@ export async function judgeHoldVoice(
  * BEST EFFORT AND BOUNDED. No key, a slow model or a refusal answers `null`, and the caller falls
  * back to its own rule rather than leaving a real person unheard.
  */
-export async function isSomebodyTalkingToUs(
+export interface WhoIsTalking { person: boolean; announcesWait: boolean; confidence: number; why: string; played: string[] }
+
+/** THE SAME READ WITH NO STOPWATCH ON IT, AND ITS OWN TIME ON THE WAY BACK (owner's order, 08-21).
+ *
+ *  Checks 432, 434, 435 and 436 ALL wrote "the reader could not answer in time". Four rounds of work
+ *  went into how long we WAIT for it and none into why it never answers — and it never answers
+ *  because it is only ever STARTED at the instant the answer is needed. A model round trip cannot
+ *  happen in no time. A caller that can start it EARLIER needs the promise itself, not a race, so
+ *  this is that call: unbounded, and `ms` is how long the reader really took whether or not anybody
+ *  was still waiting on it. Nobody knew that number before this. */
+export async function readWhoIsTalking(
   lines: Array<{ who: string; text: string }>,
-  timeoutMs = 1500,
-): Promise<{ person: boolean; announcesWait: boolean; confidence: number; why: string; played: string[] } | null> {
+): Promise<{ read: WhoIsTalking | null; ms: number }> {
   const clerk = lines.filter((l) => l.who === "Clerk" && String(l.text || "").trim().length > 2);
-  if (!clerk.length) return null;
+  if (!clerk.length) return { read: null, ms: 0 };
   const newest = clerk[clerk.length - 1];
-  const race = new Promise<null>((resolve) => setTimeout(() => resolve(null), Math.max(200, timeoutMs)));
-  const read = judgeHoldVoice(lines.slice(-4)).catch(() => null);
-  const out = await Promise.race([read, race]);
-  if (!out || !out.length) return null;
+  const t0 = Date.now();
+  const out = await judgeHoldVoice(lines.slice(-4)).catch(() => null);
+  const ms = Date.now() - t0;
+  // EVERY CALL, ON THE LOG (owner's order). A number nobody has is a number nobody can argue with;
+  // this is the first thing to look at the next time a wake goes slow.
+  console.log(`[hold-voice] the reader took ${ms}ms and ${out?.length ? "answered" : "came back with nothing"}`);
+  if (!out || !out.length) return { read: null, ms };
   const mine = out.find((r) => r.line === newest.text) ?? out[out.length - 1];
-  if (!mine) return null;
+  if (!mine) return { read: null, ms };
   // …AND EVERY OTHER LINE IN THE WINDOW IT CALLED A RECORDING, because the one moment we are sure
   // to be asking is when somebody really comes back, and that is exactly when what the store played
   // at us would otherwise be handed to Charlie as Staff's own words (check 410).
   const played = out.filter((r) => r.voice === "recording").map((r) => r.line);
-  return { person: mine.voice === "person", announcesWait: mine.announcesWait, confidence: mine.confidence, why: mine.why, played };
+  return { read: { person: mine.voice === "person", announcesWait: mine.announcesWait, confidence: mine.confidence, why: mine.why, played }, ms };
+}
+
+/** The same read for a caller with nothing in hand: it starts it and gives it `timeoutMs` to come
+ *  back. Every caller that CAN start it early should use `readWhoIsTalking` and keep the promise. */
+export async function isSomebodyTalkingToUs(
+  lines: Array<{ who: string; text: string }>,
+  timeoutMs = 1500,
+): Promise<WhoIsTalking | null> {
+  const race = new Promise<null>((resolve) => setTimeout(() => resolve(null), Math.max(200, timeoutMs)));
+  return (await Promise.race([readWhoIsTalking(lines).then((r) => r.read), race])) ?? null;
 }
 
 /** A clean one-line label for the verdict card, e.g. "3-pack blister · Surging Sparks". */

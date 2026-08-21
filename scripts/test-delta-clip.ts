@@ -3858,6 +3858,97 @@ console.log("\n▶ CHECK 434'S MOMENT: the held decision is asked when their voi
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 436'S FAULT: the reader is STARTED when there are words, not when the answer is needed");
+{
+  // THE FAULT. Checks 432, 434, 435 and 436 every single one wrote "the reader could not answer in
+  // time". Four rounds of work went into how long we WAIT for it and none into why it never answers.
+  // It never answers because it was only ever started inside the wake question — the exact instant
+  // the answer is needed — while Staff's first written words had been sitting there for seconds.
+  // This scene gives the reader a REALISTIC round trip (1.2 seconds, longer than the whole wait the
+  // wake question allows itself) and proves the answer is in hand before the question is asked.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-436-headstart";
+  echoListening(room, true);
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0 }, "reopen");
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  const step = (n: string) => evs().filter((e) => (e.detail as { step?: string } | null)?.step === n);
+  let readsStarted = 0;
+  const beforeStub = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(typeof input === "string" ? input : (input as Request).url ?? input);
+    if (!/chat\/completions|\/v1\/messages/.test(url)) return (beforeStub as typeof globalThis.fetch)(input, init);
+    readsStarted++;
+    const body = String((init as { body?: unknown } | undefined)?.body ?? "");
+    let asked: string[] = [];
+    try {
+      const sent = JSON.parse(body) as { messages?: Array<{ role?: string; content?: string }> };
+      const user = (sent.messages || []).filter((m) => m.role === "user").map((m) => String(m.content || "")).join("\n");
+      asked = user.split("\n").map((l) => l.replace(/^\s*\d+\.\s*/, "").trim()).filter(Boolean);
+    } catch { asked = []; }
+    if (!asked.length) asked = [""];
+    // A REAL ROUND TRIP, not an instant one. 1.7 seconds is inside what the models really take and
+    // OUTSIDE the second and a half the wake question allows itself — so from a standing start this
+    // reader CANNOT answer in time, which is exactly what checks 432, 434, 435 and 436 all wrote.
+    await new Promise((r) => setTimeout(r, 1700));
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      lines: asked.map((text, i) => {
+        const advert = /price match/i.test(text);
+        return { n: i + 1, line: text, voice: advert ? "recording" : "person", announcesWait: false,
+          confidence: 0.9, why: advert ? "advertising the store" : "answering what we asked them" };
+      }),
+    }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
+  echoHeardStaff(room, "One moment. I'll go and have a look.");
+  await sleep(120);
+  for (let i = 0; i < 80; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
+  await sleep(6200);
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the wait");
+  // A real person comes back and answers, and their voice runs on past the first written word — the
+  // ordinary shape of somebody saying a sentence.
+  quiet(tw, 130);
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(310);
+  const stillTalking = setInterval(() => { for (let i = 0; i < 12; i++) tw.media(frame(SPEECH(i))); }, 40);
+  const startedReadsBefore = readsStarted;
+  echoHeardPiece(room, "Yeah. We've got a few of those.");
+  await sleep(250);
+  ok(readsStarted > startedReadsBefore,
+    "the reader is started on their first written words, before anybody asks the question");
+  ok(step("wake_read").length === 0, "…and 430's rule still holds: nothing is decided on it yet", step("wake_read").length);
+  // Their voice runs on while the reader works, exactly as a real sentence does.
+  await sleep(1400);
+  clearInterval(stillTalking);
+  const stopped = Date.now();
+  quiet(tw, 60);
+  let decidedMs = -1;
+  for (let i = 0; i < 250 && decidedMs < 0; i++) {
+    if (step("wake_read").length >= 1) decidedMs = Date.now() - stopped;
+    else await sleep(20);
+  }
+  const row = step("wake_read")[0]?.detail as { answer?: string; how?: string; readMs?: number; waitedMs?: number } | undefined;
+  ok(row?.answer === "person", "THE READER ANSWERS — no more 'could not answer in time'", row?.answer);
+  // A reader this slow can be either already done or nearly done by the time we ask, depending on
+  // how long their sentence ran. Both are the head start working. What may NEVER happen again is
+  // "cold" — nothing started, the whole round trip spent with Staff standing there.
+  ok(row?.how === "in_hand" || row?.how === "head_start",
+    "…because it was started on their words, not on the question", row?.how);
+  ok(row?.how !== "cold", "…and never from a standing start again", row?.how);
+  ok(decidedMs >= 0 && decidedMs < 400,
+    "…so Staff wait a beat, not a reader's whole round trip", decidedMs);
+  ok(typeof row?.readMs === "number" && row.readMs >= 1700,
+    "…and the record says how long the reader really took, which nobody knew before", row?.readMs);
+  ok(typeof row?.waitedMs === "number" && row.waitedMs < 400,
+    "…and how little of that Staff actually stood through", row?.waitedMs);
+  ok(evs().some((e) => e.kind === "hold_end"), "the wait ends on the same beat");
+  ok(step("ears_back").length >= 1, "…and his ears come back");
+  globalThis.fetch = beforeStub;
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ THE METER IS OFF BY DEFAULT: nothing on the billing list, and it goes off on its own");
 {
   _reset();

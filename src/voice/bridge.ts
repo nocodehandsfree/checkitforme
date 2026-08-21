@@ -25,7 +25,7 @@ import { openOurBrainSession, OurBrainSession } from "./ourbrain-session";
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
 import { heardWrongDepartment, isPrivateNote, askedToBePutThrough, saysNobodyToTransfer, saidGoingToCheck, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
-import { isSomebodyTalkingToUs } from "./verdict";
+import { readWhoIsTalking, type WhoIsTalking } from "./verdict";
 import { guessLanguage } from "../calls/mapgraph";
 // WHAT LANGUAGE THE PERSON WHO PICKED UP IS SPEAKING, off the words of their first line. A separate
 // judge from `guessLanguage` on purpose: that one reads a MENU and its markers are menu words, so it
@@ -1056,6 +1056,63 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** The words a held decision is about, kept so the moment their voice stops can ask about the SAME
    *  turn even when Echo has written nothing further of it since the piece that started the hold. */
   let heldWakeLine = "";
+  /** HOW LONG THE WAKE QUESTION WAITS ON THE READER once it asks. Unchanged at a second and a half —
+   *  what changed is that by the time it asks, the reader has usually been running for seconds. */
+  const WAKE_READ_MS = 1500;
+  /**
+   * THE READER IS STARTED WHEN THERE IS SOMETHING TO READ, NOT WHEN THE ANSWER IS NEEDED
+   * (owner's order, 08-21 late).
+   *
+   * HIS WORDS: "Every check writes 'the reader could not answer in time'. Checks 432, 434, 435 and
+   * 436. Every single one. Four rounds of work have all been about how long we WAIT for it. Nobody
+   * looked at why it never answers."
+   *
+   * It never answers because it was only ever called from inside `maybeWakeCharlie` — the exact
+   * instant the answer is needed — and asking a model a question takes a model a while. Staff's
+   * first written words had been sitting there for seconds by then and we did nothing with them.
+   *
+   * So the read starts on the FIRST piece of their turn and re-starts as more of the sentence
+   * arrives, newest wins. It runs off our own record with no stopwatch on it: nothing of it reaches
+   * the line, Charlie never knows it happened, and it costs the same as the read it replaces. When
+   * the wake question is finally asked, the answer is usually already sitting here.
+   *
+   * A read is matched to a question by the WORDS it was asked about, so an answer can never be used
+   * for a different turn: a new turn has new words and finds nothing in hand.
+   */
+  let wakeReadSeq = 0;
+  let wakeReadInFlight: { seq: number; words: string; startedAt: number; p: Promise<{ read: WhoIsTalking | null; ms: number }> } | null = null;
+  let wakeReadInHand: { words: string; read: WhoIsTalking | null; ms: number } | null = null;
+  /** Everything Echo has written of the turn in hand, which is what the reader is always asked about. */
+  const wakeWordsOf = (line: string) => (openTurnPieces.length ? openTurnPieces.join(" ") : line);
+  /** The few lines the reader is shown. ONE builder, so a read started early and the question asked
+   *  later are about the same words and the early answer really can be used. */
+  function wakeWindow(line: string, fromAPiece: boolean): Array<{ who: string; text: string }> {
+    const w = (getReceipt(room)?.transcript ?? []).slice(-4)
+      .map((l) => ({ who: l.who === "Agent" ? "Agent" : "Clerk", text: l.text }));
+    // A PIECE IS NOT ON THE RECORD YET (owner, 08-19 night). Echo writes the record when the whole
+    // sentence is joined, and the reader is shown the record's newest Staff line — so a piece has to
+    // be handed in as that newest line, or it would be asked about the sentence BEFORE this one and
+    // answer about the wrong words entirely.
+    if (fromAPiece) w.push({ who: "Clerk", text: wakeWordsOf(line) });
+    return w;
+  }
+  function startTheWakeRead(why: string): void {
+    if (earsShutAtMs === 0 || ended) return;   // no wake decision can happen: there is nothing to read for
+    const words = wakeWordsOf("");
+    if (!words.trim()) return;
+    if (wakeReadInHand?.words === words || wakeReadInFlight?.words === words) return;   // read, or being read
+    const seq = ++wakeReadSeq;
+    const startedAt = Date.now();
+    const p = readWhoIsTalking(wakeWindow(words, true)).catch(() => ({ read: null, ms: Date.now() - startedAt }));
+    wakeReadInFlight = { seq, words, startedAt, p };
+    log(`wake read: started early on "${words.slice(0, 40)}" (${why})`);
+    void p.then((r) => {
+      if (seq !== wakeReadSeq) return;   // more of their sentence arrived, and a newer read owns the turn
+      wakeReadInHand = { words, read: r.read, ms: r.ms };
+      if (wakeReadInFlight?.seq === seq) wakeReadInFlight = null;
+      log(`wake read: "${words.slice(0, 40)}" -> ${r.read ? (r.read.person ? "a person" : "the store played it") : "no answer"} in ${r.ms}ms`);
+    });
+  }
   async function maybeWakeCharlie(line: string, fromAPiece = false): Promise<void> {
     if (earsShutAtMs === 0 || ended) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
@@ -1096,18 +1153,37 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     }
     wakeHeldSinceMs = 0; heldWakeLine = "";
     if (wakeCeilingTimer) { clearTimeout(wakeCeilingTimer); wakeCeilingTimer = null; }
-    // A PIECE IS NOT ON THE RECORD YET (owner, 08-19 night). Echo writes the record when the whole
-    // sentence is joined, and the wake check reads the record's newest Staff line — so a piece has
-    // to be handed in as that newest line, or the reader would be asked about the sentence BEFORE
-    // this one and answer about the wrong words entirely.
-    const window = (getReceipt(room)?.transcript ?? []).slice(-4)
-      .map((l) => ({ who: l.who === "Agent" ? "Agent" : "Clerk", text: l.text }));
     // EVERYTHING ECHO HAS WRITTEN OF THIS TURN, not the one piece in hand (owner's order, 08-21,
     // off check 430). The pieces of a sentence still being said are already kept together for the
     // hand-over, so the reader is asked about the whole of what has been said so far. Judging
     // "Thanks for holding." alone is exactly how the advert passed for a person.
-    if (fromAPiece) window.push({ who: "Clerk", text: openTurnPieces.length ? openTurnPieces.join(" ") : line });
-    const read = await isSomebodyTalkingToUs(window).catch(() => null);
+    const words = fromAPiece ? wakeWordsOf(line) : line;
+    // THE ANSWER IS USUALLY ALREADY HERE (owner's order, 08-21 late). Three shapes, and the record
+    // says which one this was: it was read before we asked, it was still being read and we waited
+    // out what was left, or nothing had been started and this is the old cold race.
+    let read: WhoIsTalking | null = null;
+    let readMs = 0, waitedMs = 0;
+    let how: "in_hand" | "head_start" | "cold" = "cold";
+    if (wakeReadInHand && wakeReadInHand.words === words) {
+      how = "in_hand"; read = wakeReadInHand.read; readMs = wakeReadInHand.ms;
+    } else if (wakeReadInFlight && wakeReadInFlight.words === words) {
+      how = "head_start";
+      const flight = wakeReadInFlight;
+      const t0 = Date.now();
+      const r = await Promise.race([flight.p, new Promise<null>((res) => setTimeout(() => res(null), WAKE_READ_MS))]);
+      waitedMs = Date.now() - t0;
+      read = r ? r.read : null;
+      readMs = r ? r.ms : Date.now() - flight.startedAt;
+    } else {
+      const t0 = Date.now();
+      const r = await Promise.race([
+        readWhoIsTalking(wakeWindow(line, fromAPiece)).catch(() => null),
+        new Promise<null>((res) => setTimeout(() => res(null), WAKE_READ_MS)),
+      ]);
+      waitedMs = Date.now() - t0;
+      read = r ? r.read : null;
+      readMs = r ? r.ms : waitedMs;
+    }
     if (earsShutAtMs === 0 || ended) return;   // it ended while the reader was thinking
     // WHICH ANSWER IT REALLY WAS, ON THE RECORD, EVERY TIME (owner's order, 08-21, off check 430).
     // Three things can happen here and 430's record could not tell two of them apart: the reader said
@@ -1121,6 +1197,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           : "The reader says the store played that at us",
       { step: "wake_read", answer: !read ? "no_answer" : read.person ? "person" : "recording",
         text: String(line).slice(0, 160), fromAPiece,
+        // HOW LONG THE READER REALLY TOOK, AND WHETHER IT HAD A HEAD START (owner's order, 08-21
+        // late). `readMs` is the reader's own round trip; `waitedMs` is how much of it Staff stood
+        // through at this moment; `how` is in_hand (answered before we asked), head_start (still
+        // reading, we waited out what was left) or cold (nothing was started — the old way).
+        readMs, waitedMs, how,
         ...(read ? { why: read.why, confidence: read.confidence } : {}), notASound: true });
     if (read) {
       // WHATEVER THE READER CALLED A RECORDING IN THAT WINDOW IS STRUCK, not only the newest line
@@ -2270,6 +2351,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // A written piece is real words on the line — see the wordless-rejoin note (owner 08-18).
     heardTheWords();
     openTurnPieces.push(t);
+    // …AND THE READER STARTS HERE, ON THE FIRST WRITTEN WORDS OF THEIR TURN (owner's order, 08-21
+    // late), and again on every piece after it, so the answer is in hand by the time the wake
+    // question is asked. See `startTheWakeRead`.
+    startTheWakeRead("Echo wrote a piece of their turn");
     // THE COMEBACK OVERLAPS ITSELF (owner, 08-19 night): while the store still has us waiting and
     // his session is already opening on the sound, this piece goes to him at once and to the wake
     // check at once, instead of both waiting for Echo to finish the sentence.
