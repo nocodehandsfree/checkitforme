@@ -3676,5 +3676,141 @@ console.log("\n▶ CHECK 399'S MOMENT: his private note never reaches the line (
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 431'S FAULT: our own voice comes back off the room and is NOT the store talking");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-431-echo";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    // A whole second of our own sound, so the room has something real to hand back.
+    openingClip: { audio: Buffer.alloc(1000 * 8, 0x20), ms: 1000, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_431", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(200);
+  // OUR OWN QUESTION, HANDED BACK BY THE ROOM, word-shuffled exactly as check 431's record has it —
+  // starting inside our own sound and running a little past it, the way an echo does.
+  const started = Date.now();
+  echoHeardStaff(room, "Hi there. I was checking. Do you have any Coke? Stock right now?", started, started + 900);
+  await sleep(120);
+  const said = (getReceipt(room)?.transcript || []).filter((l) => l.who !== "Agent");
+  ok(!said.some((l) => /do you have any coke/i.test(l.text)),
+    `our own question coming back is never written down as Staff (${said.length} Staff line(s))`);
+  const caught = (getReceipt(room)?.events || []).find((e) => (e.detail as { step?: string } | null)?.step === "our_own_echo");
+  ok(!!caught, "…and the record says it happened, in the words that came back");
+  ok(/Coke/.test(String((caught?.detail as { text?: string } | null)?.text || "")),
+    "…so nothing is ever dropped silently");
+  // AND THE STORE STILL GETS THROUGH. A sentence that starts after our sound has stopped is theirs,
+  // and the check goes on exactly as it always did.
+  await sleep(1600);
+  const real = Date.now();
+  echoHeardStaff(room, "Yeah, we've got a few of those.", real, real + 600);
+  await sleep(120);
+  ok((getReceipt(room)?.transcript || []).some((l) => l.who !== "Agent" && /got a few/.test(l.text)),
+    "Staff's own answer, said after our sound stopped, lands on the record as always");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CHECK 432'S FAULT: a reply of his that reached nobody is ASKED FOR AGAIN, not left as silence");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-432-reask";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_432", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(400);
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });   // the carrier says the question finished
+  await sleep(80);
+  // Their hello is the line our own recording answered, so his mouth stays shut over it — exactly
+  // as it did on 432 while the store's advert was playing.
+  const helloAt = Date.now();
+  echoHeardStaff(room, "Larry Vasquez. How can I help you?", helloAt, helloAt + 500);
+  await sleep(80);
+  const ws = f.sockets[f.sockets.length - 1];
+  // HIS MOUTH IS SHUT: the store's hello is the line our own recording just answered, so anything he
+  // makes right now is dropped at the audio door. That is correct, and it is where 432 went silent.
+  const framesBefore = tw.sent.filter((m) => m.event === "media").length;
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Hi! Do you have any Pokemon cards in stock?" } }));
+  await sleep(40);
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x30)) } }));
+  await sleep(150);
+  ok(tw.sent.filter((m) => m.event === "media").length === framesBefore,
+    "the store heard none of it, exactly as before");
+  const held = (getReceipt(room)?.events || []).filter((e) => (e.detail as { step?: string } | null)?.step === "hello_reply_held");
+  ok(held.length >= 1, "the record says a reply of his was held and never spoken");
+  // NOW A REAL PERSON ANSWERS — their voice on the line, then Echo's words for it. His mouth opens,
+  // and he is asked for the reply that went nowhere, rather than standing there until Staff say
+  // "Hello?" to find out whether anyone is left.
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  const answered = Date.now();
+  echoHeardStaff(room, "Yeah, we've got a few of those.", answered, answered + 600);
+  await sleep(250);
+  const reask = (getReceipt(room)?.events || []).find((e) => (e.detail as { step?: string } | null)?.step === "reply_re_asked");
+  ok(!!reask, "he is asked to say it again, the moment there is anybody to hear it");
+  ok(f.raw.some((m) => /never reached the store|nothing you just said/i.test(m)),
+    "…and the ask really reached his session, in words he can act on");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ THE METER IS OFF BY DEFAULT: nothing on the billing list, and it goes off on its own");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-billing";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_BILL", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(300);
+  ok((getReceipt(room)?.events || []).some((e) => e.kind === "charlie_join"), "his session is open and billing");
+  // 432'S OWN SHAPE: from here nobody says anything at all — no voice of theirs, no sound of his,
+  // nothing handed to him. On 432 that state billed 26 seconds because nothing was watching it.
+  const before = (getReceipt(room)?.events || []).filter((e) => e.kind === "charlie_leave").length;
+  // The backstop needs its four seconds, and the ruled drop is three more after the wait is called.
+  await sleep(11000);
+  const evs = getReceipt(room)?.events || [];
+  ok(evs.filter((e) => e.kind === "charlie_leave").length > before, "his meter goes off on its own, with nothing to arm it");
+  const why = evs.find((e) => (e.detail as { step?: string } | null)?.step === "meter_off_by_default");
+  ok(!!why, "…and the record says why: nothing he is billed for was happening");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);

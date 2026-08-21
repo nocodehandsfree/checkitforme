@@ -398,6 +398,74 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string, s
  *  bridge's echo drop and any relay use the SAME rule and can never disagree about "the same line". */
 export const normSaid = (s: string): string => s.toLowerCase().replace(/[^a-z0-9à-ɏ]+/gi, " ").trim();
 
+/**
+ * OUR OWN VOICE COMING BACK OFF THE LINE, KILLED BY THE CLOCK (owner's order, 08-21, off check 431 —
+ * his own Fun store, on a speakerphone).
+ *
+ * WHAT HAPPENED: our recorded question played at 8.880s and ran to 13.198s, and Echo wrote it down
+ * as a line the store said, word-shuffled the way a room always shuffles it: "Hi there. I was
+ * checking. Do you have any Coke? Stock right now?" It happened twice, and the second time his REAL
+ * answer was glued onto the tail of the echo ("Sorry about that. Did you catch my Yeah. I said we
+ * do.") — so the store's answer arrived inside a sentence we ourselves had said.
+ *
+ * WHY THE OLD DROP COULD NEVER CATCH IT: it compared the words (`normSaid`, an exact match against
+ * our own line). A room never gives the words back exactly — the microphone hears them through the
+ * air with the store's own noise in them — so an exact match is a test that can only fail.
+ *
+ * THE RULE IS THE CLOCK, NOT THE WORDS: a sentence the microphone starts hearing while our own
+ * sound is playing, plus a short tail for the room to stop ringing, is OURS. Judged on where the
+ * sentence STARTED, because the far end's real words get glued onto the tail of the echo and one
+ * sentence cannot be half ours.
+ *
+ * AND OUR OWN SOUND HAS TO COVER MOST OF IT, which is the one line of arithmetic that keeps this
+ * from eating the call. An echo cannot be much longer than the sound that made it. Measured on the
+ * real records, how much of each sentence our own sound covers:
+ *    431's first fake line   87%  → ours, dropped     (our question, handed back by the room)
+ *    431's second fake line  52%  → ours, dropped     (his real answer glued onto its tail)
+ *    431's "It's packs of"   37%  → theirs, KEPT      (Staff answering over the top of him)
+ *    432's hold advert       19%  → theirs, KEPT      (11 seconds of store recording that our 1.4
+ *                                                      second "Sure, thanks!" happened to start
+ *                                                      under — and the whole advert grade, the one
+ *                                                      that failed 430, reads that line)
+ * The bar is half: both of the owner's fake lines are caught, and the two real ones live. His
+ * second fake line sits at 52%, which is the tightest number in this file — it is the one with his
+ * real answer welded onto the end of it, so it is the longest an echo can honestly look.
+ *
+ * KNOWN COST, ACCEPTED BY THE OWNER FOR NOW: a short Staff interruption that falls wholly inside
+ * Charlie's own sentence is lost — we are deaf for that moment. Real echo cancellation is its own
+ * build.
+ */
+export interface OurVoiceWindow { fromMs: number; toMs: number }
+/** How long the room keeps handing our own sound back after we stop playing it. Deliberately SHORT:
+ *  `agentPlayingUntil` is our own count of the bytes we sent, and the carrier plays out a little
+ *  behind it (check 347), so the tail covers that lag and nothing more. Every millisecond of it is
+ *  a millisecond we are deaf to a store answering quickly, so it buys only what it has to. */
+export const ECHO_ROOM_TAIL_MS = 300;
+/** How much of a sentence our own sound has to cover before it is ours and not theirs. */
+export const ECHO_COVERAGE = 0.5;
+/** The window our own sound was filling when this sentence STARTED and which covers most of it, or
+ *  null when it is really theirs. Pure: the same answer on a live call and on a replayed record. */
+export function ourVoiceWasPlaying(
+  startedAtMs: number | null | undefined,
+  windows: OurVoiceWindow[],
+  endedAtMs?: number | null,
+  tailMs: number = ECHO_ROOM_TAIL_MS,
+): OurVoiceWindow | null {
+  if (startedAtMs == null) return null;   // a line nobody timed cannot be placed, so it is never accused
+  for (const w of windows) {
+    if (w.toMs < w.fromMs) continue;
+    const until = w.toMs + Math.max(0, tailMs);
+    if (startedAtMs < w.fromMs || startedAtMs > until) continue;
+    // A LINE NOBODY MEASURED THE END OF IS NEVER ACCUSED. Echo files every sentence with its own
+    // start AND its own end (owner, 08-17), so a line arriving without one did not come from the
+    // ear at all, and a sentence we cannot place the length of cannot be weighed against our sound.
+    if (endedAtMs == null || endedAtMs <= startedAtMs) return null;
+    const covered = Math.min(endedAtMs, until) - startedAtMs;
+    if (covered / (endedAtMs - startedAtMs) >= ECHO_COVERAGE) return w;
+  }
+  return null;
+}
+
 /** The conversation as WE heard it, oldest first. */
 /** Did the STORE's side of this check say anything at all? Counting only — never a reading of what
  *  was said, which belongs to Charlie. Lives here because this is where the two sides are labelled. */

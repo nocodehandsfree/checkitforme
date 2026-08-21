@@ -6,7 +6,7 @@
 // from the plan, and the phone line bills whole minutes. No database, no network, no clock games.
 import {
   openReceipt, emit, amend, markNow, addMs, closeReceipt, rollup, rollupFromRow, setEventSink,
-  getReceipt, laneNote, laneFor, actualLane, recordLine, oneSlowestReplyRow, lastLineEndEpoch, stampLineEnd, _receiptFrom, _reset, type Receipt, type RtEvent,
+  getReceipt, laneNote, laneFor, actualLane, recordLine, oneSlowestReplyRow, lastLineEndEpoch, stampLineEnd, ourVoiceWasPlaying, ECHO_ROOM_TAIL_MS, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
 import { costCall, costPerResult, costBuckets, brainCostUsd, money, MEASURED_RATES, STATUS_READ_USD, USD } from "../src/calls/cost";
 
@@ -612,6 +612,31 @@ console.log("\n== the slowest reply is ONE row, the worst one ==");
   ok(out.length === 3 && out[0].detail!.step === "missed_turn" && out[2].kind === "hangup", "every other step is untouched, in its own place");
   const none = oneSlowestReplyRow([{ kind: "hangup", note: "Check ended", detail: null }]);
   ok(none.length === 1, "a check that never measured a reply gap draws no row at all");
+}
+
+console.log("\n== OUR OWN VOICE COMING BACK OFF THE LINE, KILLED BY THE CLOCK (owner's order, 08-21, item 4) ==");
+{
+  // CHECK 431'S OWN NUMBERS — the owner's Fun store, on a speakerphone. Our sound, as the bridge
+  // keeps it, and the four sentences the microphone heard while it was playing.
+  const ourSound = [{ fromMs: 8880, toMs: 13198 }, { fromMs: 18009, toMs: 20714 }, { fromMs: 24673, toMs: 29631 }];
+  const fake1 = ourVoiceWasPlaying(8880, ourSound, 14179);
+  ok(!!fake1, "431's first fake line — our own question, handed back by the room — is ours");
+  ok(fake1?.fromMs === 8880, "…and it names the stretch of our own sound that made it");
+  ok(!!ourVoiceWasPlaying(19009, ourSound, 22889),
+    "431's second fake line is ours too, even with his real answer glued onto its tail");
+  // …AND THE TWO REAL ONES LIVE. The store's own 11 second advert that our 1.4 second "Sure,
+  // thanks!" happened to start under, and Staff answering over the top of him.
+  ok(ourVoiceWasPlaying(16141, [{ fromMs: 16141, toMs: 17534 }], 27725) === null,
+    "432's hold advert is theirs: our own sound covers a fifth of it, and the whole advert grade reads that line");
+  ok(ourVoiceWasPlaying(28829, ourSound, 32359) === null,
+    "431's \"It's packs of\" is theirs: Staff answering over the top of him is still Staff");
+  ok(ourVoiceWasPlaying(30000, ourSound, 32000) === null, "a line that starts after our sound is theirs");
+  ok(!!ourVoiceWasPlaying(29731, [{ fromMs: 24673, toMs: 29631 }], 29931),
+    "…and the room keeps handing it back for a moment after we stop, which is what the tail is for");
+  ok(ourVoiceWasPlaying(null, ourSound, 12000) === null, "a line nobody timed is never accused");
+  ok(ourVoiceWasPlaying(9000, ourSound, null) === null,
+    "…and neither is one nobody measured the end of: Echo files a start AND an end on every sentence");
+  ok(ourVoiceWasPlaying(9000, []) === null, "with nothing of ours playing, every line is theirs");
 }
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);

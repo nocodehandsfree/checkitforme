@@ -32,6 +32,14 @@ export const PROFIT_FLOOR_PCT = 67;
  *  start landed red, so the band was failing checks for the head start he asked for. */
 export const AWAKE_ON_HOLD_GREEN = 3;
 export const AWAKE_ON_HOLD_YELLOW = 8;
+/** THE SILENCE'S OWN BANDS (owner's order, 08-21, item 5: the card must FAIL when Charlie is silent
+ *  more than a few seconds while a person is waiting on him). Green to 4 seconds, yellow to 6, red
+ *  from 7 and the check fails. Where the numbers come from: check 428, the one he accepted, went
+ *  quiet for 5 seconds between Charlie's two-word hello and his full reply, so 5 cannot be a
+ *  failure; 427 sat at 8 and 432 at 19, and both are the same fault, one of them big enough for the
+ *  store to ask "Hello?" to find out whether anyone was still there. */
+export const QUIET_ON_THEM_GREEN = 4;
+export const QUIET_ON_THEM_RED = 7;
 /** Kept for the one release that imported the old name. The goal is the same 23. */
 export const METER_CAP_SEC = METER_GOAL_SEC;
 
@@ -96,6 +104,10 @@ export interface MeterInput {
    *  heard him, we paid for every one of those seconds, and on 430 it cost 10.7¢ against 428's 7.2¢
    *  and dropped the margin from 71% to 57% while the sheet still said the test passed. */
   spokeOverRecording?: { text: string; atSec: number } | null;
+  /** HE WENT QUIET ON A PERSON WHO WAS WAITING (owner's order, 08-21, item 5, off check 432). The
+   *  longest stretch where nothing at all was said and nobody was on hold, measured off the record
+   *  by `wentQuietOnThem`. Null on a check that never measured it. */
+  quietOnThem?: { sec: number; fromSec: number; after: string } | null;
 }
 
 /**
@@ -148,6 +160,55 @@ export function spokeOverTheRecording(
     if (rec.some((r) => from < r.endMs && to > r.atMs)) return { text: his.text, atSec: Math.round(from / 1000) };
   }
   return null;
+}
+
+/**
+ * NOBODY SAID ANYTHING WHILE A PERSON STOOD THERE WAITING (owner's order, 08-21, item 5, off check
+ * 432).
+ *
+ * 432 said TEST PASSED. What really happened: Charlie said his two-word hello at 41.9 seconds and
+ * then the store heard NOTHING from us until 67.8 — the person who had come back to the phone stood
+ * on a silent line for 26 seconds and said "Hello?" at 60.7 to find out if we were still there.
+ * The engine's own answer-gap stamp read 2.7 seconds, because it measures from the last thing
+ * written down, and the last thing written down was that "Hello?". So the one number that could
+ * have caught it was anchored on the store rescuing us.
+ *
+ * This is measured off the finished record instead, on the lines themselves: the longest stretch
+ * where NOTHING was said by either side, with nobody on hold. A wait the store put us in is not
+ * this — every one of those sits inside a hold window and is skipped, which is what keeps the hold
+ * scenes green. Returns the worst stretch, or null on a record with no timed lines.
+ */
+export function wentQuietOnThem(
+  timeline: Array<{ kind: string; atMs?: number | null; detail?: Record<string, unknown> | null }>,
+  lines: Array<{ who: string; text: string; atMs: number | null; endMs?: number | null }> | null,
+): { sec: number; fromSec: number; after: string } | null {
+  if (!lines?.length) return null;
+  // THE WAITS THE STORE PUT US IN, so none of them is ever counted as us going quiet on somebody.
+  // A hold that never ended runs to the end of the call, which is exactly what a check that died on
+  // hold is.
+  const callEndMs = timeline.reduce((m, e) => Math.max(m, e.atMs ?? 0), 0);
+  const holds: Array<[number, number]> = [];
+  let holdFrom: number | null = null;
+  for (const e of timeline) {
+    if (e.kind === "hold_start" && e.atMs != null && holdFrom == null) holdFrom = e.atMs;
+    if (e.kind === "hold_end" && e.atMs != null && holdFrom != null) { holds.push([holdFrom, e.atMs]); holdFrom = null; }
+  }
+  if (holdFrom != null) holds.push([holdFrom, callEndMs]);
+  const timed = lines.filter((l) => l.atMs != null).slice().sort((a, b) => (a.atMs as number) - (b.atMs as number));
+  if (timed.length < 2) return null;
+  let worst: { sec: number; fromSec: number; after: string } | null = null;
+  for (let i = 0; i < timed.length - 1; i++) {
+    const a = timed[i], b = timed[i + 1];
+    // A line with no measured end is placed at its own start: his two-word hello on 432 carries no
+    // end, and pretending it ran forever would hide the very silence this exists to find.
+    const from = Math.max(a.atMs as number, a.endMs ?? (a.atMs as number));
+    const to = b.atMs as number;
+    if (to <= from) continue;
+    if (holds.some(([h1, h2]) => h1 < to && h2 > from)) continue;
+    const sec = Math.round((to - from) / 1000);
+    if (!worst || sec > worst.sec) worst = { sec, fromSec: Math.round(from / 1000), after: String(a.text || "").slice(0, 90) };
+  }
+  return worst;
 }
 
 /** What `advertAsWait` measured off the record, all on the call's own millisecond clock. */
@@ -335,6 +396,23 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
       fails.push(`Charlie talked ${m.spokeOverRecording.atSec} seconds in, while the store's own recording was still playing, so nobody heard him.`);
       shortFails.push("talked over the store's recording");
     }
+    // AND THE OTHER HALF OF THE SAME ORDER (owner, 08-21, item 5): he went quiet on somebody who
+    // was standing there waiting. Measured off the record's own lines, never off the engine's
+    // answer-gap stamp — on 432 that stamp read 2.7 seconds for a 26 second silence, because it
+    // anchors on the last thing written down and the last thing written down was the store asking
+    // "Hello?". Staff rescuing us can never be what the number is measured from.
+    if (m.quietOnThem && m.quietOnThem.sec > QUIET_ON_THEM_GREEN) {
+      const q = m.quietOnThem;
+      const tone: "g" | "y" | "r" = q.sec >= QUIET_ON_THEM_RED ? "r" : "y";
+      rows.push({ label: "The line went quiet with a person waiting", value: `${q.sec}s at ${q.fromSec}s, green at ${QUIET_ON_THEM_GREEN}`,
+        pass: tone !== "r", tone,
+        say: { pre: "Nobody said anything for ", num: secWord(q.sec), post: ", with a person standing there waiting." },
+        open: `The last thing said was "${q.after}", ${q.fromSec} seconds in, and then the line went silent for ${secWord(q.sec)} with nobody on hold. A person waiting on a silent phone has no way of knowing anyone is still there.` });
+      if (tone === "r") {
+        fails.push(`The line went quiet for ${q.sec} seconds ${q.fromSec} seconds in, with a person standing there waiting and nobody on hold.`);
+        shortFails.push(`quiet on them, ${q.sec} seconds`);
+      }
+    }
     if (m.awakeOnHoldSec != null) {
       const sec = m.awakeOnHoldSec;
       const tone: "g" | "y" | "r" = sec <= AWAKE_ON_HOLD_GREEN ? "g" : sec <= AWAKE_ON_HOLD_YELLOW ? "y" : "r";
@@ -376,6 +454,7 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
   // THE PROFIT ROW IS THE REAL PROFIT AND NOTHING ELSE (owner, 08-17 evening). The hold set-aside
   // built earlier that day is DELETED: a hold test is shown and graded exactly like every other
   // check, what it really made against the floor, which is the system as it already was.
+  if (m.quietOnThem != null) toPass.push(`never quiet more than ${QUIET_ON_THEM_RED - 1} seconds with a person waiting`);
   if (floor != null) toPass.push(`gross profit ${floor}% or better`);
   if (m.profitPct != null) {
     // THE PROFIT ROW IS A FRIEND OF THE METER ROW (the advert ruling, owner 08-19): the forgiven

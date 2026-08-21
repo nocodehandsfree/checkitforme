@@ -1320,6 +1320,17 @@ export async function statusFromTheRecord(
   if (confirmed !== null) return statusKey;
   if (await weHungUpOnAHold(room) || await diedOnAHold(room)) return "left_on_hold";
   if (await staffHungUpOn(room)) return "staff_hung_up";
+  // …AND IT TAKES ONE BACK, TOO (owner's order, 08-21, item 6, the 08-07 screen fault, seen again
+  // on check 430). The reader has no timeline: it decides "left on hold" off the WORDING of the last
+  // thing Staff said, so "one moment, I'll go and have a look" reads as a check that ended on hold
+  // even when Staff came back, answered, and the record says in stock. The two lines above have
+  // already asked the record whether this check really ended on a wait; if it did not, then whatever
+  // the words sounded like, this check did not end on hold and it may not say so on a customer's
+  // screen. The same law as those two, pointed the other way, and at the same three doors.
+  if (statusKey === "left_on_hold") {
+    if (keptAskingNoStraightAnswer(transcript)) return "no_straight_answer";
+    return "no_clear_answer";
+  }
   if (statusKey === "no_clear_answer" && keptAskingNoStraightAnswer(transcript)) return "no_straight_answer";
   return statusKey;
 }

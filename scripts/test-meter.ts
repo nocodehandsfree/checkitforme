@@ -7,7 +7,7 @@
 // check under the 67% floor fails the same way on the cards the owner has not exempted, the
 // 08-16 shape (43 seconds of meter, 9 waiting, every behavior row green) reads FAIL, and an old
 // check that never measured a number is not graded on it — nothing is invented.
-import { meterVerdict, advertAsWait, spokeOverTheRecording, METER_GOAL_SEC, METER_YELLOW_MAX_SEC, PROFIT_FLOOR_PCT } from "../src/calls/meter";
+import { wentQuietOnThem, meterVerdict, advertAsWait, spokeOverTheRecording, METER_GOAL_SEC, METER_YELLOW_MAX_SEC, PROFIT_FLOOR_PCT } from "../src/calls/meter";
 import { TEST_CARDS } from "../src/calls/behaved";
 
 let pass = 0, fail = 0;
@@ -415,6 +415,53 @@ console.log("\n▶ AND THE OVERLAP IS MEASURED OFF THE RECORD, never guessed");
   ok("…and neither can an old record with no measured ends",
     spokeOverTheRecording(tl, [{ who: "Clerk", text: ADVERT, atMs: 12508, endMs: null },
       { who: "Agent", text: "Hey, no worries at all!", atMs: 19117, endMs: 23000 }]) === null);
+}
+
+console.log("\n▶ HE WENT QUIET ON A PERSON WHO WAS WAITING (owner's order, 08-21, item 5, off check 432)");
+{
+  // 432's own shape, on its own numbers: their answer ends at 39.5s, his two-word hello lands at
+  // 41.9s with no measured end, and the store hears NOTHING until it asks "Hello?" at 60.7s.
+  const tl = [
+    { kind: "hold_start", atMs: 13243, detail: null },
+    { kind: "hold_end", atMs: 41865, detail: null },
+    { kind: "hangup", atMs: 84000, detail: null },
+  ];
+  const lines = [
+    { who: "Clerk", text: "Yeah. We've got a few of those.", atMs: 36795, endMs: 39515 },
+    { who: "Agent", text: "Oh, hey!", atMs: 41866, endMs: null },
+    { who: "Clerk", text: "Hello?", atMs: 60655, endMs: 65105 },
+    { who: "Agent", text: "Oh hey, do you know the name of the set?", atMs: 67828, endMs: 73457 },
+  ];
+  const q = wentQuietOnThem(tl, lines);
+  ok(`the 19 second silence is found where the record puts it (${q?.sec})`, q?.sec === 19);
+  ok(`…starting at the second his hello ended (${q?.fromSec})`, q?.fromSec === 42);
+  ok("…and it names the last thing anybody said", /Oh, hey!/.test(q?.after ?? ""));
+  const v = meterVerdict(TEST_CARDS.hold_music_advert, { meterSec: 20, profitPct: 90, quietOnThem: q })!;
+  ok("THE CHECK FAILS ON IT, where 432 said TEST PASSED", v.pass === false, v.shortFails);
+  ok("…and it says so in plain words", v.fails.some((f) => /went quiet/.test(f)), v.fails);
+  ok("…with its own row on the sheet", v.rows.some((r) => r.label === "The line went quiet with a person waiting"));
+}
+
+console.log("\n▶ …AND THE WAITS THE STORE PUT US IN ARE NEVER THAT");
+{
+  // The same silence, inside a hold: the store has us waiting, so nobody is standing there on our
+  // account and every hold scene stays green.
+  const held = wentQuietOnThem(
+    [{ kind: "hold_start", atMs: 10000, detail: null }, { kind: "hold_end", atMs: 60000, detail: null }],
+    [{ who: "Clerk", text: "One moment.", atMs: 8000, endMs: 9500 },
+     { who: "Clerk", text: "Thanks for waiting.", atMs: 55000, endMs: 57000 }]);
+  ok("a 45 second wait the store put us in is not us going quiet on them", held === null, held);
+  // Check 428, the one the owner accepted: 5 seconds between his hello and his full reply. It draws
+  // a row so the sheet is honest about it, and it does not fail the check.
+  const short = { sec: 5, fromSec: 41, after: "Oh, hey!" };
+  const v = meterVerdict(TEST_CARDS.hold_music_advert, { meterSec: 20, profitPct: 90, quietOnThem: short })!;
+  ok("428's own 5 second gap still passes, exactly as he accepted it", v.pass === true, v.shortFails);
+  ok("…and it is drawn in yellow, so the sheet never hides it",
+    v.rows.some((r) => r.label === "The line went quiet with a person waiting" && r.tone === "y"));
+  const fine = meterVerdict(TEST_CARDS.hold_music_advert, { meterSec: 20, profitPct: 90, quietOnThem: { sec: 2, fromSec: 12, after: "x" } })!;
+  ok("an ordinary two second beat between turns draws no row at all",
+    !fine.rows.some((r) => r.label === "The line went quiet with a person waiting"));
+  ok("a record with no lines can never be accused", wentQuietOnThem([], null) === null);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

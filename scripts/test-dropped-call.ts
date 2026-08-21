@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
 import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { callEvents, callResults, retailers, categories, statuses } from "../src/db/schema";
-import { findRecentCheck, recentlyDropped, weHungUpOnAHold, diedOnAHold, staffHungUpOn, billableOutcome } from "../src/calls/service";
+import { findRecentCheck, recentlyDropped, weHungUpOnAHold, diedOnAHold, staffHungUpOn, billableOutcome, statusFromTheRecord } from "../src/calls/service";
 import { finishedRecordFromDb, findCheckRow, roomOfCheckId } from "../src/calls/receipt-store";
 
 let pass = 0, fail = 0;
@@ -81,6 +81,28 @@ async function main() {
     await db.insert(callEvents).values({ callId: 0, room, atMs: 80000, atSec: 80, kind: "hold_start", note: "Staff stepped away, hold music", detail: JSON.stringify({ reason: "music" }) });
     ok(await diedOnAHold(room), "a second hold that never closed dies on hold too");
     ok(!(await diedOnAHold(null)), "a row with no name can never claim it");
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+  }
+
+  console.log("\n▶ A CHECK THAT DID NOT END ON A HOLD MAY NEVER SAY IT DID (owner's order, 08-21, item 6)");
+  {
+    // THE 08-07 SCREEN FAULT, seen again on check 430: the customer's screen read left on hold while
+    // the record read in stock. The reader has no timeline — it decides that off the WORDING of the
+    // last thing Staff said, and "one moment, I'll go and have a look" is that wording on every
+    // hold check there has ever been. The record knows better and now says so.
+    const room = "room-430-screen";
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 10481, atSec: 10, kind: "hold_start", note: "Staff stepped away", detail: JSON.stringify({ reason: "music" }) });
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 18842, atSec: 18, kind: "hold_end", note: "Staff back after 8s", detail: JSON.stringify({ gapSec: 8 }) });
+    const key = await statusFromTheRecord(room, null, "left_on_hold", "Agent: do you have any Pokemon cards?\nClerk: one moment, I will go and have a look.");
+    ok(key === "no_clear_answer", `the hold ended, so the screen may not say left on hold (${key})`);
+    // …and a check that really did end on a wait still says so, exactly as it always has.
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 40000, atSec: 40, kind: "hold_start", note: "Staff stepped away again", detail: JSON.stringify({ reason: "quiet" }) });
+    const died = await statusFromTheRecord(room, null, "left_on_hold", "Agent: hello?");
+    ok(died === "left_on_hold", `a hold that never closed still reads left on hold (${died})`);
+    // …and an answer in hand is never touched by any of this.
+    const answered = await statusFromTheRecord(room, true, "in_stock", "Agent: thanks!");
+    ok(answered === "in_stock", `a check with an answer keeps it, whatever the holds did (${answered})`);
     await db.delete(callEvents).where(eq(callEvents.room, room));
   }
 

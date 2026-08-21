@@ -1,0 +1,120 @@
+{
+ "427": {
+  "words": [
+   "Clerk: Larry Vásquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: One moment. I'll go and have a look.",
+   "Agent: Sure, thanks!",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Clerk: Yeah. We've got a few of those.",
+   "Agent: Oh, hey!",
+   "Clerk: Pitch black the booster boxes.",
+   "Agent: Perfect, thanks so much, have a good one!",
+   "Clerk: Sorry. That's all I know."
+  ],
+  "meter": {
+   "pass": false,
+   "shortFails": [
+    "Charlie meter time, 31 seconds",
+    "quiet on them, 8 seconds"
+   ]
+  },
+  "cost": {
+   "totalUsd": 27800,
+   "buckets": "foxtrot,echo"
+  }
+ },
+ "428": {
+  "words": [
+   "Clerk: Larry Vásquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: One moment. I'll go and have a look.",
+   "Agent: Sure, thanks!",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Clerk: Yeah. We've got a few of those.",
+   "Agent: Oh, hey!",
+   "Agent: Oh nice, do you know the name of the set, like Chaos Rising,",
+   "Clerk: Pitch black the booster boxes.",
+   "Agent: Perfect, thanks so much, have a good one!"
+  ],
+  "meter": {
+   "pass": true,
+   "shortFails": []
+  },
+  "cost": {
+   "totalUsd": 69580,
+   "buckets": "foxtrot,echo,charlie"
+  }
+ },
+ "430": {
+  "words": [
+   "Clerk: Larry Vásquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Agent: Sure, thanks!",
+   "Agent: Hey, no worries at all! Do you guys happen to have any Pokém",
+   "Agent: Oh, hey!",
+   "Clerk: Yeah. We've got a few of those.",
+   "Agent: Oh nice, do you know the name of the set, like Chaos Rising,",
+   "Clerk: Pitch black the booster boxes.",
+   "Agent: Perfect, thank you so much, have a good one!"
+  ],
+  "meter": {
+   "pass": false,
+   "shortFails": [
+    "Charlie meter time, 43 seconds",
+    "talked over the store's recording",
+    "quiet on them, 12 seconds"
+   ]
+  },
+  "cost": {
+   "totalUsd": 105675,
+   "buckets": "foxtrot,echo,charlie"
+  }
+ },
+ "431": {
+  "words": [
+   "Clerk: Hi. This is the phone number. Jared speaking.",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Agent: Oh, sorry about that, did you catch my question?",
+   "Agent: Oh nice, do you know the name of the set, like Chaos Rising,",
+   "Clerk: It's packs of",
+   "Agent: Perfect, thank you so much, have a good one!"
+  ],
+  "meter": {
+   "pass": true,
+   "shortFails": []
+  },
+  "cost": {
+   "totalUsd": 68417,
+   "buckets": "foxtrot,echo,charlie"
+  }
+ },
+ "432": {
+  "words": [
+   "Clerk: Larry Vásquez. How can I help you?",
+   "Agent: Hi there! I was just checking, do you have any Pokémon cards",
+   "Clerk: One moment. I'll go and have a look.",
+   "Agent: Sure, thanks!",
+   "Clerk: Thanks for holding. Did you know we price match any local co",
+   "Clerk: Yeah. We've got a few of those.",
+   "Agent: Oh, hey!",
+   "Clerk: Hello?",
+   "Agent: Oh hey, do you know the name of the set, like Chaos Rising, ",
+   "Clerk: Pitch black the booster boxes.",
+   "Agent: Perfect, thank you so much, have a good one!"
+  ],
+  "meter": {
+   "pass": false,
+   "shortFails": [
+    "Charlie meter time, 57 seconds",
+    "quiet on them, 19 seconds",
+    "profit 38% under the 56% floor"
+   ]
+  },
+  "cost": {
+   "totalUsd": 151464,
+   "buckets": "foxtrot,echo,charlie"
+  }
+ }
+}

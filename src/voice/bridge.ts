@@ -9,7 +9,7 @@ import { config } from "../config";
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
 import { HOLD_ACK_LINE, HOLD_ACK_LINE_ES, COMEBACK_HELLO_LINE, COMEBACK_HELLO_LINE_ES } from "../calls/charlie-setup";
-import { emit, amend, markNow, addMs, addCount, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, stampLineEnd, lastLineEndEpoch, normSaid, getReceipt, whereItWouldDraw } from "../calls/events";
+import { emit, amend, markNow, addMs, addCount, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, stampLineEnd, lastLineEndEpoch, normSaid, getReceipt, whereItWouldDraw, ourVoiceWasPlaying, type OurVoiceWindow } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
 import { ConversationEar, looksLikeAPerson, type HoldReason } from "../calls/listen-nav";
@@ -496,6 +496,24 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // tail — inbound frames are forwarded only if they're loud enough to be a REAL barge-in; line
   // echo comes back well attenuated. Browser fanout is never gated (listeners hear the true line).
   let agentPlayingUntil = 0;  // ms epoch when the queued agent audio finishes playing out
+  // OUR OWN SOUND, AS STRETCHES, so a line the microphone hands back can be killed by the CLOCK
+  // (owner's order, 08-21, item 4, off check 431 — his own Fun store, on a speakerphone). Every
+  // moment our voice is on the line is kept here as a window; the rule that reads them is pure and
+  // lives in events.ts beside the record it protects, so the replay gate judges a saved record with
+  // exactly the same arithmetic a live call uses. Only the last few are kept: a window older than
+  // the sentence being judged can never contain it.
+  const ourVoice: OurVoiceWindow[] = [];
+  /** OUR VOICE IS GOING OUT for `ms` more milliseconds. The ONE door that moves the playout clock,
+   *  so no path can extend our sound without the window that goes with it. */
+  function ourSoundGoesOut(ms: number): void {
+    const from = Math.max(agentPlayingUntil, Date.now());
+    agentPlayingUntil = from + Math.max(0, ms);
+    const last = ourVoice[ourVoice.length - 1];
+    // Back-to-back frames of the same sentence extend the window they belong to rather than making
+    // a new one, so one sentence of his is one stretch however many frames the carrier gets.
+    if (last && from - last.toMs <= 250) last.toMs = agentPlayingUntil;
+    else { ourVoice.push({ fromMs: from, toMs: agentPlayingUntil }); if (ourVoice.length > 40) ourVoice.shift(); }
+  }
   let echoDropped = 0;        // suppressed-frame counter (logged sparsely for bench tuning)
   // 07-17 retune (owner: agent missed his name said around agent speech): real phone speech often
   // sits in the 350–900 energy band, so a 900 gate ate genuine clerk words spoken over or right
@@ -529,7 +547,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let charlieMaySpeak = true;   // true = every call that has no clip, i.e. today's behaviour exactly
   let helloAlreadyAnswered = false; // the next Staff line is the hello Delta answered, not our answer
   let answerWaitTimer: NodeJS.Timeout | null = null;
-  let heldHisHelloReply = false;    // we dropped a turn of his; recorded once, so the record shows it
+  let heldHisHelloReply = false;    // we dropped a turn of his, and the record says so every time
+  let lastHeldReplyAtMs = 0;        // …so a second drop later in the check is its own row, not silence
   let answerVoiceFrames = 0;        // how much of THEIR voice we have heard since the question started
   /** THEIR ANSWER IS HEARD BEFORE IT IS TRANSCRIBED, and that gap is the whole reason this exists.
    *  The provider runs `patient`, so a short answer is not finalised into words until the pause after
@@ -964,7 +983,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: f } }));
       fanout(room, f, "agent");
     }
-    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + hello.ms;
+    ourSoundGoesOut(hello.ms);
     hisVoiceOutAtMs = Date.now();
     addMs(room, "speakingMs", hello.ms);
     charlieSpoke = true; charlieSpokenMs += hello.ms;
@@ -1261,6 +1280,51 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  the quiet in between is Charlie thinking, which is never a wait and never stops the meter. */
   const heOwesThemAWord = () => !!eleven && charlieMaySpeak && !spokeThisSession && answeredAtMs > 0
     && Date.now() - answeredAtMs < Math.max(HIS_FIRST_WORD_MS, THEIR_TURN_QUIET_MS);
+  /**
+   * THE METER IS INVERTED (owner's order, 08-21, item 2).
+   *
+   * HIS WORDS: "Today we list the states where his meter stops, and every fix invents a state nobody
+   * listed. Flip it: the meter runs ONLY while he is really speaking or really hearing a person
+   * speak. Every other state is off by default, including waiting on his own held reply. A new state
+   * must be added on purpose to bill."
+   *
+   * He is right about the shape of the fault. The old beat was armed in ONE place — the ear hearing
+   * their voice stop — and it gave up entirely whenever it did not recognise the situation. On check
+   * 432 nobody was talking at all from 41.9 seconds, so their voice never stopped again, so the beat
+   * was never armed again, and 26 silent seconds billed at the hosted rate: 57 meter seconds and
+   * 15.4¢ against check 428's 7.2¢.
+   *
+   * So this is the WHOLE list of states that may hold his meter open, each one named, each one with
+   * its own ceiling in milliseconds. Anything not on this list — including a reply of his we are
+   * still waiting on — is off by default, and a state added here is a decision somebody made on
+   * purpose in a commit, which is exactly what he asked for.
+   */
+  const whyHeIsStillBilling = (): string | null => {
+    if (Date.now() < agentPlayingUntil) return "his own voice is going out";
+    if (theirVoiceOn) return "a person is talking to us";
+    // Him thinking about a turn he has just been handed. Bounded by the owner's own Admin number
+    // (`charlieThinkingMs`, 6 seconds), and it stops the moment he opens his mouth.
+    if (heOwesThemAWord()) return "he owes them a word";
+    // Their turn on its way to him: the pieces are written and the hand-over is in flight.
+    if (reconnectFeed && hisEarsBackAtMs > 0 && Date.now() - hisEarsBackAtMs < REJOIN_WORDLESS_MS)
+      return "their turn is being handed to him";
+    // The wake check deciding whether that voice is a person or the store's recording. It has its
+    // own ceiling already; a beat past it is added so a read that answers late is never cut off.
+    if (earlyTurn && !earlyTurn.proved && wakeHeldSinceMs > 0
+        && Date.now() - wakeHeldSinceMs < WAKE_SENTENCE_CEILING_MS + THEIR_TURN_QUIET_MS)
+      return "the wake check is deciding who is talking";
+    // NOT ON THE LIST, AND IT WAS TRIED: "the recorded question has not been answered yet". Adding it
+    // held his meter open through exactly the silence the drop exists to catch — the store saying
+    // nothing after our question is a wait, and the engine has dropped him for it since 08-17.
+    // He has been told the answer is in hand and to say his goodbye. Same thinking ceiling.
+    if (signoffNudged && signoffAtMs > 0 && Date.now() - signoffAtMs < Math.max(HIS_FIRST_WORD_MS, THEIR_TURN_QUIET_MS))
+      return "he was told to close the check";
+    return null;
+  };
+  /** ONE BEAT to be sure the quiet is theirs and not a breath, then the meter goes off. This is the
+   *  fast one, armed by the ear hearing their voice stop, and it is exactly as it has been since
+   *  08-17: a wait recognised inside a second. What it could never do is fire in a situation it was
+   *  never armed for, which is what the backstop under it is for. */
   function armTheMeterOff(why: string): void {
     if (meterOffTimer) { clearTimeout(meterOffTimer); meterOffTimer = null; }
     // A TURN IN FLIGHT IS NOT SILENCE. Their comeback being handed to him is the conversation mid
@@ -1272,13 +1336,53 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // again, the answer may have landed, our own voice may still be going out, or the word owed
       // may be HIS, which is him thinking and never a wait.
       if (ended || onHold || !eleven || theirVoiceOn || reconnectFeed || !itIsTheirTurn()) return;
-      // The word owed may still be HIS, which is him thinking, and our own voice may still be
-      // going out. Neither is a wait, so the beat simply runs again rather than being given up on.
       if (heOwesThemAWord()) { armTheMeterOff("the word owed was still his"); return; }
       if (Date.now() < agentPlayingUntil) { armTheMeterOff("our own audio was still playing"); return; }
       log(`meter off: ${why} — nobody is saying anything to us and the answer is still theirs to give`);
       // The wait began when the line went quiet, which is their last sound, not this beat's end.
       beginHold("quiet", lastTheirVoiceStopAtMs > 0 ? lastTheirVoiceStopAtMs : Date.now() - THEIR_TURN_QUIET_MS);
+    }, THEIR_TURN_QUIET_MS);
+  }
+  /**
+   * THE BACKSTOP THAT MAKES THE METER DEFAULT-OFF (owner's order, 08-21, item 2).
+   *
+   * The beat above has to be ARMED, and on check 432 nothing ever armed it again: from 41.9 seconds
+   * nobody said a word, so their voice never stopped again, so no beat ever ran, and 26 silent
+   * seconds billed. This one needs nothing to arm it. It runs for as long as his session is open,
+   * and every tick it asks the same question — is anything on the named billing list happening? —
+   * and after four seconds of the answer being no, his meter goes off wherever the check is and
+   * whatever state nobody thought to list.
+   *
+   * Four seconds, not one, because the fast beat above already catches every wait the ear can see
+   * inside a second and has been proven doing it since 08-17. This exists for the situations
+   * nobody listed, and a situation nobody listed deserves one breath before it costs money.
+   */
+  const BILLING_CEILING_MS = 4_000;
+  let billingBackstop: NodeJS.Timeout | null = null;
+  let nothingBillableSinceMs = 0;
+  function armTheBillingBackstop(): void {
+    if (billingBackstop) { clearTimeout(billingBackstop); billingBackstop = null; }
+    if (ended || onHold || !eleven) { nothingBillableSinceMs = 0; return; }
+    billingBackstop = setTimeout(() => {
+      billingBackstop = null;
+      if (ended || onHold || !eleven) { nothingBillableSinceMs = 0; return; }
+      const billing = whyHeIsStillBilling();
+      if (billing) { nothingBillableSinceMs = 0; armTheBillingBackstop(); return; }
+      if (nothingBillableSinceMs === 0) nothingBillableSinceMs = Date.now();
+      if (Date.now() - nothingBillableSinceMs < BILLING_CEILING_MS) { armTheBillingBackstop(); return; }
+      const since = nothingBillableSinceMs;
+      nothingBillableSinceMs = 0;
+      log(`meter off by default: nothing on the billing list had happened for ${Math.round((Date.now() - since) / 1000)}s`);
+      emit(room, "unknown", "Nothing was happening that Charlie is billed for, so his meter went off",
+        { step: "meter_off_by_default", quietMs: Date.now() - since, notASound: true }, since);
+      // …AND IT REALLY GOES OFF. `beginHold` holds an unannounced quiet open until its own long
+      // backstop (the 08-08 inversion gate), and THAT is what billed 432's 26 seconds: nobody had
+      // announced anything, so the quiet was read as a beat in the conversation for as long as it
+      // lasted. This is the deliberate exception the owner ordered — every state that is really a
+      // beat in the conversation is on the billing list above, with its own ceiling, so anything
+      // that reaches here is not one. Marked the same way the quiet backstop marks its own.
+      backstopFired = true;
+      try { beginHold("quiet", since); } finally { backstopFired = false; }
     }, THEIR_TURN_QUIET_MS);
   }
   /** THE REOPEN ITSELF, exactly as it has always run: the note he is owed, the reconnect feed, and
@@ -1350,6 +1454,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       connecting = true;
     } else {
       log(`comeback: his session was already opening on the sound, so the ${secs}s wait ends straight into it`);
+      // A comeback onto a session that never closed gets no fresh "ready", so the backstop is
+      // restarted here — the hold cleared it on the way in (item 2, the inverted meter).
+      armTheBillingBackstop();
     }
   }
   /** THE GAP STAMPS (owner box 08-16 late): measured by the engine on the call itself, written onto
@@ -1484,15 +1591,68 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     answerVoiceFrames = 0;
     if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
   }
+  /**
+   * A HELD REPLY IS NEVER DROPPED IN SILENCE (owner's order, 08-21, item 3, off check 432).
+   *
+   * WHAT HAPPENED: he started his reply at 39.396s with his voice held, said his two-word hello
+   * "Oh, hey!" at 41.866s, and the rest never came. The sound of that reply arrived while his mouth
+   * was still shut, so it was dropped at the audio door — and nothing anywhere asked him for it
+   * again. The store heard nothing until Staff said "Hello?" at 60.655s to find out whether we were
+   * still there, and he finally asked his question at 67.828s.
+   *
+   * THE RULE: when the window closes without the sound arriving, he is prompted to say it again
+   * right then. Staff rescuing us must never be what restarts us.
+   */
+  let hisReplyWasDropped = false;     // a reply of his went nowhere and he has not been asked again
+  let reAskTimer: NodeJS.Timeout | null = null;
+  let reAsks = 0;                     // twice a check at most: a third would be us talking to ourselves
+  let lastReAskAtMs = 0;
+  function hisReplyWentNowhere(why: string): void {
+    // A REPLY DROPPED WHILE THE STORE HAS US WAITING IS MEANT TO BE DEAD (checks 430 and 432): it is
+    // his answer to a recording, and asking him to say it again would put him straight back into the
+    // advert this engine spent yesterday learning to refuse. Only a reply nobody was there to hear
+    // BY MISTAKE is re-asked.
+    if (onHold) { hisReplyWasDropped = false; return; }
+    hisReplyWasDropped = true;
+    if (reAskTimer) clearTimeout(reAskTimer);
+    // Straight away when his mouth is already open; otherwise the moment it opens (`letHimAnswer`),
+    // with this as the backstop in case it never does.
+    if (charlieMaySpeak) { askHimToSpeakAgain(why); return; }
+    reAskTimer = setTimeout(() => { reAskTimer = null; askHimToSpeakAgain(why); }, EARLY_STALE_MS);
+  }
+  function askHimToSpeakAgain(why: string): void {
+    if (reAskTimer) { clearTimeout(reAskTimer); reAskTimer = null; }
+    if (ended || onHold || !eleven || !ready || !hisReplyWasDropped) return;
+    if (!charlieMaySpeak) return;                 // his mouth is still shut: there is nothing to ask for
+    if (Date.now() < agentPlayingUntil) { hisReplyWasDropped = false; return; }   // he is already talking
+    if (reAsks >= 2 || Date.now() - lastReAskAtMs < EARLY_STALE_MS) return;
+    hisReplyWasDropped = false;
+    reAsks++; lastReAskAtMs = Date.now();
+    emit(room, "unknown", "Charlie's reply never reached the store, so he was asked to say it again",
+      { step: "reply_re_asked", why, nth: reAsks, notASound: true });
+    log(`re-ask: ${why} — telling him to say his reply again`);
+    try {
+      eleven.send(JSON.stringify({ type: "user_message", text:
+        "[Nothing you just said reached the store — the line was muted while you were speaking, and they heard silence. "
+        + "Say your reply to them now, out loud, in one short sentence. Never mention this message and never ask them to repeat themselves.]" }));
+      lastHandAtMs = Date.now();
+      answeredAtMs = Date.now();
+      spokeThisSession = false;
+    } catch { /* best effort — a re-ask may never break a check */ }
+  }
+
   /** Staff have said something that is not the hello, so it is his conversation now. */
   function letHimAnswer(via: string) {
     if (charlieMaySpeak) return;
     charlieMaySpeak = true;
+    armTheBillingBackstop();
     // The moment his conversation became his. Everything that waits on his FIRST word measures from
     // here, never from when his session opened: opening is ours, answering is theirs.
     answeredAtMs = Date.now();
     if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
     log(`delta: ${via} -> Charlie may speak`);
+    // A REPLY OF HIS WAS DROPPED WHILE THAT MOUTH WAS SHUT (item 3): ask for it now, not never.
+    if (hisReplyWasDropped) askHimToSpeakAgain("his mouth opened and a reply of his had been dropped");
   }
 
   /** The clip is over: hand the conversation to the agent. Idempotent — three signals race to call
@@ -1559,7 +1719,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // otherwise the line's reflection of this clip comes straight back as "the clerk answering".
     // Deliberately NOT counted as speaking seconds: the agent is connected and silent through the
     // clip, and that is exactly the dead air the receipt exists to show us.
-    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
+    ourSoundGoesOut(clip.ms);
     twilio.send(JSON.stringify({ event: "mark", streamSid, mark: { name: CLIP_MARK } }));
     // NOT a join: the agent has not opened, is not billing, and cannot be heard. It used to write a
     // "charlie_join" line here, which is how one agent came to join three times on one receipt. The
@@ -2068,6 +2228,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function staffPiece(text: string): void {
     const t = String(text || "").trim();
     if (!t || ended) return;
+    // A PIECE OF OUR OWN ECHO IS STILL OUR OWN ECHO (item 4, the same rule as the whole line above).
+    // A piece has no stamp of its own — it is handed the moment it is written — so it is judged
+    // where it arrives. Pieces are never recorded, so this one just stops it reaching him as a turn.
+    if (ourVoiceWasPlaying(Date.now(), ourVoice)) {
+      log(`echo: the piece "${t.slice(0, 40)}" arrived inside our own sound, so it was ours`);
+      return;
+    }
     // A written piece is real words on the line — see the wordless-rejoin note (owner 08-18).
     heardTheWords();
     openTurnPieces.push(t);
@@ -2189,7 +2356,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (earlyTurnBackstop) clearTimeout(earlyTurnBackstop);
       earlyTurnBackstop = setTimeout(() => {
         earlyTurnBackstop = null;
-        if (earlyTurn === held) { earlyTurn = null; log("early turn: the sound of his reply never came, so those words were never his to say"); }
+        if (earlyTurn === held) {
+          earlyTurn = null;
+          log("early turn: the sound of his reply never came, so those words were never his to say");
+          // …AND THAT IS THE WINDOW CLOSING WITH NOTHING IN IT (owner's order, 08-21, item 3): he is
+          // asked to say it again right here, rather than the store being left on a silent line.
+          hisReplyWentNowhere("the sound of his held reply never came");
+        }
       }, EARLY_STALE_MS);
       return;
     }
@@ -2224,7 +2397,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       fanout(room, b64, "agent");
       ms += Math.ceil((b64.length * 3) / 4 / 8);
     }
-    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
+    ourSoundGoesOut(ms);
     hisVoiceOutAtMs = Date.now();
     addMs(room, "speakingMs", ms);
     charlieSpoke = true; spokeThisSession = true; charlieSpokenMs += ms;
@@ -2273,7 +2446,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: f } }));
       fanout(room, f, "agent");
     }
-    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
+    ourSoundGoesOut(clip.ms);
     ackPlayingUntil = Date.now() + clip.ms + 4000;
     ackAlreadyPlayed = true;
     // THE WORDS THAT REALLY PLAYED, off the clip itself — never a constant that a change to the
@@ -2337,6 +2510,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // own instructions still govern the one follow-up they call for, so the note allows it and then
   // requires the goodbye, which is the thing that was missing.
   let signoffNudged = false;
+  /** …and when he was told, so the billing list can hold his meter open for his goodbye and no
+   *  longer (item 2, the inverted meter). */
+  let signoffAtMs = 0;
   // HUNG ON THE CHECK'S NAME, WHEN THE NAME IS KNOWN. The carrier's socket connects bare and the
   // room only arrives in its start message a moment later — so a door hung at connect time was
   // registered under an empty name on EVERY real check, and the knock ("the answer is in hand…")
@@ -2356,6 +2532,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       return;
     }
     signoffNudged = true;
+    signoffAtMs = Date.now();
     // Worded for where it really sits on the log: the reader hears the yes BEFORE Charlie's follow-up
     // question is answered, so "told to wrap up" read as wrapping before the product detail
     // (owner 08-05). He is told to finish once he has what the check needs, and that is what it says.
@@ -2470,6 +2647,27 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *        arithmetic against this call's own zero; without it the line stamps on arrival.
    */
   function staffSaid(txt: string, spokenAtEpochMs?: number, fromEcho?: boolean, endedAtEpochMs?: number): boolean {
+    // OUR OWN VOICE COMING BACK OFF THE LINE IS NOT THE STORE TALKING (owner's order, 08-21, item 4,
+    // off check 431 — his own Fun store, on a speakerphone). Our recorded question came back through
+    // the room and was written down as a line Staff said, word-shuffled, twice, and the second time
+    // his real answer was glued onto the tail of it. Killed by the CLOCK, never by the words: the
+    // room never hands the words back exactly, so a text match is a test that can only fail. It is
+    // judged before ANY of the work below, because an echo must not restart a wait, prove a person,
+    // reach Charlie as a turn, or reach the record. Recorded on the timeline, never silently: a line
+    // we dropped has to be visible on the check that dropped it (rule 8).
+    if (String(txt || "").trim()) {
+      // ONLY A LINE THAT CARRIES ITS OWN MOMENT IS EVER ACCUSED. Echo stamps every sentence off the
+      // audio's own clock; a line that arrives with no moment cannot be placed against our sound, so
+      // it is the store's, exactly as it always was.
+      const mine = ourVoiceWasPlaying(spokenAtEpochMs ?? null, ourVoice, endedAtEpochMs);
+      if (mine) {
+        emit(room, "unknown", "Our own voice came back off the line and was written down as Staff, so it was dropped",
+          { step: "our_own_echo", text: String(txt).slice(0, 200),
+            ourSoundFromMs: mine.fromMs, ourSoundToMs: mine.toMs, notASound: true }, spokenAtEpochMs);
+        log(`echo: "${String(txt).slice(0, 50)}" started inside our own sound, so it was ours`);
+        return false;
+      }
+    }
     // Echo wrote a whole line: real words on the line, the proof a rejoin was a person and the one
     // key that reopens a hold which proved wordless (owner 08-18, check 380).
     if (fromEcho && txt && String(txt).trim() && !ended) heardTheWords();
@@ -2795,6 +2993,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       try { m = JSON.parse(data.toString()); } catch { return; }
       if (m.type === "conversation_initiation_metadata") {
         ready = true;
+        // THE BILLING BACKSTOP STARTS WITH HIS SESSION (item 2, the inverted meter): from here
+        // something on the named list has to be happening or his meter goes off, whatever the
+        // situation is and whether or not anything thought to arm the beat above it.
+        armTheBillingBackstop();
         // HOW LATE HE WAS, IF HE WAS LATE. The question has already finished when this lands after
         // the gate opened, and every one of those milliseconds is a person listening to silence.
         if (gateOpenedMs) {
@@ -2952,17 +3154,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
           const msOwn = Math.ceil((b64.length * 3) / 4 / 8);
-          agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + msOwn;
+          ourSoundGoesOut(msOwn);
           hisVoiceOutAtMs = Date.now();
           addMs(room, "speakingMs", msOwn);
           charlieSpoke = true; spokeThisSession = true; charlieSpokenMs += msOwn;
         }
         else if (b64 && !charlieMaySpeak) {
-          if (!heldHisHelloReply) {
+          // RECORDED EVERY TIME, NOT ONCE (owner's order, 08-21, item 3). This was stamped once per
+          // check, so on 432 the drop during the advert took the stamp and the drop that cost 26
+          // seconds of silence left no trace at all.
+          if (!heldHisHelloReply || Date.now() - lastHeldReplyAtMs > 2000) {
             heldHisHelloReply = true;
-            emit(room, "unknown", "Charlie went to answer their hello, which the recording had already answered, so it was not spoken",
+            lastHeldReplyAtMs = Date.now();
+            emit(room, "unknown", "Charlie went to answer with his voice held, so the store never heard it",
               { step: "hello_reply_held" });
-            log("delta: agent tried to answer their hello, suppressed (the recording already did)");
+            log("delta: agent tried to speak with his mouth shut, suppressed");
+            // …AND HE IS ASKED FOR IT AGAIN the moment there is anybody to hear it (item 3).
+            hisReplyWentNowhere("his reply arrived while his voice was still held");
           }
         }
         // Nobody is there to hear him. Suppressing his voice while the person is away also stops him
@@ -3015,7 +3223,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // Extend the echo-gate window by this chunk's real playout time (μ-law 8kHz = 8 bytes/ms);
           // Twilio plays queued audio sequentially, so chunks extend the window back-to-back.
           const ms = Math.ceil((b64.length * 3) / 4 / 8);
-          agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
+          ourSoundGoesOut(ms);
           hisVoiceOutAtMs = Date.now();
           // HIS LINE'S END, as the sound goes out (owner, 08-17 evening: every spoken line files
           // with a start and an end), AND IT LANDS ON HIS OWN LINE (owner, 08-17 late, off check
