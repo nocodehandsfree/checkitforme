@@ -1072,13 +1072,24 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    * trigger, the re-ask, the claim-a-turn guard and the read stopwatch. THE WINDOW IS THE CEILING,
    * and it is the only clock in here.
    *
-   * WHY 1200ms, and it is his number to move: check 437's reader answered its comeback turn in
-   * 1601ms and its advert turn in 1068ms, so a window this size catches the fast reads and lets the
-   * sound rule — the one measured on his own recordings, right 23 times out of 23 — answer the slow
-   * ones rather than making Staff stand there for a model. `scripts/test-delta-clip.ts` measures the
-   * gap this produces on a driven call, and the replay gate now watches that number on every record.
+   * WHY 2000ms, and it is his number to move. It was 1200, and three dials (439/441/442) proved 1200
+   * sits ON the reader's own answer time, which makes it a coin flip:
+   *   439  three adverts, reads back in 904/1126/1001ms, ALL inside the window, all refused. 6.5¢.
+   *   441  the advert's read came back at readMs 1201 — ONE MILLISECOND outside — so the sound
+   *        rule decided, said person, and woke him onto the advert. That is 430's fault exactly.
+   *        10.3¢ at 59% profit, under his 67% floor.
+   * 2000 puts the whole measured spread of the reader (904-1601ms across 437/439/441/442) INSIDE the
+   * window, so the sound rule stands in only when the reader is genuinely slow, never by a hair.
+   * The sound rule stays as it is — measured on his own recordings, right 23 times out of 23.
+   *
+   * KNOWN AND NOT FIXED BY THIS NUMBER: on 439 and 442 the window's own timer fired ~2.3s LATE
+   * (openMs 3565 and 3495 against a 1200 setting), on both of which a `reconnect_early` opened
+   * Charlie's ElevenLabs session ~1.4s before the window; on 441, where nothing opened early, it
+   * closed dead on 1200. Not opening that session before `judgeTheComeback()` runs is the next fix
+   * and it is the owner's call. `scripts/test-delta-clip.ts` measures the gap this produces on a
+   * driven call, and the replay gate watches that number on every record.
    */
-  const WAKE_WINDOW_MS = 1200;
+  const WAKE_WINDOW_MS = 2000;
   let wakeWindowTimer: NodeJS.Timeout | null = null;
   let wakeWindowOpenedAt = 0;
   /** The newest words handed in while the window is open, used when Echo has joined nothing yet. */

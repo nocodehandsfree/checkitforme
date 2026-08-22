@@ -3230,8 +3230,8 @@ console.log("\n▶ CHECKS 398 TO 405: THE ADVERT NEVER REACHES HIM, IN SOUND OR 
     ok(step("little_hello").length === 0, "nothing of his plays while they are still talking", step("little_hello").length);
     quiet(tw, 40);
     // THE WINDOW IS THE CLOCK NOW (owner, 08-21 night): the decision lands when it closes, a fixed
-    // 1200ms after their first written words, not on the beat their voice stopped.
-    await sleep(1500);
+    // 2000ms after their first written words, not on the beat their voice stopped.
+    await sleep(2300);
     const hello = step("little_hello")[0];
     ok(!!hello, "he says his little hello once the window closes and the words prove a person");
     const back = evs().find((e) => (e.detail as { step?: string } | null)?.step === "reconnect_early"
@@ -3466,8 +3466,8 @@ console.log("\n▶ CHECK 427'S MOMENT: his words are in, his sound is still bein
   ok(tw.outMedia().length === beforeHisReply, "his words on their own put nothing on the line", tw.outMedia().length);
   // THEY STOP TALKING AND THE WAKE CHECK SAYS PERSON — with the sound of his reply still unmade.
   quiet(tw, 40);
-  // The window closes 1200ms after their first written words; nothing lands before that now.
-  await sleep(1500);
+  // The window closes 2000ms after their first written words; nothing lands before that now.
+  await sleep(2300);
   ok(step("little_hello").length === 1, "his two words go out once the window closes and the person is proved", step("little_hello").length);
   ok(evs().some((e) => e.kind === "hold_end"), "…and the wait ends on that same proof");
   ok(step("early_turn_released").length === 0,
@@ -3940,18 +3940,19 @@ console.log("\n▶ CHECK 436'S FAULT: the reader is STARTED when there are words
     else await sleep(20);
   }
   const row = step("wake_read")[0]?.detail as { answer?: string; decidedBy?: string; readMs?: number; openMs?: number; windowMs?: number } | undefined;
-  // THE TRADE A FIXED WINDOW MAKES, IN THE OPEN. This stubbed reader takes 1700ms and the window is
-  // 1200ms, so it does NOT answer and the measured sound rule decides instead — correctly, which is
-  // the whole reason the sound rule is the stand-in. What matters is that the record SAYS which of
-  // the two decided, and that Staff waited the window, not a model's round trip.
-  // ON A REAL CHECK: 437's reader took 1601ms on Staff's answer and 1068ms on the advert, so at
-  // 1200ms roughly the fast half of the reads land inside the window and the rest fall to the sound
-  // rule. The window's length is the owner's number to move, and this row is where the trade shows.
-  ok(row?.decidedBy === "the measured sound",
-    "a reader slower than the window does not decide, and the record says the sound did", row?.decidedBy);
-  ok(row?.windowMs === 1200, "…and the window is a fixed length, the same every time", row?.windowMs);
-  ok(decidedMs >= 0 && decidedMs < 400,
-    "…so Staff wait a beat, not a reader's whole round trip", decidedMs);
+  // WHY THE WINDOW MOVED FROM 1200 TO 2000, PROVED HERE. This stubbed reader takes 1700ms — slower
+  // than the old 1200ms window, so it used to lose and the measured sound rule stood in. That is
+  // exactly what cost check 441: its real read came back at 1201ms, ONE MILLISECOND outside, the
+  // sound rule decided, said person, and woke Charlie onto the store's advert. At 2000ms the whole
+  // measured spread of the reader (904-1601ms across checks 437/439/441/442) lands INSIDE, so a read
+  // this slow now decides and the record says so.
+  ok(row?.decidedBy === "the reader",
+    "a read slower than the OLD window still answers inside the new one, and the record says the reader decided",
+    row?.decidedBy);
+  ok(row?.windowMs === 2000, "…and the window is a fixed length, the same every time", row?.windowMs);
+  // Their voice ran 1400ms of the 2000ms window, so what is left of it after they stop is ~600ms.
+  ok(decidedMs >= 0 && decidedMs < 900,
+    "…so Staff wait out the rest of the window, not a reader's whole round trip", decidedMs);
   ok(typeof row?.readMs === "number" && (row.readMs as number) > 0,
     "…and the record says how long the reader really took, which nobody knew before", row?.readMs);
   ok(evs().some((e) => e.kind === "hold_end"), "the wait ends on the same beat");
@@ -4019,7 +4020,7 @@ console.log("\n▶ CHECK 437'S FAULT: one answer per turn, one row per turn, one
   // Their voice stops, so the held question is asked on the piece — door one.
   clearInterval(stillTalking);
   quiet(tw, 60);
-  await sleep(700);
+  await sleep(1600);   // the window is 2000ms from the piece, and 600 of it has already run
   ok(step("wake_read").length === 1, "the piece is answered, once", step("wake_read").length);
   ok(step("not_a_person").length === 1, "…and the store's recording is refused, once", step("not_a_person").length);
   const afterFirst = readerCalls;
@@ -4041,7 +4042,7 @@ console.log("\n▶ CHECK 437'S FAULT: one answer per turn, one row per turn, one
   await sleep(400);
   clearInterval(talking2);
   quiet(tw, 60);
-  await sleep(900);
+  await sleep(1800);   // the window is 2000ms from the piece, and 400 of it has already run
   ok(step("wake_read").length === 2, "a genuinely different turn gets its own answer", step("wake_read").length);
   ok(step("wake_read").every((e) => !!(e.detail as { decidedBy?: string }).decidedBy),
     "…and every row says which of the two decided it",
