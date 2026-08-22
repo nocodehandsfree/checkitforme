@@ -12,7 +12,8 @@ import { HOLD_ACK_LINE, HOLD_ACK_LINE_ES, COMEBACK_HELLO_LINE, COMEBACK_HELLO_LI
 import { emit, amend, markNow, addMs, addCount, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, stampLineEnd, lastLineEndEpoch, normSaid, getReceipt, whereItWouldDraw, ourVoiceWasPlaying, type OurVoiceWindow } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
-import { ConversationEar, looksLikeAPerson, type HoldReason } from "../calls/listen-nav";
+import { ConversationEar, looksLikeAPerson, judgeVoice, SoundPrint, heardThisSoundBefore,
+  type HoldReason, type VoiceVerdict } from "../calls/listen-nav";
 // What our own account charges to write one reply. Pure arithmetic on the model's own token counts,
 // so the row that names the brain can also say what that brain cost (owner's order, 08-20, fix 3).
 import { brainCostUsd } from "../calls/cost";
@@ -1001,9 +1002,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (earsShutAtMs > 0) return;
     earsShutAtMs = atMs ?? Date.now();
     personSoundAtMs = 0;
-    // A NEW WAIT STARTS CLEAN: no window of the last one is left open over this one.
-    if (wakeWindowTimer) { clearTimeout(wakeWindowTimer); wakeWindowTimer = null; }
-    wakeWindowLine = "";
     // A SILENT SWITCH, MARKED AS ONE (owner, 08-19 evening). Nothing was said on the line at this
     // second: it is our own machinery moving, and the sheet reads it apart from the rows that are
     // sounds. Stamped at the moment the wait was recognised, never the moment the code ran.
@@ -1050,89 +1048,76 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  speech with real silence in its gaps, on a line clear of the music. Never nothing, because a
    *  real person left unheard costs the whole check. */
   /**
-   * THE SEQUENCE AT A COMEBACK, FIXED (owner's order, 08-21 night). THIS REPLACES THE RACE.
+   * WHO IS TALKING TO US, ANSWERED BY THE SAME PLAIN FUNCTION MAPPING ALREADY USES (owner's order,
+   * 08-22, "THE ONE CHANGE").
    *
-   * HIS WORDS: "425 through 438, every one, in the same five seconds: Staff coming back from hold.
-   * Four things race there and the winner changes every time — the transcriber writing words, the
-   * ear deciding their voice stopped, the Groq reader answering person or recording, Charlie's reply
-   * being made. Each fix so far reordered the race. 434 the ceiling won (4.4s). 435 the ear won
-   * (1.5s). 436 the ear was slow (3.3s). 437 the reader won (1.4s). 438 claiming the turn early won
-   * (6.1s, 9.2¢, 63% profit, under his 67% floor)."
+   * HIS WORDS: "Charlie's side decides person or recording by asking Groq over the network. It
+   * usually does not answer in time. Every timing layer built this week exists to wait for it.
+   * Mapping's side already decides the same question with judgeVoice in src/calls/listen-nav.ts.
+   * Plain function, not async, no network, answers in the same instant. USE judgeVoice AT THE
+   * COMEBACK. Call it, take its answer, act. No window, no ceiling, no waiting on the ear, no
+   * fallback. GROQ MOVES OFF THE CRITICAL PATH."
    *
-   * So there is no race left to win. On a voice returning after a wait:
-   *   1  A window of a FIXED length opens at the first written piece of their turn. Nothing decides
-   *      before it closes. Later pieces feed it more words and re-start the reader; they never
-   *      decide, and they never re-open or extend it.
-   *   2  When it closes, ONE judgement, on everything written by then: the reader's answer if it has
-   *      one, the measured sound rule if it does not, and the record says which of the two decided.
-   *   3  A person: Charlie speaks now. The store's recording: he stays off, and the window re-arms
-   *      for the next voice.
+   * So there is no clock in this path at all any more. Words land, `judgeVoice` answers in the same
+   * instant, and we act on that answer. Gone with the waiting: the 2000ms window, the four second
+   * ceiling, the hold on a sentence still being said, the voice-stop trigger, the re-ask, the read
+   * stopwatch and the measured-sound fallback. Nothing here can be late, because nothing here waits
+   * — which is the whole point: on checks 439/442/444/445 the window's own `setTimeout` fired up to
+   * 2.8 SECONDS late while a finished answer sat unused (444: openMs 4809 on a 2000 setting with the
+   * read in hand at 1515ms).
    *
-   * Gone with it: the four second ceiling, the hold on a sentence still being said, the voice-stop
-   * trigger, the re-ask, the claim-a-turn guard and the read stopwatch. THE WINDOW IS THE CEILING,
-   * and it is the only clock in here.
+   * WHAT judgeVoice IS GIVEN, all of it already tracked on this call:
+   *   saidBefore / knownMenuLines  every line the store has said on THIS call, off the record Echo
+   *                               writes. A recording repeats itself word for word; a person never
+   *                               does, and the hold advert is word for word identical every time.
+   *   soundHeardBefore            this same stretch of SOUND already played on this line, off the
+   *                               same `SoundPrint` mapping uses. It is the one test that catches
+   *                               hold music, and hold music with an advert talking over it, which
+   *                               every word rule in the world calls a person.
+   *   weSpokeAtSec / weAskedAtSec off `ourVoice`, the stretches of our own sound (shipped 08-21).
+   *   product                     so the product's own name counts as news about it.
    *
-   * WHY 2000ms, and it is his number to move. It was 1200, and three dials (439/441/442) proved 1200
-   * sits ON the reader's own answer time, which makes it a coin flip:
-   *   439  three adverts, reads back in 904/1126/1001ms, ALL inside the window, all refused. 6.5¢.
-   *   441  the advert's read came back at readMs 1201 — ONE MILLISECOND outside — so the sound
-   *        rule decided, said person, and woke him onto the advert. That is 430's fault exactly.
-   *        10.3¢ at 59% profit, under his 67% floor.
-   * 2000 puts the whole measured spread of the reader (904-1601ms across 437/439/441/442) INSIDE the
-   * window, so the sound rule stands in only when the reader is genuinely slow, never by a hair.
-   * The sound rule stays as it is — measured on his own recordings, right 23 times out of 23.
+   * WHAT IT IS DELIBERATELY NOT GIVEN, and why: `ringsHeard` and `handedOnAtSec`. Both answer
+   * "person" for everything after Staff first picked up, the advert included, and `handedOnAtSec`
+   * additionally switches OFF the repeat and sound rules for any line that is not already known menu
+   * wording — which is exactly the advert on its first play. They belong to mapping's question (has
+   * the phone system finished with us), not to this one (is the voice back on a hold a person or the
+   * store's own recording).
    *
-   * KNOWN AND NOT FIXED BY THIS NUMBER: on 439 and 442 the window's own timer fired ~2.3s LATE
-   * (openMs 3565 and 3495 against a 1200 setting), on both of which a `reconnect_early` opened
-   * Charlie's ElevenLabs session ~1.4s before the window; on 441, where nothing opened early, it
-   * closed dead on 1200. Not opening that session before `judgeTheComeback()` runs is the next fix
-   * and it is the owner's call. `scripts/test-delta-clip.ts` measures the gap this produces on a
-   * driven call, and the replay gate watches that number on every record.
+   * UNSURE IS AN ANSWER AND IT MEANS WAIT, exactly as it does for mapping. Charlie stays closed and
+   * the next thing said is judged again, so nothing is lost: a recording gives itself away by
+   * repeating, and a person is heard the moment they say anything about what we asked.
    */
-  const WAKE_WINDOW_MS = 2000;
-  let wakeWindowTimer: NodeJS.Timeout | null = null;
-  let wakeWindowOpenedAt = 0;
-  /** The newest words handed in while the window is open, used when Echo has joined nothing yet. */
-  let wakeWindowLine = "";
+  /** THE SOUND OF THIS LINE, kept as a shape so a loop can be recognised with no words at all. Fed
+   *  from the store's own inbound frames, exactly as mapping feeds its own. */
+  const linePrint = new SoundPrint();
   /**
-   * THE READER IS STARTED WHEN THERE IS SOMETHING TO READ, NOT WHEN THE ANSWER IS NEEDED
-   * (owner's order, 08-21 late).
+   * GROQ, OFF THE CRITICAL PATH AND STILL EARNING ITS KEEP (his order, same message: "Keep asking
+   * it, in the background, and when it comes back use its answer to LEARN this store's advert
+   * wording for next time. It never gates Charlie's mouth again.")
    *
-   * HIS WORDS: "Every check writes 'the reader could not answer in time'. Checks 432, 434, 435 and
-   * 436. Every single one. Four rounds of work have all been about how long we WAIT for it. Nobody
-   * looked at why it never answers."
-   *
-   * It never answers because it was only ever called from inside `maybeWakeCharlie` — the exact
-   * instant the answer is needed — and asking a model a question takes a model a while. Staff's
-   * first written words had been sitting there for seconds by then and we did nothing with them.
-   *
-   * So the read starts on the FIRST piece of their turn and re-starts as more of the sentence
-   * arrives, newest wins. It runs off our own record with no stopwatch on it: nothing of it reaches
-   * the line, Charlie never knows it happened, and it costs the same as the read it replaces. When
-   * the wake question is finally asked, the answer is usually already sitting here.
-   *
-   * A read is matched to a question by the WORDS it was asked about, so an answer can never be used
-   * for a different turn: a new turn has new words and finds nothing in hand.
+   * It is started on the first written piece of their turn and re-started as more arrives, newest
+   * wins. Nothing waits for it. When it lands it strikes the lines it names as played at us out of
+   * the pocket that feeds Charlie what he missed, so an advert can never be handed to him as Staff's
+   * own words even when it answered too late to have said so at the time.
    */
   let wakeReadSeq = 0;
   let wakeReadInFlight: { seq: number; words: string; startedAt: number; p: Promise<{ read: WhoIsTalking | null; ms: number }> } | null = null;
   let wakeReadInHand: { words: string; read: WhoIsTalking | null; ms: number } | null = null;
-  /** Everything Echo has written of the turn in hand, which is what the reader is always asked about. */
+  /** Everything Echo has written of the turn in hand, which is what the judge is always asked about. */
   const wakeWordsOf = (line: string) => (openTurnPieces.length ? openTurnPieces.join(" ") : line);
-  /** The few lines the reader is SHOWN (not to be confused with the time window above). ONE builder,
-   *  so a read started early and the judgement made later are about the same words. */
+  /** The few lines Groq is SHOWN. */
   function whatTheReaderSees(line: string, fromAPiece: boolean): Array<{ who: string; text: string }> {
     const w = (getReceipt(room)?.transcript ?? []).slice(-4)
       .map((l) => ({ who: l.who === "Agent" ? "Agent" : "Clerk", text: l.text }));
     // A PIECE IS NOT ON THE RECORD YET (owner, 08-19 night). Echo writes the record when the whole
-    // sentence is joined, and the reader is shown the record's newest Staff line — so a piece has to
-    // be handed in as that newest line, or it would be asked about the sentence BEFORE this one and
-    // answer about the wrong words entirely.
+    // sentence is joined, so a piece has to be handed in as that newest line or it would be asked
+    // about the sentence BEFORE this one and answer about the wrong words entirely.
     if (fromAPiece) w.push({ who: "Clerk", text: wakeWordsOf(line) });
     return w;
   }
   function startTheWakeRead(why: string): void {
-    if (earsShutAtMs === 0 || ended) return;   // no wake decision can happen: there is nothing to read for
+    if (earsShutAtMs === 0 || ended) return;
     const words = wakeWordsOf("");
     if (!words.trim()) return;
     if (wakeReadInHand?.words === words || wakeReadInFlight?.words === words) return;   // read, or being read
@@ -1140,110 +1125,126 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const startedAt = Date.now();
     const p = readWhoIsTalking(whatTheReaderSees(words, true)).catch(() => ({ read: null, ms: Date.now() - startedAt }));
     wakeReadInFlight = { seq, words, startedAt, p };
-    log(`wake read: started early on "${words.slice(0, 40)}" (${why})`);
+    log(`wake read: started in the background on "${words.slice(0, 40)}" (${why})`);
     void p.then((r) => {
       if (seq !== wakeReadSeq) return;   // more of their sentence arrived, and a newer read owns the turn
       wakeReadInHand = { words, read: r.read, ms: r.ms };
       if (wakeReadInFlight?.seq === seq) wakeReadInFlight = null;
       log(`wake read: "${words.slice(0, 40)}" -> ${r.read ? (r.read.person ? "a person" : "the store played it") : "no answer"} in ${r.ms}ms`);
+      if (!r.read) return;
+      // WHAT IT CALLED A RECORDING IS STRUCK, however late it says so (check 410: it could not
+      // answer about the advert as it played, so nothing struck it, and when the real person came
+      // back the advert rode the pocket to Charlie as Staff's own words). This is the whole of what
+      // its answer is used for now: it never opens or closes his ears.
+      let struck = 0;
+      const strike = (t: string) => {
+        if (!t || playedAtUs.has(keyOf(t))) return;
+        playedAtUs.add(keyOf(t));
+        missedWhileClosed = missedWhileClosed.filter((m) => keyOf(m) !== keyOf(t));
+        struck++;
+      };
+      for (const played of r.read.played) strike(played);
+      if (!r.read.person) strike(words);
+      if (struck) {
+        emit(room, "unknown", "The store's own recording was struck out of what Charlie is handed",
+          { step: "read_struck", lines: struck, readMs: r.ms, why: r.read.why, notASound: true });
+      }
     });
   }
-  /** WORDS CAME BACK ON THE LINE. This is the ONLY door in from Echo now, and it decides NOTHING:
-   *  it feeds the reader and it opens the window. See the sequence above. */
+  /** THE SAME SOUND, HEARD AGAIN — asked ONLY of a stretch that has sound in it. Silence prints as a
+   *  row of zeros and so repeats itself all call long: without this, a quiet line 'proves' a recording
+   *  every time. Caught on the bench, in check 360's own scene: Staff announced a wait, the line went
+   *  quiet, and their answer afterwards was refused as the store playing something at us. Hold music
+   *  fills every slot, so the test it exists for is untouched. */
+  function theSameSoundAgain(): boolean {
+    const now = linePrint.print(4);
+    if (!now) return false;
+    const withSound = [...now].filter((c) => c !== "0").length;
+    if (withSound * 2 < now.length) return false;   // mostly quiet: nothing was really playing at us
+    return heardThisSoundBefore(linePrint.all(), now);
+  }
+  /** THE JUDGE'S INPUT, built from what this call has already written down. Plain data, no network. */
+  function whoIsBackNow(line: string): VoiceVerdict {
+    const mine = keyOf(line);
+    const theirs = (getReceipt(room)?.transcript ?? [])
+      .filter((l) => l.who !== "Agent" && String(l.text || "").trim() && keyOf(l.text) !== mine)
+      .map((l) => l.text);
+    const sec = (ms: number) => Math.round((ms - startMs) / 1000);
+    const firstOurs = ourVoice[0];
+    const lastOurs = ourVoice[ourVoice.length - 1];
+    return judgeVoice({
+      text: line,
+      atSec: sec(Date.now()),
+      knownMenuLines: theirs,
+      saidBefore: theirs,
+      soundHeardBefore: theSameSoundAgain(),
+      weSpokeAtSec: lastOurs ? sec(lastOurs.toMs) : undefined,
+      weAskedAtSec: firstOurs ? sec(firstOurs.toMs) : undefined,
+      product: String(ctx?.dynamicVars?.category || "").trim() || undefined,
+    });
+  }
+  /** The exact words already answered for, so one turn gets one answer and one row (owner, 08-21:
+   *  "one answer per turn, one row per turn"). Echo hands the same turn in twice — once as a piece,
+   *  once as the joined line — and the judge would give the identical answer to the identical words. */
+  let judgedWords = "";
+  /** WORDS CAME BACK ON THE LINE. The one door in from Echo, and it answers here and now. */
   function noteTheirWords(line: string, fromAPiece: boolean): void {
     if (earsShutAtMs === 0 || ended) return;
     if (saidGoingToCheck(line)) return;   // they are stepping away again, not coming back
-    wakeWindowLine = line;
-    // The reader is re-started on the newest words, so what is in hand when the window closes is
-    // about the whole of what they have said, never a prefix of it (430's fault).
     startTheWakeRead(fromAPiece ? "Echo wrote a piece of their turn" : "Echo wrote their line");
-    if (wakeWindowTimer) return;          // open already: a later piece never re-opens or extends it
-    wakeWindowOpenedAt = Date.now();
-    emit(room, "unknown", "A voice came back, so the window opened and nothing is decided until it closes",
-      { step: "wake_window", ms: WAKE_WINDOW_MS, text: String(line).slice(0, 160), notASound: true });
-    log(`wake window: open for ${WAKE_WINDOW_MS}ms on "${String(line).slice(0, 40)}"`);
-    wakeWindowTimer = setTimeout(() => { wakeWindowTimer = null; void judgeTheComeback(); }, WAKE_WINDOW_MS);
-  }
-
-  /** THE WINDOW CLOSED. One judgement, on everything written by then, and no waiting on anybody. */
-  async function judgeTheComeback(): Promise<void> {
-    if (earsShutAtMs === 0 || ended) return;
-    const openMs = Math.max(0, Date.now() - wakeWindowOpenedAt);
-    // EVERYTHING ECHO HAS WRITTEN OF THIS TURN, not the one piece that opened the window (430's
-    // fault: judging "Thanks for holding." alone is exactly how the advert passed for a person).
-    const line = wakeWindowLine;
+    // EVERYTHING ECHO HAS WRITTEN OF THIS TURN, never the one piece that arrived (430's fault:
+    // judging "Thanks for holding." alone is exactly how the advert passed for a person).
     const words = wakeWordsOf(line);
     if (!words.trim()) return;
-    // THE READER'S ANSWER IF IT HAS ONE, THE MEASURED SOUND IF IT DOES NOT. Never a wait: the window
-    // WAS the wait, and it has just closed. A read about FEWER words than are written now is not
-    // this turn's answer and is not used — that is 430 all over again.
-    const inHand = wakeReadInHand && wakeReadInHand.words === words ? wakeReadInHand : null;
-    const read: WhoIsTalking | null = inHand?.read ?? null;
-    const readMs = inHand?.ms ?? (wakeReadInFlight && wakeReadInFlight.words === words
-      ? Date.now() - wakeReadInFlight.startedAt : 0);
-    const how: "the reader" | "the measured sound" = read ? "the reader" : "the measured sound";
-    // WHICH OF THE TWO DECIDED, ON THE RECORD, EVERY TIME (his step 2). `openMs` is how long the
-    // window really stood open, `readMs` the reader's own round trip. Nobody has to reason about a
-    // race any more: the row says the reader answered, or it says the measured sound stood in.
+    if (words === judgedWords) return;    // the same words, already answered: same answer, no second row
+    judgedWords = words;
+    const v = whoIsBackNow(words);
     emit(room, "unknown",
-      !read ? "The window closed with no answer from the reader, so the measured sound decided"
-        : read.person ? "The reader says a real person is talking to us"
-          : "The reader says the store played that at us",
-      { step: "wake_read", answer: !read ? "no_answer" : read.person ? "person" : "recording",
-        text: String(line).slice(0, 160), decidedBy: how, windowMs: WAKE_WINDOW_MS, openMs, readMs,
-        ...(read ? { why: read.why, confidence: read.confidence } : {}), notASound: true });
-    if (read) {
-      // WHATEVER THE READER CALLED A RECORDING IN THAT WINDOW IS STRUCK, not only the newest line
-      // (check 410: the reader could not answer about the advert as it played, so nothing struck
-      // it, and when the real person came back the advert rode the pocket to him as Staff's own
-      // words). The wake is the one moment we are certain to be asking, so it is where this lands.
-      for (const p of read.played) {
-        if (!playedAtUs.has(keyOf(p))) {
-          playedAtUs.add(keyOf(p));
-          missedWhileClosed = missedWhileClosed.filter((m) => keyOf(m) !== keyOf(p));
-        }
+      v.who === "person" ? "A real person is talking to us, and it was decided the moment they were written down"
+        : v.who === "recording" ? "The store played that at us rather than saying it to us"
+          : "Nothing has proved who that is yet, so Charlie stays off and the next thing said is judged again",
+      { step: "wake_read", answer: v.who, text: String(words).slice(0, 160), decidedBy: "the judge",
+        why: v.why, notASound: true });
+    log(`wake: ${v.who} — ${v.why}`);
+    if (v.who === "recording") {
+      // A LINE THE STORE PLAYED AT US IS NEVER HIS TO ANSWER (owner, 08-19 evening; check 409, where
+      // the advert's own words were handed to him as "Staff's own words, answer them now"). It is
+      // struck out of the pocket and stays on the record, where Echo wrote it.
+      for (const t of [words, line]) {
+        playedAtUs.add(keyOf(t));
+        missedWhileClosed = missedWhileClosed.filter((m) => keyOf(m) !== keyOf(t));
       }
-      if (!read.person) {
-        // …AND IT IS NEVER HIS TO ANSWER, EITHER (owner's order, 08-19 evening; caught on check 409,
-        // where the advert's own words were handed to him as "Staff's own words, answer them now"
-        // when the real person came back, and he answered the jumble). A line the store played at
-        // us is struck out of the pocket that feeds him what he missed. It stays on the record.
-        playedAtUs.add(keyOf(line));
-        missedWhileClosed = missedWhileClosed.filter((m) => keyOf(m) !== keyOf(line));
-        emit(room, "unknown", "The store played that at us rather than saying it to us, so Charlie stayed off",
-          { step: "not_a_person", text: String(line).slice(0, 160), why: read.why, notASound: true });
-        log(`wake: the reader says that line was played at us (${read.why}) — he stays off and never hears it`);
-        // …AND IF HIS SESSION WAS ALREADY OPENING ON THE SOUND, IT GOES BACK DOWN (fix 3). The
-        // seconds it was up are counted and graded as awake on hold: that is the price of starting
-        // early, and the owner ruled it should be visible rather than hidden.
-        dropTheEarlySession("the words say the store played that at us");
-        return;
-      }
-      if (read.announcesWait) return;   // a person, telling us they are stepping away again
-    } else {
-      // The reader could not answer. Fall back to the sound rule, which is measured on his own
-      // recordings and refuses the advert there, rather than waking on words nobody judged.
-      if (!personSoundAtMs || Date.now() - personSoundAtMs > WAKE_TOGETHER_MS) return;
-      log("wake: no read came back, standing on the sound rule instead");
+      emit(room, "unknown", "The store played that at us rather than saying it to us, so Charlie stayed off",
+        { step: "not_a_person", text: String(words).slice(0, 160), why: v.why, notASound: true });
+      // …AND IF HIS SESSION WAS ALREADY OPENING ON THE SOUND, IT GOES BACK DOWN. The seconds it was
+      // up are counted and graded as awake on hold: that is the price of starting early.
+      dropTheEarlySession("the words say the store played that at us");
+      return;
+    }
+    if (v.who !== "person") {
+      // UNSURE MEANS WAIT, and waiting costs nothing: Charlie stays off and the next thing said is
+      // judged again. But it is not HIS TO ANSWER either, and that is the whole point of shutting
+      // his ears — check 409, where the advert's own words rode the pocket and were handed to him as
+      // "Staff's own words, answer them now" the moment the real person came back, and he answered
+      // the jumble. Until something proves a person, nothing said into the wait goes in the pocket.
+      // It stays on the record, where Echo wrote it and where the after-call reader names it.
+      for (const t of [words, line]) missedWhileClosed = missedWhileClosed.filter((m) => keyOf(m) !== keyOf(t));
+      return;
     }
     // A WAIT WE DECLARED OFF THE MUSIC ENDS HERE, on the same proof (owner, 08-19 evening). His
-    // session is closed and his meter is off through the music; the wake rule is what brings both
-    // back, so a recording talking at us can never do it. Every other kind of wait ends exactly as
-    // it always has, on the ear's own comeback.
+    // session is closed and his meter is off through the music; this is what brings both back, so a
+    // recording talking at us can never do it. Every other kind of wait ends on the ear's comeback.
     if (onHold) {
       if (!musicRecognisedHold) return;
       const pc = pendingComeback; pendingComeback = null;
-      log("the music wait ends: the sound and the words both say a person is back");
+      log("the music wait ends: the judge says a person is back");
       endHold(pc?.gapMs ?? Math.max(0, Date.now() - (earsShutAtMs || Date.now())), pc?.newPerson ?? false, pc?.backAtMs);
       return;
     }
     // THE WORDS THAT WOKE HIM ARE THE ONES HE ANSWERS. A line said while his ears were shut and
-    // REFUSED by this rule was the store's recording talking, and it is never handed to him: it
-    // stays on the record, where Echo wrote it and where the after-call reader names it, and that
-    // is the whole point of shutting his ears. Only the line that passes goes in the pocket, and
-    // opening his ears hands it straight over as their turn.
-    if (!alreadyHisToAnswer(line)) missedWhileClosed.push(line);
-    openCharliesEars("the sound and the words both say a person");
+    // refused by this rule was the store's recording talking, and it is never handed to him.
+    if (!alreadyHisToAnswer(words)) missedWhileClosed.push(words);
+    openCharliesEars("the judge says a person is talking to us");
   }
   const REJOIN_WORDLESS_MS = 4000;
   let wordlessRejoinTimer: NodeJS.Timeout | null = null;
@@ -1382,11 +1383,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // Their turn on its way to him: the pieces are written and the hand-over is in flight.
     if (reconnectFeed && hisEarsBackAtMs > 0 && Date.now() - hisEarsBackAtMs < REJOIN_WORDLESS_MS)
       return "their turn is being handed to him";
-    // The wake check deciding whether that voice is a person or the store's recording. It has its
-    // own ceiling already; a beat past it is added so a read that answers late is never cut off.
-    // The window is open, which is the whole of the wake decision now and has a fixed end.
-    if (earlyTurn && !earlyTurn.proved && wakeWindowTimer)
-      return "the wake check is deciding who is talking";
+    // GONE WITH THE WINDOW (owner, 08-22). The wake decision used to be a thing that took time, so
+    // his meter was held open across it. `judgeVoice` answers in the same instant the words land, so
+    // there is no longer any deciding for him to be billed through.
     // NOT ON THE LIST, AND IT WAS TRIED: "the recorded question has not been answered yet". Adding it
     // held his meter open through exactly the silence the drop exists to catch — the store saying
     // nothing after our question is a wait, and the engine has dropped him for it since 08-17.
@@ -4249,6 +4248,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           }
         }
       }
+      // THE SHAPE OF THE LINE, ON EVERY STORE FRAME AND BEFORE ANY BRANCH BELOW TAKES IT. This is
+      // the one thing the comeback judge cannot read off the record, and it is what tells hold music
+      // — and hold music with an advert talking over it — from a person: the music plays the same
+      // four seconds round again, a person never does. It has to be fed THROUGH the wait, which is
+      // exactly the stretch the branches below hand to `heldWords` instead. Our own voice coming back
+      // off the line is not the store's sound and would print as a repeat of itself, so it is left
+      // out on the same clock the echo gate uses.
+      if (Date.now() >= agentPlayingUntil + ECHO_TAIL_MS) linePrint.feed(b64);
       const echoWindow = Date.now() < agentPlayingUntil + ECHO_TAIL_MS;
       const suppress = echoWindow && frameEnergy(b64) < BARGE_THRESH;
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }

@@ -190,7 +190,8 @@ for (const [n, why] of RECORDS) {
   ok("3 the meter grades the same as it did", JSON.stringify(m) === JSON.stringify(gold.meter), m);
   ok("4 the cost is the same, and the buckets sum to it exactly",
     c.totalUsd === gold.cost.totalUsd && c.summed === c.totalUsd && c.buckets === gold.cost.buckets, c);
-  ok("5 the gap Staff stand through before he speaks", g === gold.gapMs, { gapMs: g, was: gold.gapMs });
+  ok(`5 the gap Staff stand through before he speaks: ${g == null ? "no comeback on this check" : `${g}ms`}`,
+    g === gold.gapMs, { gapMs: g, was: gold.gapMs });
 }
 
 if (WRITE) {

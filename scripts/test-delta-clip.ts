@@ -3924,38 +3924,27 @@ console.log("\n▶ CHECK 436'S FAULT: the reader is STARTED when there are words
   await sleep(310);
   const stillTalking = setInterval(() => { for (let i = 0; i < 12; i++) tw.media(frame(SPEECH(i))); }, 40);
   const startedReadsBefore = readsStarted;
+  const askedAt = Date.now();
   echoHeardPiece(room, "Yeah. We've got a few of those.");
   await sleep(250);
+  const decidedMs = Date.now() - askedAt;
   ok(readsStarted > startedReadsBefore,
-    "the reader is started on their first written words, before anybody asks the question");
-  ok(step("wake_read").length === 0, "…and 430's rule still holds: nothing is decided on it yet", step("wake_read").length);
-  // Their voice runs on while the reader works, exactly as a real sentence does.
-  await sleep(1400);
+    "Groq is still asked, in the background, on their first written words");
+  const row = step("wake_read")[0]?.detail as { answer?: string; decidedBy?: string; why?: string } | undefined;
+  // GROQ IS OFF THE CRITICAL PATH (owner's order, 08-22, "THE ONE CHANGE"). This stubbed reader takes
+  // 1700ms and it decides NOTHING: the answer is already on the record, and it is `judgeVoice`'s —
+  // the same plain function mapping uses, no network, answering in the same instant the words land.
+  // The old window is gone with the waiting, and so is the fault it could not fix: on checks 439,
+  // 442, 444 and 445 the window's own setTimeout fired up to 2.8 SECONDS late (444: openMs 4809 on a
+  // 2000 setting with a finished read sitting there from 1515ms).
+  ok(row?.decidedBy === "the judge", "the answer is the judge's, not a model's", row?.decidedBy);
+  ok(decidedMs < 400, "…and it lands in the same instant the words do, with no round trip in it", decidedMs);
+  ok(typeof row?.why === "string" && (row.why as string).length > 0,
+    "…and the record says in plain words which rule answered", row?.why);
   clearInterval(stillTalking);
-  const stopped = Date.now();
   quiet(tw, 60);
-  let decidedMs = -1;
-  for (let i = 0; i < 250 && decidedMs < 0; i++) {
-    if (step("wake_read").length >= 1) decidedMs = Date.now() - stopped;
-    else await sleep(20);
-  }
-  const row = step("wake_read")[0]?.detail as { answer?: string; decidedBy?: string; readMs?: number; openMs?: number; windowMs?: number } | undefined;
-  // WHY THE WINDOW MOVED FROM 1200 TO 2000, PROVED HERE. This stubbed reader takes 1700ms — slower
-  // than the old 1200ms window, so it used to lose and the measured sound rule stood in. That is
-  // exactly what cost check 441: its real read came back at 1201ms, ONE MILLISECOND outside, the
-  // sound rule decided, said person, and woke Charlie onto the store's advert. At 2000ms the whole
-  // measured spread of the reader (904-1601ms across checks 437/439/441/442) lands INSIDE, so a read
-  // this slow now decides and the record says so.
-  ok(row?.decidedBy === "the reader",
-    "a read slower than the OLD window still answers inside the new one, and the record says the reader decided",
-    row?.decidedBy);
-  ok(row?.windowMs === 2000, "…and the window is a fixed length, the same every time", row?.windowMs);
-  // Their voice ran 1400ms of the 2000ms window, so what is left of it after they stop is ~600ms.
-  ok(decidedMs >= 0 && decidedMs < 900,
-    "…so Staff wait out the rest of the window, not a reader's whole round trip", decidedMs);
-  ok(typeof row?.readMs === "number" && (row.readMs as number) > 0,
-    "…and the record says how long the reader really took, which nobody knew before", row?.readMs);
-  ok(evs().some((e) => e.kind === "hold_end"), "the wait ends on the same beat");
+  await sleep(200);
+  ok(evs().some((e) => e.kind === "hold_end"), "the wait ends on that same answer");
   ok(step("ears_back").length >= 1, "…and his ears come back");
   globalThis.fetch = beforeStub;
   echoListening(room, false);
