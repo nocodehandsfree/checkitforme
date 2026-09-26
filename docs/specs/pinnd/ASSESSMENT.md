@@ -32,3 +32,39 @@ Questions for you and her, in order of what unblocks me:
 4. Is camera to outfit to bag enough for the first show, or does the stylist chat need to be in it?
 5. Whose Ximilar account, and can we turn on Fashion Search on it?
 6. Who is the first person she wants to show it to (friend, investor, brand), so I polish that flow first?
+
+## Owner notes 2026-09-26 (after Kayla saw the prototype)
+
+Kayla's feedback: quick to make, a lot of work to make it special; add a sporty style (Alo, Vuori); bottom nav near the right thumb; could be one button you talk to, more magical and graphical; it has to come back to the brand.
+
+Recap the owner sent her, plus the open thoughts and the questions to answer before code:
+
+The prototype is a wireframe, not the product. What it does is start the real conversation: what matters most, what the must haves are, and what the customer's journey is. That journey does not start at the sign up page. It starts the first time she hears about PINND. A link to the website, a business card, a contact card sent phone to phone, a TikTok follow, and ideally the app download or the website saved to her home screen. Every one of those touchpoints should be seamless, worth something to her right away, and easy to share. That is where the user journey begins.
+
+There will be different customers with different needs, but one customer matters most. Who is she? How old is she? What does she do on the weekends? Where does she live and where is she from? What is her family like, her friends, her education? What does she read, what does she listen to, who influences her? A small group of girls like her, out of 350 million people, is what blows the brand up for everybody else. They are the fans already there when somebody famous cosigns it, which we are going to be able to do. But you need people willing to test it and talk about it first, and then talk about it even louder after somebody popular does.
+
+So when that girl finally opens the app, what is the first thing she does? Should there even be a create account page or a sign in? That is an extra step. Maybe we let people use the technology immediately, free, as much as they want, like the Google model. Then the money comes from advertising and big brand deals, which is probably where you want to go and could be mixed with a subscription, or from owning the data to make other products better. Or people use it free until they are hooked and cannot not have it, and then it costs money to keep more items in your closet. A monthly subscription through the App Store is easiest for people, but the website has to work exactly the same as the app and be just as good.
+
+Here is my point. If we do not know how we make money and we build the product for this set of women, later we have to change the experience on them when the chance to make money shows up. It is a lot easier to line things up now. Brand deals and advertising are cool because they expand your network in the industry, you want to work with all these high end brands, and eventually you want your own line, so you could put your own clothes in the app and show them to the brands you are doing deals with. Free is a lot easier to offer than a subscription. But a subscription is a lot easier to raise money on, because investors love recurring revenue and how it compounds.
+
+If you know where your values are, and where the line is that you are comfortable with, you can figure out the best way to make money. If the answer is advertisers, then your data collection, your privacy policy, and how you share that data all have to be rock solid, and you have to think about how ads look, because ads are ugly and this is a fashion app. That changes the user experience of the app. That is why I want to think about it now, and why I want you to walk me through the brand and the technology in your own words.
+
+WHAT WE SHOULD BE THINKING ABOUT
+
+The money question is really three product questions, and they can be decided before anyone writes code. One, is there a gate before the camera. Two, what is in the feed. Three, what does the paywall count. One read: no gate, the camera works the second the app opens, and the account is created the first time she saves something, the way Pinterest did it. The feed is already nothing but products, so an ad in PINND is a brand paying for a tile in the feed with a small sponsored label, never a banner, which means ads and the fashion look do not have to fight. And the thing people pay for is the closet, the saved looks, boards and back in stock alerts, because paying to keep your taste feels fair while paying per chat with a stylist feels like a meter.
+
+Your own line and brand deals are the same pipe as the catalog. Every product in PINND comes from a source, and your line is one more source, so nothing gets rebuilt when it arrives. The privacy policy can be a brand promise: your taste never leaves PINND, private by default. And the shortest distance from any touchpoint to the app is a shared look: one image with the pin mark, a link that opens as a web page with no app needed, and open in PINND on it. A business card is a QR code to a look. A TikTok is a look. A famous cosign is a screenshot of a look. Build that one object right and every channel uses it.
+
+Your two notes are both right and both cheap: sporty goes in the quiz, and Alo and Vuori go in the brands. The one button idea, where you talk to the app and it answers in pictures, is the stylist pulled to the front, and we can see it side by side with the current version in the next prototype.
+
+QUESTIONS FOR US TO ANSWER
+
+1. Who is the one girl? A name, an age, a city, what she wore yesterday, where she found it, and who she would text the look to. One paragraph.
+2. Where is the line: ads and brand deals, subscription, or both, and which comes first? This decides the sign up gate, the feed, and the paywall.
+3. If she pays, what does she pay for: the closet, stylist sessions, or something else?
+4. Does the camera work before she has an account?
+5. Which touchpoint will you actually use first: TikTok, a link, a business card? If TikTok, the web version of a shared look matters more than the App Store page.
+6. Who is the cosign, realistically, and what would they share? That tells us what the look card has to look like.
+7. Is your own line in the first version of the catalog, or later?
+8. The five brands for the demo catalog, with Alo and Vuori now on the list.
+9. What is the one thing in the prototype you would delete, and the one thing you would keep?
