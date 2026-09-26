@@ -1,0 +1,865 @@
+<title>PINND Prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap">
+<style>
+:root{
+  --esp:#2B1D16; --esp2:#3D2B22; --cream:#F3EBDF; --cream2:#EAE0D0; --paper:#FBF7F1;
+  --ink:#241913; --ink2:#6B5A4E; --line:#DDD2C2; --pin:#B58C6B; --ok:#4E6B4A; --sale:#8C3B2E;
+  --sand:#D9C8B1; --clay:#B58C6B; --stone:#C9C2B8; --denim:#5B6B7F; --black:#1C1917; --blush:#E5C9BE; --olive:#7A7A5C; --white:#F8F5F0;
+  --serif:"Cormorant Garamond",Georgia,"Times New Roman",serif; --sans:"Jost","Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:#E7DFD3;color:var(--ink);font-family:var(--sans);font-weight:300;-webkit-font-smoothing:antialiased;padding-inline:0}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,.tile:focus-visible{outline:2px solid var(--pin);outline-offset:2px}
+h1,h2,h3{margin:0;font-family:var(--serif);font-weight:500;text-wrap:balance}
+p{margin:0}
+.eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink2);font-weight:400}
+
+/* phone frame */
+.stage{height:100%;display:flex;align-items:center;justify-content:center;padding:24px 16px;gap:28px}
+.phone{position:relative;width:390px;height:820px;max-height:100%;background:var(--paper);border-radius:44px;box-shadow:0 30px 80px rgba(43,29,22,.35),0 0 0 10px #1c1613,0 0 0 12px #3a302a;overflow:hidden;display:flex;flex-direction:column}
+.notes{max-width:300px;color:var(--esp);font-size:14px;line-height:1.5}
+.notes h2{font-size:34px;margin-bottom:10px}
+.notes ol{padding-left:18px;margin:10px 0 0}
+.notes li{margin:6px 0}
+.notes .eyebrow{margin-bottom:6px}
+@media (max-width:760px){
+  .stage{padding:0;gap:0}
+  .phone{width:100%;height:100%;max-height:none;border-radius:0;box-shadow:none}
+  .notes{display:none}
+}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;background:var(--paper)}
+.screen.on{display:flex}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:96px}
+.pad{padding-inline:20px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px;min-height:58px}
+.topbar .wordmark{font-family:var(--serif);font-size:26px;letter-spacing:.02em;color:var(--esp)}
+.icon-btn{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;position:relative}
+.icon-btn svg{width:22px;height:22px;stroke:var(--esp);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.badge{position:absolute;top:4px;right:2px;min-width:18px;height:18px;border-radius:9px;background:var(--esp);color:var(--cream);font-size:11px;font-weight:500;display:grid;place-items:center;padding-inline:5px}
+.badge[hidden]{display:none}
+.back{display:flex;align-items:center;gap:6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--esp)}
+
+/* pin motif */
+.pinmark{display:inline-block;width:14px;height:22px;position:relative}
+.pinmark::before{content:"";position:absolute;left:50%;top:0;width:12px;height:12px;border-radius:50%;background:var(--pin);transform:translateX(-50%);box-shadow:inset -2px -2px 0 rgba(0,0,0,.18)}
+.pinmark::after{content:"";position:absolute;left:50%;top:11px;width:0;height:0;border-left:2px solid transparent;border-right:2px solid transparent;border-top:11px solid var(--sand);transform:translateX(-50%)}
+
+/* plates (stand-ins for product photography) */
+.plate{position:relative;overflow:hidden;background:var(--sand);display:grid;place-items:center;border-radius:4px}
+.plate::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 30% 10%,rgba(255,255,255,.35),transparent 60%),linear-gradient(180deg,transparent,rgba(0,0,0,.08))}
+.plate svg{width:62%;height:62%;position:relative;z-index:1}
+.plate.dark svg{fill:var(--cream);stroke:var(--cream)}
+.plate.light svg{fill:var(--esp);stroke:var(--esp)}
+.plate .tag{position:absolute;left:8px;top:8px;z-index:2;font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:rgba(251,247,241,.9);color:var(--esp);padding:4px 7px;border-radius:2px;font-weight:400}
+.plate .tag.sale{background:var(--sale);color:var(--cream)}
+.plate .save{position:absolute;right:8px;top:8px;z-index:2;width:30px;height:30px;border-radius:50%;background:rgba(251,247,241,.85);display:grid;place-items:center}
+.plate .save .pinmark{transform:scale(.7)}
+.plate .save.saved{background:var(--esp)}
+.plate .save.saved .pinmark::before{background:var(--cream)}
+
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;height:52px;border-radius:2px;background:var(--esp);color:var(--cream);font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-weight:400;width:100%}
+.btn.ghost{background:transparent;color:var(--esp);box-shadow:inset 0 0 0 1px var(--esp)}
+.btn.sm{height:40px;font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 14px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);font-size:13px;color:var(--ink);background:var(--paper)}
+.chip.on{background:var(--esp);color:var(--cream);box-shadow:none}
+.chip.small{padding:7px 12px;font-size:12px}
+
+/* bottom nav */
+.nav{position:absolute;left:0;right:0;bottom:0;height:84px;background:var(--paper);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);align-items:start;padding-top:10px;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+.nav button{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+.nav button.on{color:var(--esp)}
+.nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.nav .cam{margin-top:-30px}
+.nav .cam .ring{width:58px;height:58px;border-radius:50%;background:var(--esp);display:grid;place-items:center;box-shadow:0 8px 20px rgba(43,29,22,.3)}
+.nav .cam .ring svg{stroke:var(--cream);width:24px;height:24px}
+
+/* welcome */
+.welcome{background:var(--esp);color:var(--cream);justify-content:space-between;padding:0 28px 40px}
+.welcome .logo{margin-top:120px;display:flex;flex-direction:column;align-items:center}
+.appicon{width:118px;height:118px;border-radius:30px;background:#231610;display:grid;place-items:center;box-shadow:0 20px 50px rgba(0,0,0,.4);position:relative;overflow:hidden}
+.appicon::before{content:"";position:absolute;inset:0;background:radial-gradient(90% 70% at 20% 10%,rgba(255,255,255,.12),transparent 60%)}
+.appicon .word{font-family:var(--serif);font-size:44px;line-height:.86;color:#E8DCC7;text-align:center;position:relative}
+.appicon .word i{font-style:normal;display:inline-block;width:.42em;position:relative}
+.appicon .word i::before{content:"";position:absolute;left:50%;top:.1em;width:.32em;height:.32em;border-radius:50%;background:#C8B39A;transform:translateX(-50%)}
+.appicon .word i::after{content:"";position:absolute;left:50%;top:.36em;width:0;height:0;border-left:.075em solid transparent;border-right:.075em solid transparent;border-top:.58em solid #E8DCC7;transform:translateX(-50%)}
+.welcome h1{font-size:40px;margin-top:34px;letter-spacing:.04em;text-align:center}
+.welcome .tag{font-family:var(--serif);font-size:19px;letter-spacing:.14em;margin-top:10px;text-align:center;color:#CDBDA6}
+.welcome .btn{background:var(--cream);color:var(--esp)}
+.welcome .btn.ghost{background:transparent;color:var(--cream);box-shadow:inset 0 0 0 1px rgba(243,235,223,.5);margin-top:10px}
+.welcome .fine{font-size:12px;color:#A99783;text-align:center;margin-top:16px}
+
+/* quiz */
+.quiz h2{font-size:34px;line-height:1.05;margin:6px 0 6px}
+.quiz .sub{color:var(--ink2);font-size:14px;margin-bottom:18px}
+.steps{display:flex;gap:6px;margin:16px 0 0}
+.steps i{flex:1;height:2px;background:var(--line)}
+.steps i.on{background:var(--esp)}
+.moods{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mood{position:relative;aspect-ratio:3/4;border-radius:4px;overflow:hidden;text-align:left}
+.mood .plate{position:absolute;inset:0;border-radius:0}
+.mood .name{position:absolute;left:12px;bottom:12px;z-index:2;font-family:var(--serif);font-size:22px;color:var(--cream);text-shadow:0 1px 8px rgba(0,0,0,.4)}
+.mood .check{position:absolute;right:10px;top:10px;z-index:2;width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.8);display:grid;place-items:center}
+.mood.on .check{background:var(--cream);box-shadow:none}
+.mood.on .check::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--esp)}
+.sizes{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}
+.field label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);margin-bottom:8px}
+.seg{display:flex;box-shadow:inset 0 0 0 1px var(--line);border-radius:2px;overflow:hidden}
+.seg button{flex:1;height:40px;font-size:13px}
+.seg button.on{background:var(--esp);color:var(--cream)}
+.footer-cta{position:absolute;left:0;right:0;bottom:0;padding:14px 20px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(251,247,241,0),var(--paper) 35%)}
+.loader{align-items:center;justify-content:center;background:var(--cream)}
+.loader .pinmark{transform:scale(2.4);animation:drop 1.1s cubic-bezier(.2,.8,.2,1) infinite alternate}
+@keyframes drop{from{transform:scale(2.4) translateY(-14px)}to{transform:scale(2.4) translateY(0)}}
+.loader p{margin-top:34px;font-family:var(--serif);font-size:24px;color:var(--esp)}
+@media (prefers-reduced-motion:reduce){.loader .pinmark{animation:none}}
+
+/* home feed */
+.masonry{columns:2;column-gap:10px;padding-inline:14px}
+.tile{break-inside:avoid;margin-bottom:10px;display:block;width:100%;text-align:left}
+.tile .plate{width:100%}
+.tile .cap{padding:8px 2px 4px}
+.tile .cap b{display:block;font-weight:400;font-size:13px;color:var(--ink)}
+.tile .cap span{font-size:12px;color:var(--ink2)}
+.tile .cap .price{color:var(--ink);font-weight:400}
+.h-1{aspect-ratio:3/4}.h-2{aspect-ratio:4/5}.h-3{aspect-ratio:1/1}.h-4{aspect-ratio:3/5}
+.feedhead{padding:4px 20px 12px;display:flex;justify-content:space-between;align-items:end}
+.feedhead h2{font-size:30px;line-height:1}
+.feedhead .eyebrow{margin-bottom:6px}
+.editorial{margin:0 14px 10px;background:var(--esp);color:var(--cream);border-radius:4px;padding:18px;display:flex;justify-content:space-between;align-items:center;text-align:left;width:calc(100% - 28px)}
+.editorial h3{font-size:24px;line-height:1.05}
+.editorial p{font-size:12px;color:#CDBDA6;margin-top:4px}
+.editorial .go{width:38px;height:38px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(243,235,223,.5);display:grid;place-items:center}
+.editorial svg{width:16px;height:16px;stroke:var(--cream);fill:none;stroke-width:1.5}
+
+/* search */
+.searchbox{margin:6px 20px 14px;display:flex;align-items:center;gap:10px;height:48px;border-bottom:1px solid var(--esp);font-size:15px}
+.searchbox svg{width:18px;height:18px;stroke:var(--esp);fill:none;stroke-width:1.5}
+.searchbox input{flex:1;border:0;background:none;font:inherit;color:var(--ink);outline:0}
+.recent{padding-inline:20px}
+.recent button{display:block;width:100%;text-align:left;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px;display:flex;justify-content:space-between}
+.recent button span{color:var(--ink2);font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding-top:3px}
+
+/* camera */
+.camera{background:var(--black);color:var(--cream)}
+.camera .topbar .back{color:var(--cream)}
+.viewfinder{position:relative;margin:0 14px;aspect-ratio:3/4;border-radius:6px;overflow:hidden;background:var(--cream2)}
+.viewfinder .scene{position:absolute;inset:0}
+.viewfinder .scene svg{width:100%;height:100%}
+.scanline{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--pin),transparent);top:0;animation:scan 2.2s ease-in-out infinite;opacity:.9}
+@keyframes scan{0%{top:2%}50%{top:96%}100%{top:2%}}
+.viewfinder.done .scanline{display:none}
+.pin-dot{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0;transition:opacity .4s}
+.viewfinder.done .pin-dot{opacity:1}
+.pin-dot .pinmark{transform:scale(1.15);filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+.pin-dot .lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:rgba(36,25,19,.85);color:var(--cream);padding:4px 8px;border-radius:2px;white-space:nowrap}
+.pin-dot.on .lbl{background:var(--cream);color:var(--esp)}
+.camera .hint{text-align:center;font-size:13px;color:#B9AB9A;margin:16px 20px 0}
+.camera .hint b{color:var(--cream);font-weight:400}
+.found{display:flex;gap:8px;padding:14px 14px 0;overflow-x:auto}
+.found button{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(243,235,223,.35);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream)}
+.found button .sw{width:18px;height:18px;border-radius:50%}
+.found button.on{background:var(--cream);color:var(--esp);box-shadow:none}
+.camera .footer-cta{background:linear-gradient(180deg,rgba(28,25,23,0),var(--black) 35%)}
+.camera .btn{background:var(--cream);color:var(--esp)}
+.shutter{display:flex;justify-content:center;gap:34px;align-items:center;margin-top:10px}
+.shutter .ring{width:64px;height:64px;border-radius:50%;box-shadow:inset 0 0 0 3px var(--cream);display:grid;place-items:center}
+.shutter .ring i{width:50px;height:50px;border-radius:50%;background:var(--cream)}
+.shutter .side{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#B9AB9A;width:70px;text-align:center}
+
+/* match */
+.match-hero{margin:0 20px;display:flex;gap:14px;align-items:stretch}
+.match-hero .plate{width:120px;aspect-ratio:3/4;flex:0 0 auto}
+.match-hero .txt{flex:1;display:flex;flex-direction:column;justify-content:center}
+.conf{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:6px 10px;border-radius:2px;background:var(--cream2);color:var(--esp);align-self:flex-start}
+.conf.exact{background:var(--esp);color:var(--cream)}
+.conf i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.match-hero h2{font-size:26px;line-height:1.05;margin:10px 0 2px}
+.match-hero .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+.match-hero .price{font-size:17px;margin-top:8px}
+.section{padding:22px 20px 0}
+.section h3{font-family:var(--sans);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink2);font-weight:400;margin-bottom:12px;display:flex;justify-content:space-between}
+.row{display:flex;gap:10px;overflow-x:auto;padding-inline:20px;scroll-snap-type:x mandatory}
+.row .card{flex:0 0 130px;scroll-snap-align:start;text-align:left}
+.row .card .plate{aspect-ratio:3/4;width:100%}
+.card .cap{padding:8px 0 0}
+.card .cap b{display:block;font-weight:400;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
+.card .cap span{display:block;font-size:13px;color:var(--ink);margin-top:2px}
+.card .cap em{display:block;font-style:normal;font-size:13px;margin-top:2px}
+.soldout{position:absolute;inset:auto 0 0 0;z-index:2;background:rgba(36,25,19,.85);color:var(--cream);font-size:10px;letter-spacing:.16em;text-transform:uppercase;text-align:center;padding:6px}
+
+/* builder */
+.builder .topbar h2{font-size:20px}
+.dirs{display:flex;gap:6px;padding:4px 20px 10px}
+.dirs button{font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding:8px 12px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink2)}
+.dirs button.on{background:var(--esp);color:var(--cream);box-shadow:none}
+.spread{display:grid;grid-template-columns:1fr 128px;gap:12px;padding-inline:14px;align-items:start}
+.hero{position:sticky;top:0}
+.hero .plate{aspect-ratio:3/4;width:100%;border-radius:4px}
+.hero .cap{padding:10px 2px 0}
+.hero .cap b{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:400}
+.hero .cap span{display:block;font-family:var(--serif);font-size:22px;line-height:1.1;margin-top:2px}
+.hero .cap em{display:block;font-style:normal;margin-top:4px;font-size:14px}
+.hero .heropin{position:absolute;left:50%;top:-6px;transform:translateX(-50%) scale(1.3);z-index:3}
+.rail{display:flex;flex-direction:column;gap:18px}
+.rail h4{margin:0 0 8px;font-family:var(--sans);font-weight:400;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink2);display:flex;justify-content:space-between}
+.rail h4 button{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--pin)}
+.opt{display:flex;flex-direction:column;gap:8px}
+.opt .plate{aspect-ratio:1/1;width:100%;border-radius:4px}
+.opt .plate.picked{outline:2px solid var(--esp);outline-offset:2px}
+.opt .meta{display:flex;flex-direction:column;gap:2px}
+.opt .meta b{font-weight:400;font-size:11px;line-height:1.25;color:var(--ink)}
+.opt .meta span{font-size:11px;color:var(--ink2)}
+.opt .acts{display:flex;gap:6px}
+.opt .acts button{flex:1;height:28px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;box-shadow:inset 0 0 0 1px var(--line);border-radius:2px;color:var(--esp)}
+.opt .acts button.add{background:var(--esp);color:var(--cream);box-shadow:none;flex:0 0 28px;font-size:16px;line-height:1}
+.opt .acts button.add.in{background:var(--pin)}
+.opt.swapping .plate{animation:flip .38s ease}
+@keyframes flip{0%{opacity:1;transform:translateX(0)}45%{opacity:0;transform:translateX(12px)}55%{opacity:0;transform:translateX(-12px)}100%{opacity:1;transform:translateX(0)}}
+.railset{display:flex;flex-direction:column;gap:10px}
+.builder .footer-cta{display:flex;align-items:center;gap:12px}
+.total{flex:0 0 auto;display:flex;flex-direction:column;gap:2px}
+.total b{font-weight:400;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2)}
+.total span{font-size:20px;font-variant-numeric:tabular-nums}
+.builder .footer-cta .btn{flex:1}
+
+/* product sheet */
+.sheet-wrap{position:absolute;inset:0;z-index:20;display:none}
+.sheet-wrap.on{display:block}
+.sheet-wrap .dim{position:absolute;inset:0;background:rgba(36,25,19,.5)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:18px 18px 0 0;padding:14px 20px calc(24px + env(safe-area-inset-bottom,0px));max-height:80%;overflow-y:auto}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px}
+.sheet .plate{aspect-ratio:4/3;width:100%;margin-bottom:14px}
+.sheet h2{font-size:26px;line-height:1.05}
+.sheet .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);margin-bottom:6px}
+.sheet .price{font-size:18px;margin:8px 0 12px}
+.sheet .sizes-row{display:flex;gap:6px;margin-bottom:14px}
+.sheet .sizes-row button{width:44px;height:36px;box-shadow:inset 0 0 0 1px var(--line);font-size:13px;border-radius:2px}
+.sheet .sizes-row button.on{background:var(--esp);color:var(--cream)}
+.sheet .sizes-row button.x{color:var(--line);text-decoration:line-through}
+.sheet .note{font-size:13px;color:var(--ink2);line-height:1.5;margin-bottom:14px}
+.sheet .stack{display:flex;flex-direction:column;gap:8px}
+.sheet .retail{font-size:12px;color:var(--ink2);margin-top:10px;text-align:center}
+
+/* bag + checkout */
+.lines{padding-inline:20px}
+.line{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.line .plate{width:64px;aspect-ratio:3/4;flex:0 0 auto}
+.line .t{flex:1}
+.line .t b{display:block;font-weight:400;font-size:14px}
+.line .t span{display:block;font-size:12px;color:var(--ink2);margin-top:2px}
+.line .p{font-size:14px;font-variant-numeric:tabular-nums}
+.line .rm{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin-top:8px}
+.sum{padding:16px 20px 0;display:grid;grid-template-columns:1fr auto;row-gap:8px;font-size:14px;font-variant-numeric:tabular-nums}
+.sum .k{color:var(--ink2)}
+.sum .big{font-size:18px;padding-top:8px;border-top:1px solid var(--line);margin-top:4px}
+.empty{padding:60px 30px;text-align:center;color:var(--ink2)}
+.empty h2{font-size:28px;color:var(--ink);margin-bottom:8px}
+.form{padding-inline:20px;display:flex;flex-direction:column;gap:14px}
+.form .in{border-bottom:1px solid var(--line);padding:10px 0 8px}
+.form .in label{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);margin-bottom:4px}
+.form .in div{font-size:15px}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pay{display:flex;align-items:center;gap:12px;padding:14px;box-shadow:inset 0 0 0 1px var(--esp);border-radius:2px;font-size:14px}
+.pay .cc{width:34px;height:22px;border-radius:3px;background:var(--esp)}
+.retailers{padding:8px 20px 0;font-size:12px;color:var(--ink2);line-height:1.5}
+.confirm{align-items:center;text-align:center;padding:0 30px;justify-content:center;background:var(--cream)}
+.confirm .pinmark{transform:scale(2.4);margin-bottom:34px}
+.confirm h1{font-size:40px;line-height:1;color:var(--esp)}
+.confirm p{margin-top:12px;color:var(--ink2);font-size:14px;line-height:1.55;max-width:280px}
+.confirm .order{margin-top:24px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2)}
+.confirm .btn{margin-top:34px}
+
+/* stylist */
+.chat{padding:6px 20px 0;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:86%;font-size:15px;line-height:1.5}
+.msg.me{align-self:flex-end;background:var(--esp);color:var(--cream);padding:12px 16px;border-radius:18px 18px 4px 18px}
+.msg.ai{align-self:flex-start}
+.msg.ai .who{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);margin-bottom:6px}
+.looks{display:flex;gap:10px;overflow-x:auto;margin:0 -20px;padding:0 20px 4px;scroll-snap-type:x mandatory}
+.look{flex:0 0 200px;scroll-snap-align:start;border-radius:4px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line);text-align:left}
+.look .grid{display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:1fr 1fr;gap:2px;height:180px}
+.look .grid .plate{border-radius:0;height:100%}
+.look .grid .plate:first-child{grid-row:1/3}
+.look .c{padding:10px 12px 12px}
+.look .c b{display:block;font-family:var(--serif);font-size:19px;font-weight:500}
+.look .c span{display:block;font-size:12px;color:var(--ink2);margin-top:2px}
+.look .c em{display:block;font-style:normal;font-size:13px;margin-top:6px}
+.prompts{display:flex;gap:8px;overflow-x:auto;padding:12px 20px 0}
+.prompts button{flex:0 0 auto;padding:9px 14px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);font-size:13px}
+.composer{position:absolute;left:0;right:0;bottom:84px;padding:10px 20px;background:var(--paper);display:flex;gap:10px;align-items:center;border-top:1px solid var(--line)}
+.composer div{flex:1;height:44px;border-radius:22px;box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;padding-inline:16px;font-size:14px;color:var(--ink2)}
+.composer button{width:44px;height:44px;border-radius:50%;background:var(--esp);display:grid;place-items:center}
+.composer svg{width:18px;height:18px;stroke:var(--cream);fill:none;stroke-width:1.6}
+.sessions{margin:0 20px 10px;padding:10px 12px;background:var(--cream2);font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;border-radius:2px}
+.sessions b{font-weight:400;color:var(--esp)}
+
+/* profile */
+.prof{padding:6px 20px 16px;display:flex;gap:14px;align-items:center}
+.prof .av{width:58px;height:58px;border-radius:50%;background:var(--esp);color:var(--cream);display:grid;place-items:center;font-family:var(--serif);font-size:26px}
+.prof h2{font-size:26px;line-height:1}
+.prof p{font-size:12px;color:var(--ink2);margin-top:4px}
+.boards{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-inline:20px}
+.board{text-align:left}
+.board .grid{display:grid;grid-template-columns:1.3fr 1fr;grid-template-rows:1fr 1fr;gap:2px;aspect-ratio:4/3;border-radius:4px;overflow:hidden}
+.board .grid .plate{border-radius:0;height:100%}
+.board .grid .plate:first-child{grid-row:1/3}
+.board b{display:block;font-weight:400;font-size:14px;margin-top:8px}
+.board span{font-size:12px;color:var(--ink2)}
+.orders .line .t span.st{color:var(--ok)}
+.menu{padding-inline:20px}
+.menu button{width:100%;text-align:left;display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);font-size:15px}
+.menu button span{color:var(--ink2);font-size:13px}
+.plan{margin:0 20px;background:var(--esp);color:var(--cream);padding:16px;border-radius:4px;display:flex;justify-content:space-between;align-items:center;text-align:left;width:calc(100% - 40px)}
+.plan b{display:block;font-family:var(--serif);font-size:22px;font-weight:500}
+.plan span{font-size:12px;color:#CDBDA6}
+.plan em{font-style:normal;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:8px 12px;box-shadow:inset 0 0 0 1px rgba(243,235,223,.5);border-radius:2px}
+
+/* toast */
+.toast{position:absolute;left:50%;bottom:110px;transform:translateX(-50%) translateY(10px);background:var(--esp);color:var(--cream);padding:10px 16px;border-radius:999px;font-size:13px;display:flex;align-items:center;gap:10px;opacity:0;transition:all .25s;z-index:30;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast .pinmark{transform:scale(.7)}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="s-top" viewBox="0 0 80 80"><path d="M20 14 L31 8 Q40 14 49 8 L60 14 L68 30 L57 35 L55 70 L25 70 L23 35 L12 30 Z"/></symbol>
+    <symbol id="s-jeans" viewBox="0 0 80 80"><path d="M22 4 H58 L59 14 H21 Z"/><path d="M21 16 H59 L61 40 L57 76 H45 L40 36 L35 76 H23 L19 40 Z"/></symbol>
+    <symbol id="s-bag" viewBox="0 0 80 80"><path d="M27 32 C27 14 53 14 53 32" fill="none" stroke-width="3"/><rect x="16" y="30" width="48" height="36" rx="7"/></symbol>
+    <symbol id="s-loafer" viewBox="0 0 80 80"><path d="M8 54 C8 46 20 42 30 40 C40 38 46 30 56 31 C66 32 72 44 72 54 Z"/><rect x="8" y="54" width="64" height="5" rx="2"/></symbol>
+    <symbol id="s-sneaker" viewBox="0 0 80 80"><path d="M8 52 C10 44 22 44 30 40 C38 36 44 28 54 30 C64 32 70 44 72 52 Z"/><rect x="8" y="52" width="64" height="8" rx="3"/></symbol>
+    <symbol id="s-heel" viewBox="0 0 80 80"><path d="M10 52 L28 40 C40 32 54 30 66 34 L66 40 L46 47 L44 56 L38 56 L38 50 L18 60 Z"/></symbol>
+    <symbol id="s-sandal" viewBox="0 0 80 80"><path d="M8 54 C10 48 20 46 30 46 L54 40 L70 46 L70 54 Z"/><path d="M30 46 L44 30 M44 30 L54 40" fill="none" stroke-width="3"/><rect x="8" y="54" width="62" height="5" rx="2"/></symbol>
+    <symbol id="s-glasses" viewBox="0 0 80 80"><circle cx="24" cy="42" r="12"/><circle cx="56" cy="42" r="12"/><path d="M36 40 Q40 36 44 40 M12 40 L4 34 M68 40 L76 34" fill="none" stroke-width="3"/></symbol>
+    <symbol id="s-hoop" viewBox="0 0 80 80"><circle cx="40" cy="46" r="16" fill="none" stroke-width="4"/><circle cx="40" cy="26" r="4"/></symbol>
+    <symbol id="s-stud" viewBox="0 0 80 80"><circle cx="30" cy="40" r="8"/><circle cx="52" cy="40" r="8"/></symbol>
+    <symbol id="s-chain" viewBox="0 0 80 80"><path d="M14 26 C20 50 60 50 66 26" fill="none" stroke-width="4"/><circle cx="40" cy="50" r="5"/></symbol>
+    <symbol id="s-ring" viewBox="0 0 80 80"><circle cx="40" cy="44" r="14" fill="none" stroke-width="5"/><rect x="34" y="22" width="12" height="10" rx="2"/></symbol>
+    <symbol id="s-dress" viewBox="0 0 80 80"><path d="M30 6 H50 L54 24 L62 74 H18 L26 24 Z"/></symbol>
+    <symbol id="s-jacket" viewBox="0 0 80 80"><path d="M18 14 L32 8 L40 20 L48 8 L62 14 L72 34 L60 38 L58 72 L22 72 L20 38 L8 34 Z"/><path d="M40 20 L40 72" fill="none" stroke-width="2"/></symbol>
+    <symbol id="s-skirt" viewBox="0 0 80 80"><path d="M26 12 H54 L66 70 H14 Z"/></symbol>
+  </defs>
+</svg>
+
+<div class="stage">
+<div class="phone" id="phone">
+
+  <!-- WELCOME -->
+  <section class="screen welcome on" data-s="welcome">
+    <div class="logo">
+      <div class="appicon"><div class="word">p<i></i>n<br>nd</div></div>
+      <h1>PINND</h1>
+      <p class="tag">SEE IT. FIND IT. STYLE IT. SHOP IT.</p>
+    </div>
+    <div>
+      <button class="btn" onclick="go('quiz1')">Create account</button>
+      <button class="btn ghost" onclick="go('home')">I already have one</button>
+      <p class="fine">Email or phone. No social account needed.</p>
+    </div>
+  </section>
+
+  <!-- QUIZ 1 -->
+  <section class="screen quiz" data-s="quiz1">
+    <div class="topbar"><button class="back" onclick="go('welcome')">‹ Back</button><span class="eyebrow">Style quiz</span><span style="width:60px"></span></div>
+    <div class="scroll pad">
+      <div class="steps"><i class="on"></i><i></i><i></i></div>
+      <h2 style="margin-top:22px">What do you gravitate toward?</h2>
+      <p class="sub">Pick as many as you like. We learn the rest from how you use PINND.</p>
+      <div class="moods" id="moods"></div>
+    </div>
+    <div class="footer-cta"><button class="btn" onclick="go('quiz2')">Continue</button></div>
+  </section>
+
+  <!-- QUIZ 2 -->
+  <section class="screen quiz" data-s="quiz2">
+    <div class="topbar"><button class="back" onclick="go('quiz1')">‹ Back</button><span class="eyebrow">Style quiz</span><span style="width:60px"></span></div>
+    <div class="scroll pad">
+      <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
+      <h2 style="margin-top:22px">Your sizes, once.</h2>
+      <p class="sub">So every match and every look is already in your size.</p>
+      <div class="sizes">
+        <div class="field"><label>Sizing</label><div class="seg"><button class="on">US</button><button>UK</button><button>EU</button></div></div>
+        <div class="field"><label>Height</label><div class="seg"><button>5'2</button><button class="on">5'6</button><button>5'10</button></div></div>
+        <div class="field"><label>Tops</label><div class="seg"><button>XS</button><button class="on">S</button><button>M</button><button>L</button></div></div>
+        <div class="field"><label>Bottoms</label><div class="seg"><button>25</button><button>26</button><button class="on">27</button><button>28</button></div></div>
+        <div class="field"><label>Dresses</label><div class="seg"><button>0</button><button>2</button><button class="on">4</button><button>6</button></div></div>
+        <div class="field"><label>Shoes</label><div class="seg"><button>6</button><button>7</button><button class="on">8</button><button>9</button></div></div>
+      </div>
+      <div class="field" style="margin-top:18px"><label>Fit</label><div class="chips"><button class="chip">Fitted</button><button class="chip on">Relaxed</button><button class="chip on">Oversized</button></div></div>
+      <div class="field" style="margin-top:18px"><label>Jewelry</label><div class="chips"><button class="chip on">Gold</button><button class="chip">Silver</button><button class="chip">Mixed</button><button class="chip">Rarely</button></div></div>
+    </div>
+    <div class="footer-cta"><button class="btn" onclick="go('quiz3')">Continue</button></div>
+  </section>
+
+  <!-- QUIZ 3 -->
+  <section class="screen quiz" data-s="quiz3">
+    <div class="topbar"><button class="back" onclick="go('quiz2')">‹ Back</button><span class="eyebrow">Style quiz</span><span style="width:60px"></span></div>
+    <div class="scroll pad">
+      <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      <h2 style="margin-top:22px">Brands you already love.</h2>
+      <p class="sub">We start here and stay open to new ones.</p>
+      <div class="searchbox" style="margin-inline:0"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="brandq" placeholder="Search a brand"></div>
+      <div class="chips" id="brands"></div>
+      <div class="field" style="margin-top:26px"><label>Colors you avoid</label><div class="chips"><button class="chip small">Neon</button><button class="chip small on">Orange</button><button class="chip small">Purple</button><button class="chip small">Pastels</button><button class="chip small">Prints</button></div></div>
+    </div>
+    <div class="footer-cta"><button class="btn" onclick="buildFeed()">Build my PINND</button></div>
+  </section>
+
+  <!-- LOADER -->
+  <section class="screen loader" data-s="loader">
+    <span class="pinmark"></span>
+    <p id="loadmsg">Pinning your taste</p>
+  </section>
+
+  <!-- HOME -->
+  <section class="screen" data-s="home">
+    <div class="topbar"><span class="wordmark">pinnd</span><div style="display:flex"><button class="icon-btn" onclick="go('sales')" aria-label="Sales"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-8-8V4h8z"/><circle cx="8" cy="8" r="1.5"/></svg></button><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div></div>
+    <div class="scroll">
+      <div class="feedhead"><div><p class="eyebrow">Friday, for you</p><h2>Fall, quietly.</h2></div></div>
+      <button class="editorial" onclick="openCamera()"><div><h3>Saw something?</h3><p>Photo, screenshot or upload. PINND finds it.</p></div><span class="go"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+      <div class="masonry" id="feed"></div>
+    </div>
+    <div class="nav" data-nav></div>
+  </section>
+
+  <!-- SEARCH -->
+  <section class="screen" data-s="search">
+    <div class="topbar"><h2 style="font-size:28px">Search</h2><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div>
+    <div class="scroll">
+      <div class="searchbox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="black dress under $300"></div>
+      <div class="recent">
+        <p class="eyebrow" style="padding:6px 0 4px">Try saying it like you would to a friend</p>
+        <button onclick="fakeSearch('brown suede shoulder bag')">brown suede shoulder bag <span>Search</span></button>
+        <button onclick="fakeSearch('red wedding guest dress')">red wedding guest dress <span>Search</span></button>
+        <button onclick="fakeSearch('oversized vintage leather jacket')">oversized vintage leather jacket <span>Search</span></button>
+        <button onclick="fakeSearch('Aritzia on sale')">Aritzia on sale <span>Search</span></button>
+      </div>
+      <div class="section"><h3><span id="qtitle">Results</span><span id="qcount"></span></h3></div>
+      <div class="masonry" id="results"></div>
+    </div>
+    <div class="nav" data-nav></div>
+  </section>
+
+  <!-- CAMERA -->
+  <section class="screen camera" data-s="camera">
+    <div class="topbar"><button class="back" onclick="go('home')">‹ Close</button><span class="eyebrow" style="color:#B9AB9A">Find it</span><span style="width:60px"></span></div>
+    <div class="scroll">
+      <div class="viewfinder" id="vf">
+        <div class="scene" id="scene"></div>
+        <div class="scanline"></div>
+        <div id="pins"></div>
+      </div>
+      <p class="hint" id="camhint">Looking for pieces…</p>
+      <div class="found" id="found"></div>
+      <div class="shutter" id="shutter" hidden><span class="side">Upload</span><button class="ring" aria-label="Take photo"><i></i></button><span class="side">Screenshot</span></div>
+    </div>
+    <div class="footer-cta"><button class="btn" id="findbtn" onclick="go('match')" disabled style="opacity:.4">Find the jeans</button></div>
+  </section>
+
+  <!-- MATCH -->
+  <section class="screen" data-s="match">
+    <div class="topbar"><button class="back" onclick="go('camera')">‹ Photo</button><span class="eyebrow">Match</span><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div>
+    <div class="scroll">
+      <div class="match-hero">
+        <div class="plate" style="background:var(--denim)"><svg class="sil" style="fill:#DCE1E8"><use href="#s-jeans"/></svg></div>
+        <div class="txt">
+          <span class="conf"><i></i>Possible match · 84%</span>
+          <p class="brand" style="margin-top:12px">AGOLDE</p>
+          <h2>Riley High Rise Straight Crop</h2>
+          <p class="price">$198 · Revolve · in your size</p>
+        </div>
+      </div>
+      <div class="pad" style="padding-top:14px"><p style="font-size:13px;color:var(--ink2);line-height:1.5">We could not confirm the exact pair. The cut, wash and rise match closely. Here is the same jean secondhand, then the closest quality alternatives.</p></div>
+      <div class="pad" style="padding-top:14px;display:flex;gap:8px"><button class="btn sm" onclick="openBuilder()">Style it</button><button class="btn sm ghost" style="flex:0 0 120px" onclick="toast('Saved to Fall NYC')"><span class="pinmark" style="transform:scale(.7)"></span>Save</button></div>
+      <div class="section"><h3>Also the exact jean <span>Resale</span></h3></div>
+      <div class="row" id="resale"></div>
+      <div class="section"><h3>Closest matches <span>Quality first</span></h3></div>
+      <div class="row" id="similar"></div>
+      <div style="height:20px"></div>
+    </div>
+  </section>
+
+  <!-- BUILDER -->
+  <section class="screen builder" data-s="builder">
+    <div class="topbar"><button class="back" onclick="go('match')">‹ Match</button><h2>Style it</h2><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div>
+    <div class="dirs" id="dirs"></div>
+    <div class="scroll">
+      <div class="spread">
+        <div class="hero">
+          <span class="pinmark heropin"></span>
+          <div class="plate" style="background:var(--denim)"><svg style="fill:#DCE1E8"><use href="#s-jeans"/></svg></div>
+          <div class="cap"><b>Agolde</b><span>Riley High Rise Straight Crop</span><em>$198</em></div>
+          <div style="margin-top:12px"><button class="btn sm ghost" id="heroadd" onclick="addHero()">+ Add the jeans</button></div>
+        </div>
+        <div class="rail" id="rail"></div>
+      </div>
+      <div style="height:40px"></div>
+    </div>
+    <div class="footer-cta"><div class="total"><b>This look</b><span id="looktotal">$198</span></div><button class="btn" onclick="addAll()">Add all</button></div>
+  </section>
+
+  <!-- BAG -->
+  <section class="screen" data-s="bag">
+    <div class="topbar"><button class="back" onclick="back()">‹ Back</button><h2 style="font-size:26px">Bag</h2><span style="width:60px"></span></div>
+    <div class="scroll">
+      <div id="baglist"></div>
+    </div>
+    <div class="footer-cta" id="bagcta"><button class="btn" onclick="go('checkout')">Checkout</button></div>
+  </section>
+
+  <!-- CHECKOUT -->
+  <section class="screen" data-s="checkout">
+    <div class="topbar"><button class="back" onclick="go('bag')">‹ Bag</button><h2 style="font-size:26px">Checkout</h2><span style="width:60px"></span></div>
+    <div class="scroll">
+      <div class="section" style="padding-top:6px"><h3>Ship to</h3></div>
+      <div class="form">
+        <div class="in"><label>Name</label><div>Ava Coin</div></div>
+        <div class="in"><label>Address</label><div>118 Mercer St, Apt 4 · New York, NY 10012</div></div>
+        <div class="two"><div class="in"><label>Email</label><div>ava@pinnd.app</div></div><div class="in"><label>Phone</label><div>(917) 555 0142</div></div></div>
+      </div>
+      <div class="section"><h3>Pay with</h3></div>
+      <div class="pad"><div class="pay"><span class="cc"></span><span>Visa ending 4421</span><span style="margin-left:auto;font-size:12px;color:var(--ink2)">Change</span></div></div>
+      <div class="section"><h3>Summary</h3></div>
+      <div class="sum" id="cksum"></div>
+      <p class="retailers" id="ckret"></p>
+    </div>
+    <div class="footer-cta"><button class="btn" onclick="placeOrder()">Place order</button></div>
+  </section>
+
+  <!-- CONFIRM -->
+  <section class="screen confirm" data-s="confirm">
+    <span class="pinmark"></span>
+    <h1>Pinned down.</h1>
+    <p>One order, one confirmation. Each retailer ships to you and PINND tracks every piece in Profile.</p>
+    <p class="order">Order PN-20419</p>
+    <button class="btn" onclick="go('profile')">See my order</button>
+    <button class="btn ghost" style="margin-top:10px" onclick="go('home')">Keep looking</button>
+  </section>
+
+  <!-- STYLIST -->
+  <section class="screen" data-s="stylist">
+    <div class="topbar"><h2 style="font-size:28px">Stylist</h2><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div>
+    <div class="scroll" id="chatscroll" style="padding-bottom:160px">
+      <div class="sessions"><span>PINND+ · <b>5 of 7</b> styling sessions left this month</span><span>Upgrade</span></div>
+      <div class="chat" id="chat">
+        <div class="msg ai"><div class="who">Your stylist</div>Hi Ava. Tell me the occasion and I will pull looks in your size. Wedding, trip, dinner, or just a good Tuesday?</div>
+      </div>
+      <div class="prompts" id="prompts">
+        <button onclick="ask('wedding')">Wedding this weekend, blue dress</button>
+        <button onclick="ask('hamptons')">Hamptons for Memorial Day</button>
+        <button onclick="ask('chill')">Chill clothes for around the house</button>
+      </div>
+    </div>
+    <div class="composer"><div>Ask anything…</div><button aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+    <div class="nav" data-nav></div>
+  </section>
+
+  <!-- PROFILE -->
+  <section class="screen" data-s="profile">
+    <div class="topbar"><h2 style="font-size:28px">Profile</h2><button class="icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button></div>
+    <div class="scroll">
+      <div class="prof"><div class="av">A</div><div><h2>Ava</h2><p>Minimal · Clean · Vintage · gravitating toward espresso lately</p></div></div>
+      <button class="plan"><div><b>PINND+</b><span>7 styling sessions a month · $9.99</span></div><em>Manage</em></button>
+      <div class="section"><h3>Boards <span>Private</span></h3></div>
+      <div class="boards" id="boards"></div>
+      <div class="section"><h3>Orders</h3></div>
+      <div class="lines orders" id="orders"></div>
+      <div class="section"><h3>More</h3></div>
+      <div class="menu">
+        <button>Book a human stylist <span>30 min · $100</span></button>
+        <button>Notifications <span>Back in stock, price drops</span></button>
+        <button>Sizes and fit <span>US · S · 27 · 8</span></button>
+        <button>Returns <span>Start from any order</span></button>
+      </div>
+      <div style="height:20px"></div>
+    </div>
+    <div class="nav" data-nav></div>
+  </section>
+
+  <!-- SALES -->
+  <section class="screen" data-s="sales">
+    <div class="topbar"><button class="back" onclick="go('home')">‹ Home</button><h2 style="font-size:26px">Sales</h2><span style="width:60px"></span></div>
+    <div class="scroll">
+      <div class="pad"><p style="font-size:13px;color:var(--ink2);line-height:1.5">Your brands, your saved pieces, your size. Nothing else.</p></div>
+      <div class="masonry" id="salesfeed" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- PRODUCT SHEET -->
+  <div class="sheet-wrap" id="sheetwrap"><div class="dim" onclick="closeSheet()"></div><div class="sheet" id="sheet"></div></div>
+  <div class="toast" id="toast"><span class="pinmark"></span><span id="toastmsg"></span></div>
+</div>
+
+<aside class="notes">
+  <p class="eyebrow">Tap-through prototype</p>
+  <h2>PINND, before code.</h2>
+  <p>Every screen here is the look and the journey, not the product. The grey plates stand in for real photography. Try the main path:</p>
+  <ol>
+    <li>Create account, take the three quiz screens</li>
+    <li>Home feed, then the camera circle</li>
+    <li>Tap the pin on the jeans, then Find the jeans</li>
+    <li>Style it: swap pieces, add all</li>
+    <li>Bag, checkout, confirmation</li>
+  </ol>
+  <p style="margin-top:10px">Then Stylist and Profile from the bottom bar.</p>
+</aside>
+</div>
+
+<script>
+/* ---------- data (curated demo catalog, real brands, simulated stock) ---------- */
+const P = {
+  // tops
+  t1:{n:"Contour Squareneck Tee",b:"Aritzia",p:58,r:"Aritzia",s:"top",bg:"var(--white)",fg:"var(--esp)"},
+  t2:{n:"Ribbed Knit Top",b:"Zara",p:35.9,r:"Zara",s:"top",bg:"var(--esp)",fg:"var(--cream)"},
+  t3:{n:"Ellie Silk Blouse",b:"Lovers and Friends",p:148,r:"Revolve",s:"top",bg:"var(--blush)",fg:"var(--esp)"},
+  t4:{n:"Striped Cotton Tee",b:"Toteme",p:210,r:"Toteme",s:"top",bg:"var(--stone)",fg:"var(--esp)"},
+  t5:{n:"Cara Knit Top",b:"Reformation",p:128,r:"Reformation",s:"top",bg:"var(--olive)",fg:"var(--cream)"},
+  t6:{n:"Cropped Leather Jacket, 1998",b:"Vintage",p:340,r:"The RealReal",s:"jacket",bg:"var(--black)",fg:"var(--cream)"},
+  // shoes
+  s1:{n:"Loraine Bit Loafer",b:"Sam Edelman",p:150,r:"Nordstrom",s:"loafer",bg:"var(--cream2)",fg:"var(--esp)"},
+  s2:{n:"Samba OG",b:"Adidas",p:100,r:"Adidas",s:"sneaker",bg:"var(--white)",fg:"var(--black)"},
+  s3:{n:"Strappy Block Sandal",b:"Tony Bianco",p:190,r:"Revolve",s:"sandal",bg:"var(--sand)",fg:"var(--esp)"},
+  s4:{n:"Slingback Kitten Heel",b:"Zara",p:59.9,r:"Zara",s:"heel",bg:"var(--stone)",fg:"var(--black)"},
+  s5:{n:"Buckle Ballet Flat",b:"Ganni",p:325,r:"Ganni",s:"loafer",bg:"var(--esp)",fg:"var(--cream)"},
+  s6:{n:"Prada Kitten Heel, 38",b:"Prada",p:410,r:"The RealReal",s:"heel",bg:"var(--black)",fg:"var(--cream)"},
+  // bags
+  b1:{n:"Suede Shoulder Bag",b:"Zara",p:79.9,r:"Zara",s:"bag",bg:"var(--clay)",fg:"var(--cream)"},
+  b2:{n:"Mini Crescent Bag",b:"Wilfred",p:98,r:"Aritzia",s:"bag",bg:"var(--esp)",fg:"var(--cream)"},
+  b3:{n:"Numéro Dix",b:"Polène",p:450,r:"Polène",s:"bag",bg:"var(--sand)",fg:"var(--esp)"},
+  b4:{n:"Brooklyn Shoulder Bag",b:"Coach",p:395,r:"Coach",s:"bag",bg:"var(--black)",fg:"var(--cream)"},
+  b5:{n:"Vintage Coach, 90s",b:"Coach",p:85,r:"Depop",s:"bag",bg:"var(--clay)",fg:"var(--cream)"},
+  b6:{n:"Wally Shoulder Bag",b:"Staud",p:250,r:"Revolve",s:"bag",bg:"var(--white)",fg:"var(--esp)"},
+  // jewelry
+  j1:{n:"Bold Hoops, gold",b:"Mejuri",p:98,r:"Mejuri",s:"hoop",bg:"var(--cream2)",fg:"var(--clay)"},
+  j2:{n:"Pearl Studs",b:"Zara",p:17.9,r:"Zara",s:"stud",bg:"var(--white)",fg:"var(--stone)"},
+  j3:{n:"Constance Chain",b:"Jenny Bird",p:128,r:"Jenny Bird",s:"chain",bg:"var(--cream)",fg:"var(--clay)"},
+  j4:{n:"Snake Chain Necklace",b:"Missoma",p:155,r:"Missoma",s:"chain",bg:"var(--esp)",fg:"var(--sand)"},
+  j5:{n:"Vintage Gold Hoops",b:"Vintage",p:28,r:"Depop",s:"hoop",bg:"var(--sand)",fg:"var(--esp)"},
+  j6:{n:"Signet Ring",b:"Catbird",p:98,r:"Catbird",s:"ring",bg:"var(--white)",fg:"var(--clay)"},
+  // jeans and misc
+  hero:{n:"Riley High Rise Straight Crop",b:"Agolde",p:198,r:"Revolve",s:"jeans",bg:"var(--denim)",fg:"#DCE1E8"},
+  d1:{n:"Riley Straight, size 27",b:"Agolde",p:89,r:"The RealReal",s:"jeans",bg:"var(--denim)",fg:"#DCE1E8",exact:true},
+  d2:{n:"Riley Straight, size 26",b:"Agolde",p:110,r:"Depop",s:"jeans",bg:"var(--denim)",fg:"#DCE1E8",exact:true},
+  d3:{n:"Ribcage Straight Ankle",b:"Levi's",p:98,r:"Levi's",s:"jeans",bg:"#6B7B8E",fg:"#DCE1E8"},
+  d4:{n:"Arlo High Rise Straight",b:"Denim Forum",p:148,r:"Aritzia",s:"jeans",bg:"#4C5A6B",fg:"#DCE1E8"},
+  d5:{n:"Straight Fit Jeans",b:"Zara",p:49.9,r:"Zara",s:"jeans",bg:"#7A8797",fg:"#DCE1E8",sold:true},
+  x1:{n:"Wool Slip Dress",b:"Wilfred",p:168,r:"Aritzia",s:"dress",bg:"var(--esp)",fg:"var(--cream)"},
+  x2:{n:"Oval Sunglasses",b:"Celine",p:420,r:"Celine",s:"glasses",bg:"var(--sand)",fg:"var(--black)"},
+  x3:{n:"Midi Satin Skirt",b:"Zara",p:45.9,r:"Zara",s:"skirt",bg:"var(--blush)",fg:"var(--esp)"},
+  x4:{n:"Blue Silk Midi",b:"Reformation",p:298,r:"Reformation",s:"dress",bg:"#5B6B7F",fg:"#DCE1E8"},
+  x5:{n:"Cobalt Wrap Dress",b:"Amanda Uprichard",p:238,r:"Revolve",s:"dress",bg:"#3E4E6B",fg:"#DCE1E8"},
+  x6:{n:"Navy Column Gown",b:"Staud",p:395,r:"Revolve",s:"dress",bg:"#2A3446",fg:"#DCE1E8"},
+  x7:{n:"Terry Lounge Set",b:"Skims",p:118,r:"Skims",s:"top",bg:"var(--stone)",fg:"var(--white)"},
+  x8:{n:"Oversized Hoodie",b:"Aritzia",p:70,r:"Aritzia",s:"jacket",bg:"var(--cream2)",fg:"var(--esp)"},
+};
+const RAIL = {
+  TOPS:["t1","t2","t3","t4","t5","t6"],
+  SHOES:["s1","s2","s3","s4","s5","s6"],
+  BAGS:["b1","b2","b3","b4","b5","b6"],
+  JEWELRY:["j1","j2","j3","j4","j5","j6"],
+};
+const DIRS = {CLEAN:0,EDGY:1,CASUAL:2,DINNER:3};
+
+/* ---------- state ---------- */
+let bag = [];          // product ids
+let picked = {};       // cat -> product id currently shown
+let railIdx = {};      // cat -> index into RAIL list
+let heroIn = false;
+let history = [];
+let cur = "welcome";
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const money = n => "$" + n.toLocaleString("en-US",{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2});
+function plate(id, cls="", extra=""){
+  const p = P[id];
+  return `<div class="plate ${cls}" style="background:${p.bg}">${extra}<svg style="fill:${p.fg};stroke:${p.fg}"><use href="#s-${p.s}"/></svg>${p.sold?'<div class="soldout">Sold out</div>':""}</div>`;
+}
+function go(s){
+  if (s!==cur) history.push(cur);
+  document.querySelectorAll(".screen").forEach(e=>e.classList.toggle("on", e.dataset.s===s));
+  cur = s;
+  document.querySelectorAll(".nav").forEach(renderNav);
+  const sc = document.querySelector(`.screen[data-s="${s}"] .scroll`); if (sc) sc.scrollTop = 0;
+  if (s==="bag") renderBag();
+  if (s==="checkout") renderCheckout();
+}
+function back(){ go(history.pop() || "home"); }
+let toastT;
+function toast(m){ $("#toastmsg").textContent=m; $("#toast").classList.add("on"); clearTimeout(toastT); toastT=setTimeout(()=>$("#toast").classList.remove("on"),1600); }
+function updateBadge(){ document.querySelectorAll(".bagbadge").forEach(b=>{ b.textContent=bag.length; b.hidden = bag.length===0; }); }
+
+/* ---------- nav ---------- */
+const NAV = [
+  ["home","Home",'<path d="M4 11l8-7 8 7v9H4z"/>'],
+  ["search","Search",'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'],
+  ["camera","",'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'],
+  ["stylist","Stylist",'<path d="M12 3l2.2 5.4L20 9l-4.4 3.8L17 19l-5-3-5 3 1.4-6.2L4 9l5.8-.6z"/>'],
+  ["profile","Profile",'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'],
+];
+function renderNav(el){
+  el.innerHTML = NAV.map(([k,l,svg])=> k==="camera"
+    ? `<button class="cam" onclick="openCamera()" aria-label="Camera"><span class="ring"><svg viewBox="0 0 24 24">${svg}</svg></span></button>`
+    : `<button class="${cur===k?'on':''}" onclick="go('${k}')"><svg viewBox="0 0 24 24">${svg}</svg>${l}</button>`).join("");
+}
+
+/* ---------- quiz ---------- */
+const MOODS=[["Minimal","t4"],["Clean","t1"],["Vintage","t6"],["Edgy","s6"],["Streetwear","s2"],["Romantic","t3"],["Classic","b3"],["Model off duty","hero"]];
+$("#moods").innerHTML = MOODS.map(([n,id],i)=>`<button class="mood ${i<3?'on':''}" onclick="this.classList.toggle('on')">${plate(id)}<span class="name">${n}</span><span class="check"></span></button>`).join("");
+const BRANDS=["Aritzia","Zara","Revolve","The RealReal","Depop","Reformation","Toteme","Ganni","Mejuri","Polène","Levi's","Skims","Vintage","Designer"];
+$("#brands").innerHTML = BRANDS.map((b,i)=>`<button class="chip ${i<5?'on':''}" onclick="this.classList.toggle('on')">${b}</button>`).join("");
+function buildFeed(){
+  go("loader");
+  const msgs=["Pinning your taste","Reading your brands","Setting your sizes","Opening your feed"]; let i=0;
+  const t=setInterval(()=>{ i++; if(i<msgs.length){$("#loadmsg").textContent=msgs[i];} else {clearInterval(t); go("home");} },650);
+}
+
+/* ---------- home feed ---------- */
+const FEED = [
+  {id:"x1",h:"h-1",tag:"For you"},{id:"b1",h:"h-3"},{id:"hero",h:"h-4",tag:"Trending"},{id:"j1",h:"h-3"},
+  {id:"t6",h:"h-2",tag:"Vintage"},{id:"s1",h:"h-3"},{id:"x2",h:"h-3"},{id:"t3",h:"h-1",tag:"Sale",sale:true},
+  {id:"b3",h:"h-2"},{id:"s5",h:"h-3"},{id:"x3",h:"h-1"},{id:"j3",h:"h-3"},
+];
+function tile(f){
+  const p=P[f.id];
+  const tag = f.tag?`<span class="tag ${f.sale?'sale':''}">${f.tag}</span>`:"";
+  return `<button class="tile" onclick="openSheet('${f.id}')">${plate(f.id,f.h,tag+`<span class="save" onclick="event.stopPropagation();this.classList.toggle('saved');toast(this.classList.contains('saved')?'Pinned to Fall NYC':'Removed')"><span class="pinmark"></span></span>`)}<div class="cap"><b>${p.n}</b><span>${p.b} · </span><span class="price">${money(p.p)}</span></div></button>`;
+}
+$("#feed").innerHTML = FEED.map(tile).join("");
+$("#salesfeed").innerHTML = [{id:"t3",h:"h-1",tag:"30% off",sale:true},{id:"b2",h:"h-3",tag:"Saved · now $78",sale:true},{id:"s4",h:"h-3",tag:"Zara",sale:true},{id:"x8",h:"h-2",tag:"Aritzia",sale:true}].map(tile).join("");
+
+/* ---------- search ---------- */
+function fakeSearch(q){
+  $("#q").value=q;
+  const map={"brown suede shoulder bag":["b1","b5","b3","b2"],"red wedding guest dress":["x5","x4","x6","x1"],"oversized vintage leather jacket":["t6","x8","t4","t2"],"Aritzia on sale":["b2","x8","t1","d4"]};
+  const ids = map[q]||["b1","t1","s1","j1"];
+  $("#qtitle").textContent = `“${q}”`; $("#qcount").textContent = `${ids.length} of 212`;
+  $("#results").innerHTML = ids.map((id,i)=>tile({id,h:i%2?"h-3":"h-1"})).join("");
+}
+fakeSearch("brown suede shoulder bag");
+
+/* ---------- camera ---------- */
+const SCENE = `<svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="400" fill="#E9E1D4"/>
+  <rect width="300" height="400" fill="url(#g)"/>
+  <defs><radialGradient id="g" cx="25%" cy="10%" r="90%"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#000" stop-opacity=".08"/></radialGradient></defs>
+  <g fill="#3D2B22"><use href="#s-glasses" x="184" y="14" width="86" height="86"/></g>
+  <g fill="#F5F0E6" stroke="#F5F0E6"><use href="#s-top" x="40" y="40" width="150" height="150"/></g>
+  <g fill="#5B6B7F"><use href="#s-jeans" x="90" y="150" width="190" height="190"/></g>
+  <g fill="#B58C6B" stroke="#B58C6B"><use href="#s-bag" x="8" y="210" width="110" height="110"/></g>
+  <g fill="#2B1D16"><use href="#s-loafer" x="30" y="310" width="100" height="100"/></g>
+</svg>`;
+const PINS=[["Sunglasses",76,14,"#3D2B22"],["Top",38,20,"#F5F0E6"],["Jeans",62,50,"#5B6B7F"],["Bag",21,64,"#B58C6B"],["Shoes",27,88,"#2B1D16"]];
+function openCamera(){
+  go("camera");
+  const vf=$("#vf"); vf.classList.remove("done"); $("#scene").innerHTML=SCENE;
+  $("#pins").innerHTML = PINS.map(([l,x,y])=>`<button class="pin-dot" style="left:${x}%;top:${y}%" onclick="pickPin('${l}')"><span class="pinmark"></span><span class="lbl">${l}</span></button>`).join("");
+  $("#found").innerHTML=""; $("#camhint").innerHTML="Looking for pieces…"; $("#findbtn").disabled=true; $("#findbtn").style.opacity=.4; $("#findbtn").textContent="Find it";
+  setTimeout(()=>{ vf.classList.add("done"); $("#camhint").innerHTML="<b>5 pieces found.</b> Tap a pin to choose one.";
+    $("#found").innerHTML = PINS.map(([l,,,c])=>`<button onclick="pickPin('${l}')"><span class="sw" style="background:${c}"></span>${l}</button>`).join(""); },1500);
+}
+function pickPin(l){
+  document.querySelectorAll(".pin-dot").forEach(e=>e.classList.toggle("on", e.textContent.trim()===l));
+  document.querySelectorAll("#found button").forEach(e=>e.classList.toggle("on", e.textContent.trim()===l));
+  $("#findbtn").disabled=false; $("#findbtn").style.opacity=1; $("#findbtn").textContent="Find the "+l.toLowerCase();
+  $("#findbtn").onclick = ()=> l==="Jeans" ? go("match") : toast("Prototype: only the jeans are wired up");
+}
+
+/* ---------- match ---------- */
+function card(id){
+  const p=P[id];
+  const conf = p.exact ? `<span class="tag">Exact · resale</span>` : "";
+  return `<button class="card" onclick="openSheet('${id}')">${plate(id,"",conf)}<div class="cap"><b>${p.b}</b><span>${p.n}</span><em>${money(p.p)} · ${p.r}</em></div></button>`;
+}
+$("#resale").innerHTML=["d1","d2"].map(card).join("");
+$("#similar").innerHTML=["d4","d3","d5"].map(card).join("");
+
+/* ---------- builder ---------- */
+function openBuilder(){ go("builder"); renderRail(); }
+$("#dirs").innerHTML = Object.keys(DIRS).map((d,i)=>`<button class="${i?'':'on'}" onclick="setDir('${d}',this)">${d}</button>`).join("");
+function setDir(d,el){ document.querySelectorAll("#dirs button").forEach(b=>b.classList.toggle("on",b===el)); Object.keys(RAIL).forEach(c=>railIdx[c]=DIRS[d]); renderRail(); toast(d.charAt(0)+d.slice(1).toLowerCase()+" direction"); }
+function renderRail(){
+  const rail=$("#rail"); rail.innerHTML="";
+  Object.keys(RAIL).forEach(c=>{
+    if (railIdx[c]==null) railIdx[c]=0;
+    const id = RAIL[c][railIdx[c]%RAIL[c].length]; picked[c]=id; const p=P[id]; const inBag=bag.includes(id);
+    rail.insertAdjacentHTML("beforeend",`<div class="railset"><h4>${c}<button onclick="swap('${c}')">Swap</button></h4>
+      <div class="opt" id="opt-${c}">${plate(id)}<div class="meta"><b>${p.n}</b><span>${p.b} · ${money(p.p)}</span></div>
+      <div class="acts"><button onclick="openSheet('${id}')">View</button><button class="add ${inBag?'in':''}" onclick="toggleBag('${id}');renderRail()" aria-label="Add">${inBag?'✓':'+'}</button></div></div></div>`);
+  });
+  lookTotal();
+}
+function swap(c){
+  const el=$("#opt-"+c); el.classList.add("swapping");
+  setTimeout(()=>{ railIdx[c]=(railIdx[c]+1); renderRail(); },200);
+  toast("Noted. Less of that.");
+}
+function lookTotal(){ const t = P.hero.p + Object.values(picked).reduce((a,id)=>a+P[id].p,0); $("#looktotal").textContent=money(t); }
+function toggleBag(id){ const i=bag.indexOf(id); if(i>-1){bag.splice(i,1);} else {bag.push(id); toast("Added to bag");} updateBadge(); }
+function addHero(){ if(!bag.includes("hero")){bag.push("hero"); heroIn=true; toast("Jeans in your bag"); updateBadge();} $("#heroadd").textContent="✓ In your bag"; }
+function addAll(){ ["hero",...Object.values(picked)].forEach(id=>{ if(!bag.includes(id)) bag.push(id); }); updateBadge(); toast("Whole look added"); setTimeout(()=>go("bag"),500); }
+
+/* ---------- sheet ---------- */
+function openSheet(id){
+  const p=P[id];
+  const sizes = p.sold ? `<div class="sizes-row"><button class="x">25</button><button class="x">26</button><button class="x on">27</button><button class="x">28</button></div>` : `<div class="sizes-row"><button>XS</button><button class="on">S</button><button>M</button><button>L</button></div>`;
+  const cta = p.sold
+    ? `<div class="stack"><button class="btn" onclick="closeSheet();toast('We will tell you when 27 is back')">Notify me when available</button><button class="btn ghost" onclick="closeSheet();go('match')">Find secondhand</button></div>`
+    : `<div class="stack"><button class="btn" onclick="toggleBag('${id}');closeSheet();if(cur==='builder')renderRail()">Add to bag · ${money(p.p)}</button><button class="btn ghost" onclick="closeSheet();openBuilder()">Style it</button></div>`;
+  $("#sheet").innerHTML = `<div class="grab"></div>${plate(id)}<p class="brand">${p.b}${p.exact?' · exact item, resale':''}</p><h2>${p.n}</h2><p class="price">${money(p.p)}${p.sold?' · <span style="color:var(--sale)">Sold out in your size</span>':''}</p>${sizes}<p class="note">${p.sold?"We never hide a sold out match. Get a note the moment your size returns, or find the same piece secondhand.":"Ships from "+p.r+". Free returns in 30 days, started from your PINND order."}</p>${cta}<p class="retail">Sold by ${p.r} · checkout stays in PINND</p>`;
+  $("#sheetwrap").classList.add("on");
+}
+function closeSheet(){ $("#sheetwrap").classList.remove("on"); }
+
+/* ---------- bag + checkout ---------- */
+function renderBag(){
+  const el=$("#baglist");
+  if(!bag.length){ el.innerHTML=`<div class="empty"><h2>Nothing pinned yet.</h2><p>Find something, style it, add the whole look.</p><button class="btn ghost" style="margin-top:24px" onclick="openCamera()">Open camera</button></div>`; $("#bagcta").hidden=true; return; }
+  $("#bagcta").hidden=false;
+  const sub = bag.reduce((a,id)=>a+P[id].p,0);
+  el.innerHTML = `<div class="lines">${bag.map(id=>`<div class="line">${plate(id)}<div class="t"><b>${P[id].n}</b><span>${P[id].b} · size S · ${P[id].r}</span><button class="rm" onclick="toggleBag('${id}');renderBag()">Remove</button></div><div class="p">${money(P[id].p)}</div></div>`).join("")}</div>
+  <div class="sum"><span class="k">Subtotal</span><span>${money(sub)}</span><span class="k">Shipping</span><span>Free</span><span class="k">Estimated tax</span><span>${money(Math.round(sub*0.08875*100)/100)}</span><span class="big">Total</span><span class="big">${money(Math.round(sub*1.08875*100)/100)}</span></div>
+  <p class="retailers">One bag, one checkout. Pieces ship from ${[...new Set(bag.map(id=>P[id].r))].join(", ")}.</p>`;
+}
+function renderCheckout(){
+  const sub = bag.reduce((a,id)=>a+P[id].p,0); const tax=Math.round(sub*0.08875*100)/100;
+  $("#cksum").innerHTML=`<span class="k">${bag.length} item${bag.length===1?"":"s"}</span><span>${money(sub)}</span><span class="k">Shipping</span><span>Free</span><span class="k">Tax</span><span>${money(tax)}</span><span class="big">Total</span><span class="big">${money(Math.round((sub+tax)*100)/100)}</span>`;
+  $("#ckret").textContent = `Prototype: retailer checkout is simulated. In production PINND routes each piece to ${[...new Set(bag.map(id=>P[id].r))].join(", ")} behind one payment.`;
+}
+function placeOrder(){
+  const items=[...bag]; bag=[]; updateBadge();
+  $("#orders").innerHTML = `<div class="line">${plate(items[0]||"hero")}<div class="t"><b>Order PN-20419 · ${items.length} piece${items.length===1?"":"s"}</b><span class="st">Preparing shipment · arrives Tue</span><span>${[...new Set(items.map(id=>P[id].r))].join(", ")}</span></div></div>` + $("#orders").innerHTML;
+  go("confirm");
+}
+$("#orders").innerHTML = `<div class="line">${plate("s1")}<div class="t"><b>Order PN-20388 · 2 pieces</b><span class="st">Delivered Sep 19</span><span>Nordstrom, Zara · Return an item</span></div></div>`;
+
+/* ---------- boards ---------- */
+const BOARDS=[["Fall NYC",14,["hero","t6","s1"]],["Wedding guest",6,["x4","s3","j1"]],["Europe summer",22,["x3","b3","x2"]],["Dream closet",31,["b4","s6","t4"]]];
+$("#boards").innerHTML = BOARDS.map(([n,c,ids])=>`<button class="board" onclick="toast('Board: ${n}')"><div class="grid">${ids.map(id=>plate(id)).join("")}</div><b>${n}</b><span>${c} pins</span></button>`).join("");
+
+/* ---------- stylist ---------- */
+const LOOKS={
+  wedding:{ask:"Wedding this weekend. I need a really pretty blue dress.",q:"Love it. Garden or ballroom, and do we keep it under $300 like last time?",a:"Garden, and yes under $300.",r:"Three in your size 4, all blue, all under $300. Gold hoops from your board finish each one.",looks:[["x4","s3","j1","Silk midi, garden","Reformation · Tony Bianco · Mejuri",298+190+98],["x5","s4","j5","Cobalt wrap, easy","Amanda Uprichard · Zara · Depop",238+59.9+28],["x1","s5","j3","Slip, done quietly","Wilfred · Ganni · Jenny Bird",168+325+128]]},
+  hamptons:{ask:"I'm going to the Hamptons for Memorial Day. Cute red, white and blue outfits.",q:"Three days, mostly outdoors, high of 74. Beach day, a dinner and the parade?",a:"Yes, exactly that.",r:"Three looks, one for each day, built around pieces you already saved. Nothing louder than a stripe.",looks:[["t4","d3","s2","Parade, striped","Toteme · Levi's · Adidas",210+98+100],["x4","s3","b3","Dinner, blue silk","Reformation · Tony Bianco · Polène",298+190+450],["t1","x3","b1","Beach to lunch","Aritzia · Zara · Zara",58+45.9+79.9]]},
+  chill:{ask:"I want chill clothes I can wear around the house every day.",q:"",a:"",r:"Soft, relaxed, still you. All in your S, all under $120.",looks:[["x7","s2","j2","Terry set","Skims · Adidas · Zara",118+100+17.9],["x8","d3","s1","Hoodie, straight jean","Aritzia · Levi's · Sam Edelman",70+98+150],["t2","x3","s5","Knit and satin","Zara · Zara · Ganni",35.9+45.9+325]]},
+};
+function ask(k){
+  const L=LOOKS[k]; const chat=$("#chat"); $("#prompts").hidden=true;
+  const add=h=>{ chat.insertAdjacentHTML("beforeend",h); $("#chatscroll").scrollTop=1e6; };
+  add(`<div class="msg me">${L.ask}</div>`);
+  let d=600;
+  if(L.q){ setTimeout(()=>add(`<div class="msg ai"><div class="who">Your stylist</div>${L.q}</div>`),d); d+=1400; setTimeout(()=>add(`<div class="msg me">${L.a}</div>`),d); d+=700; }
+  setTimeout(()=>{
+    add(`<div class="msg ai"><div class="who">Your stylist</div>${L.r}</div>`);
+    add(`<div class="looks">${L.looks.map(([a,b,c,n,br,t])=>`<button class="look" onclick="lookToBag(['${a}','${b}','${c}'])"><div class="grid">${plate(a)}${plate(b)}${plate(c)}</div><div class="c"><b>${n}</b><span>${br}</span><em>${money(Math.round(t*100)/100)} · Add all</em></div></button>`).join("")}</div>`);
+    add(`<div class="prompts" style="padding-inline:0"><button onclick="toast('Three more coming')">Show me more</button><button onclick="toast('Noted, no heels')">No heels</button><button onclick="ask('chill')">Something chill instead</button></div>`);
+  },d);
+}
+function lookToBag(ids){ ids.forEach(id=>{ if(!bag.includes(id)) bag.push(id); }); updateBadge(); toast("Look added to bag"); }
+
+document.querySelectorAll(".nav").forEach(renderNav);
+</script>
