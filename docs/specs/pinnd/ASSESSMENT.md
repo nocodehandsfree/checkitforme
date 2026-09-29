@@ -88,3 +88,7 @@ Decision for the owner: which prototype is the base going forward.
 ## Kayla's feedback round 3 (2026-09-30), applied in v4
 
 Sign up screen with first name, email, phone, then a 6 digit code screen, before the quiz. Plain color names (black, white, brown, blue, green, pink, red, yellow, orange, purple). Home greeting 'Good morning, Ava.' with 'Tuned to Downtown Minimalist' replaces 'Fall, quietly.' Camera page rebuilt like Emmy's: espresso hero card with stacked Take a photo and Upload a photo, a Test photo card, More to try samples, bottom nav stays. Restock: Notify me arms a simulated restock that 6 seconds later clears sold out, adds the item to the bag, and shows an 'It's back' banner with Open bag.
+
+## Kai mode (2026-09-30), prototype v5
+
+Second interface in the same prototype: no tabs, one pin shaped button bottom right under the thumb. Tap: it drops with a bounce and a sheet slides up over the bottom half with Kai (head stylist of PINND): transcript, live wave while listening, mic button, and a type field. Kai navigates: find this (camera), style the jeans for dinner (builder + direction), add the whole look (bag), show my boards (profile), what's on sale, trending, wedding/Hamptons/chill (stylist looks), search phrases, and remembers 'no heels'. The app above stays touchable. Switch: welcome screen link, or Profile > Settings > Interface. Real Kai stack when the interface is blessed: Deepgram streaming for listening, Claude with tools for navigation, ElevenLabs for Kai's voice, all already wired in this repo's src/voice.
