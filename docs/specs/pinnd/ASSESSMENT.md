@@ -68,3 +68,9 @@ QUESTIONS FOR US TO ANSWER
 7. Is your own line in the first version of the catalog, or later?
 8. The five brands for the demo catalog, with Alo and Vuori now on the list.
 9. What is the one thing in the prototype you would delete, and the one thing you would keep?
+
+## Kayla's feedback on prototype v1 (2026-09-29) and what v2 changed
+
+Applied in v2: welcome without the icon; home tabs For you / Trending (what people are buying) / Sale; browse categories New brands, Going out, Work, Weekends, Travel, Sporty replacing the camera card; quiz now 4 steps with Sporty, colors loved and avoided, occasions, sustainable and vegan, location for weather, and 'change anytime in Profile'; camera opens on Take a photo / Upload a photo with her copy; profile reordered: Style ID with Change, then Style profile, Orders, Membership, Book a real stylist, then Boards, then Settings (size and fit, notifications, connected accounts Instagram and TikTok); sold out sheet takes email and size, promises the email and the automatic add to bag.
+
+Open: the rest of the profile follows Emmy's app, which we have not seen yet. Gap analysis once the owner shares the link.

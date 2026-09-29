@@ -80,7 +80,7 @@ p{margin:0}
 
 /* welcome */
 .welcome{background:var(--esp);color:var(--cream);justify-content:space-between;padding:0 28px 40px}
-.welcome .logo{margin-top:120px;display:flex;flex-direction:column;align-items:center}
+.welcome .logo{margin-top:230px;display:flex;flex-direction:column;align-items:center}
 .appicon{width:118px;height:118px;border-radius:30px;background:#231610;display:grid;place-items:center;box-shadow:0 20px 50px rgba(0,0,0,.4);position:relative;overflow:hidden}
 .appicon::before{content:"";position:absolute;inset:0;background:radial-gradient(90% 70% at 20% 10%,rgba(255,255,255,.12),transparent 60%)}
 .appicon .word{font-family:var(--serif);font-size:44px;line-height:.86;color:#E8DCC7;text-align:center;position:relative}
@@ -136,6 +136,12 @@ p{margin:0}
 .editorial .go{width:38px;height:38px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(243,235,223,.5);display:grid;place-items:center}
 .editorial svg{width:16px;height:16px;stroke:var(--cream);fill:none;stroke-width:1.5}
 
+.cats{display:flex;gap:8px;overflow-x:auto;padding:0 14px 14px;scroll-snap-type:x mandatory}
+.cats button{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px 8px 8px;border-radius:999px;background:var(--cream2);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--esp);scroll-snap-align:start}
+.cats button .plate{width:26px;height:26px;border-radius:50%}
+.cats button .plate svg{width:60%;height:60%}
+.trend{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin-top:3px}
+.trend i{width:5px;height:5px;border-radius:50%;background:var(--ok)}
 /* search */
 .searchbox{margin:6px 20px 14px;display:flex;align-items:center;gap:10px;height:48px;border-bottom:1px solid var(--esp);font-size:15px}
 .searchbox svg{width:18px;height:18px;stroke:var(--esp);fill:none;stroke-width:1.5}
@@ -158,6 +164,14 @@ p{margin:0}
 .pin-dot .pinmark{transform:scale(1.15);filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
 .pin-dot .lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:rgba(36,25,19,.85);color:var(--cream);padding:4px 8px;border-radius:2px;white-space:nowrap}
 .pin-dot.on .lbl{background:var(--cream);color:var(--esp)}
+.camstart{padding:60px 28px 0;text-align:center;display:flex;flex-direction:column;align-items:center}
+.camstart h2{font-size:38px;color:var(--cream)}
+.camstart p{color:#B9AB9A;font-size:14px;line-height:1.55;max-width:290px;margin-top:12px}
+.camstart .fine{font-size:11px;color:#7C6F63;margin-top:26px}
+.camopts{display:flex;gap:28px;margin-top:40px}
+.camopts button{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cream)}
+.camopts .ring{width:78px;height:78px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(243,235,223,.6);display:grid;place-items:center}
+.camopts .ring svg{width:28px;height:28px;stroke:var(--cream);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 .camera .hint{text-align:center;font-size:13px;color:#B9AB9A;margin:16px 20px 0}
 .camera .hint b{color:var(--cream);font-weight:400}
 .found{display:flex;gap:8px;padding:14px 14px 0;overflow-x:auto}
@@ -245,6 +259,11 @@ p{margin:0}
 .sheet .stack{display:flex;flex-direction:column;gap:8px}
 .sheet .retail{font-size:12px;color:var(--ink2);margin-top:10px;text-align:center}
 
+.restock{margin-bottom:14px}
+.restock label{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);margin-bottom:8px}
+.restock .two{display:grid;grid-template-columns:1fr 84px;gap:8px}
+.restock input,.restock select{height:44px;border:0;box-shadow:inset 0 0 0 1px var(--line);border-radius:2px;padding-inline:12px;font:inherit;color:var(--ink);background:var(--paper)}
+.restock p{font-size:12px;color:var(--ink2);line-height:1.5;margin-top:8px}
 /* bag + checkout */
 .lines{padding-inline:20px}
 .line{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -319,6 +338,13 @@ p{margin:0}
 .plan span{font-size:12px;color:#CDBDA6}
 .plan em{font-style:normal;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:8px 12px;box-shadow:inset 0 0 0 1px rgba(243,235,223,.5);border-radius:2px}
 
+.styleid{margin:0 20px;width:calc(100% - 40px);display:flex;gap:14px;align-items:center;text-align:left;padding:16px;background:var(--esp);color:var(--cream);border-radius:4px}
+.styleid .av{background:var(--cream);color:var(--esp);flex:0 0 58px}
+.styleid .t{flex:1;min-width:0}
+.styleid .t b{display:block;font-weight:400;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#CDBDA6}
+.styleid .t h2{font-size:20px;line-height:1.1;margin-top:4px;color:var(--cream)}
+.styleid .t p{font-size:11px;color:#CDBDA6;margin-top:4px}
+.styleid em{font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:8px 10px;box-shadow:inset 0 0 0 1px rgba(243,235,223,.5);border-radius:2px;flex:0 0 auto}
 /* toast */
 .toast{position:absolute;left:50%;bottom:110px;transform:translateX(-50%) translateY(10px);background:var(--esp);color:var(--cream);padding:10px 16px;border-radius:999px;font-size:13px;display:flex;align-items:center;gap:10px;opacity:0;transition:all .25s;z-index:30;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -351,8 +377,7 @@ p{margin:0}
   <!-- WELCOME -->
   <section class="screen welcome on" data-s="welcome">
     <div class="logo">
-      <div class="appicon"><div class="word">p<i></i>n<br>nd</div></div>
-      <h1>PINND</h1>
+      <h1 style="margin-top:0">PINND</h1>
       <p class="tag">SEE IT. FIND IT. STYLE IT. SHOP IT.</p>
     </div>
     <div>
@@ -366,7 +391,7 @@ p{margin:0}
   <section class="screen quiz" data-s="quiz1">
     <div class="topbar"><button class="back" onclick="go('welcome')">‹ Back</button><span class="eyebrow">Style quiz</span><span style="width:60px"></span></div>
     <div class="scroll pad">
-      <div class="steps"><i class="on"></i><i></i><i></i></div>
+      <div class="steps"><i class="on"></i><i></i><i></i><i></i></div>
       <h2 style="margin-top:22px">What do you gravitate toward?</h2>
       <p class="sub">Pick as many as you like. We learn the rest from how you use PINND.</p>
       <div class="moods" id="moods"></div>
@@ -378,7 +403,7 @@ p{margin:0}
   <section class="screen quiz" data-s="quiz2">
     <div class="topbar"><button class="back" onclick="go('quiz1')">‹ Back</button><span class="eyebrow">Style quiz</span><span style="width:60px"></span></div>
     <div class="scroll pad">
-      <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>
       <h2 style="margin-top:22px">Your sizes, once.</h2>
       <p class="sub">So every match and every look is already in your size.</p>
       <div class="sizes">
@@ -392,19 +417,35 @@ p{margin:0}
       <div class="field" style="margin-top:18px"><label>Fit</label><div class="chips"><button class="chip">Fitted</button><button class="chip on">Relaxed</button><button class="chip on">Oversized</button></div></div>
       <div class="field" style="margin-top:18px"><label>Jewelry</label><div class="chips"><button class="chip on">Gold</button><button class="chip">Silver</button><button class="chip">Mixed</button><button class="chip">Rarely</button></div></div>
     </div>
+    <div class="footer-cta"><button class="btn" onclick="go('quiz2b')">Continue</button></div>
+  </section>
+
+  <!-- QUIZ 2b: colors, occasions, values -->
+  <section class="screen quiz" data-s="quiz2b">
+    <div class="topbar"><button class="back" onclick="go('quiz2')">‹ Back</button><span class="eyebrow">Style quiz</span><span style="width:60px"></span></div>
+    <div class="scroll pad">
+      <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+      <h2 style="margin-top:22px">Colors and occasions.</h2>
+      <p class="sub">What you shop for most, and what you never want to see.</p>
+      <div class="field"><label>Colors you love</label><div class="chips" id="colorsLove"></div></div>
+      <div class="field" style="margin-top:18px"><label>Colors you avoid</label><div class="chips" id="colorsAvoid"></div></div>
+      <div class="field" style="margin-top:18px"><label>What you shop for</label><div class="chips"><button class="chip on" onclick="this.classList.toggle('on')">Going out</button><button class="chip on" onclick="this.classList.toggle('on')">Work</button><button class="chip on" onclick="this.classList.toggle('on')">Weekends</button><button class="chip" onclick="this.classList.toggle('on')">Travel</button><button class="chip" onclick="this.classList.toggle('on')">Events</button><button class="chip" onclick="this.classList.toggle('on')">Gym</button><button class="chip" onclick="this.classList.toggle('on')">School</button></div></div>
+      <div class="field" style="margin-top:18px"><label>What matters to you</label><div class="chips"><button class="chip" onclick="this.classList.toggle('on')">Sustainable</button><button class="chip" onclick="this.classList.toggle('on')">Vegan</button><button class="chip on" onclick="this.classList.toggle('on')">Secondhand is fine</button><button class="chip" onclick="this.classList.toggle('on')">Small brands</button></div></div>
+    </div>
     <div class="footer-cta"><button class="btn" onclick="go('quiz3')">Continue</button></div>
   </section>
 
   <!-- QUIZ 3 -->
   <section class="screen quiz" data-s="quiz3">
-    <div class="topbar"><button class="back" onclick="go('quiz2')">‹ Back</button><span class="eyebrow">Style quiz</span><span style="width:60px"></span></div>
+    <div class="topbar"><button class="back" onclick="go('quiz2b')">‹ Back</button><span class="eyebrow">Style quiz</span><span style="width:60px"></span></div>
     <div class="scroll pad">
-      <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
       <h2 style="margin-top:22px">Brands you already love.</h2>
       <p class="sub">We start here and stay open to new ones.</p>
       <div class="searchbox" style="margin-inline:0"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="brandq" placeholder="Search a brand"></div>
       <div class="chips" id="brands"></div>
-      <div class="field" style="margin-top:26px"><label>Colors you avoid</label><div class="chips"><button class="chip small">Neon</button><button class="chip small on">Orange</button><button class="chip small">Purple</button><button class="chip small">Pastels</button><button class="chip small">Prints</button></div></div>
+      <div class="field" style="margin-top:26px"><label>Where you live</label><div class="searchbox" style="margin:0"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.3-6-10a6 6 0 0112 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg><input id="cityq" value="New York, NY"></div><p class="sub" style="margin:8px 0 0">So looks match the weather where you are. Fall in New York, 58° this week.</p></div>
+      <p class="sub" style="margin-top:22px">You can change any of these answers anytime in Profile.</p>
     </div>
     <div class="footer-cta"><button class="btn" onclick="buildFeed()">Build my PINND</button></div>
   </section>
@@ -417,10 +458,11 @@ p{margin:0}
 
   <!-- HOME -->
   <section class="screen" data-s="home">
-    <div class="topbar"><span class="wordmark">pinnd</span><div style="display:flex"><button class="icon-btn" onclick="go('sales')" aria-label="Sales"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-8-8V4h8z"/><circle cx="8" cy="8" r="1.5"/></svg></button><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div></div>
+    <div class="topbar"><span class="wordmark">pinnd</span><div style="display:flex"><button class="icon-btn" onclick="homeTab('sale',document.querySelectorAll('#hometabs button')[2])" aria-label="Sales"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-8-8V4h8z"/><circle cx="8" cy="8" r="1.5"/></svg></button><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div></div>
     <div class="scroll">
-      <div class="feedhead"><div><p class="eyebrow">Friday, for you</p><h2>Fall, quietly.</h2></div></div>
-      <button class="editorial" onclick="openCamera()"><div><h3>Saw something?</h3><p>Photo, screenshot or upload. PINND finds it.</p></div><span class="go"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+      <div class="dirs" id="hometabs" style="padding-top:0"><button class="on" onclick="homeTab('foryou',this)">For you</button><button onclick="homeTab('trending',this)">Trending</button><button onclick="homeTab('sale',this)">Sale</button></div>
+      <div class="feedhead"><div><p class="eyebrow" id="feedeyebrow">Monday, for you</p><h2 id="feedtitle">Fall, quietly.</h2></div></div>
+      <div class="cats" id="cats"></div>
       <div class="masonry" id="feed"></div>
     </div>
     <div class="nav" data-nav></div>
@@ -448,12 +490,21 @@ p{margin:0}
   <section class="screen camera" data-s="camera">
     <div class="topbar"><button class="back" onclick="go('home')">‹ Close</button><span class="eyebrow" style="color:#B9AB9A">Find it</span><span style="width:60px"></span></div>
     <div class="scroll">
-      <div class="viewfinder" id="vf">
+      <div class="camstart" id="camstart">
+        <h2>See it. Find it.</h2>
+        <p>Snap a photo of something you spot on someone, upload a screenshot from your feed, or choose any photo.</p>
+        <div class="camopts">
+          <button onclick="startScan()"><span class="ring"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>Take a photo</button>
+          <button onclick="startScan()"><span class="ring"><svg viewBox="0 0 24 24"><path d="M4 16v3h16v-3M12 4v11M7 9l5-5 5 5"/></svg></span>Upload a photo</button>
+        </div>
+        <p class="fine">Prototype: either button opens a sample photo.</p>
+      </div>
+      <div class="viewfinder" id="vf" hidden>
         <div class="scene" id="scene"></div>
         <div class="scanline"></div>
         <div id="pins"></div>
       </div>
-      <p class="hint" id="camhint">Looking for pieces…</p>
+      <p class="hint" id="camhint" hidden>Looking for pieces…</p>
       <div class="found" id="found"></div>
       <div class="shutter" id="shutter" hidden><span class="side">Upload</span><button class="ring" aria-label="Take photo"><i></i></button><span class="side">Screenshot</span></div>
     </div>
@@ -562,18 +613,23 @@ p{margin:0}
   <section class="screen" data-s="profile">
     <div class="topbar"><h2 style="font-size:28px">Profile</h2><button class="icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button></div>
     <div class="scroll">
-      <div class="prof"><div class="av">A</div><div><h2>Ava</h2><p>Minimal · Clean · Vintage · gravitating toward espresso lately</p></div></div>
-      <button class="plan"><div><b>PINND+</b><span>7 styling sessions a month · $9.99</span></div><em>Manage</em></button>
+      <button class="styleid" onclick="toast('Retake the quiz or edit any answer')"><div class="av">A</div><div class="t"><b>Style ID</b><h2>Clean Minimal, with a vintage edge</h2><p>Minimal · Clean · Vintage · Sporty · Gold</p></div><em>Change</em></button>
+      <div class="menu" style="margin-top:6px">
+        <button onclick="go('quiz1')">Style profile <span>Sizes, colors, brands, occasions</span></button>
+        <button onclick="toast('Orders')">Orders <span>1 on the way</span></button>
+        <button onclick="toast('Membership')">Membership <span>PINND+ · $9.99 a month</span></button>
+        <button onclick="toast('Booking preview')">Book a real stylist <span>30 min · $100</span></button>
+      </div>
       <div class="section"><h3>Boards <span>Private</span></h3></div>
       <div class="boards" id="boards"></div>
       <div class="section"><h3>Orders</h3></div>
       <div class="lines orders" id="orders"></div>
-      <div class="section"><h3>More</h3></div>
+      <div class="section"><h3>Settings</h3></div>
       <div class="menu">
-        <button>Book a human stylist <span>30 min · $100</span></button>
+        <button>Size and fit <span>US · S · 27 · 8</span></button>
         <button>Notifications <span>Back in stock, price drops</span></button>
-        <button>Sizes and fit <span>US · S · 27 · 8</span></button>
-        <button>Returns <span>Start from any order</span></button>
+        <button>Connected accounts <span>Instagram · TikTok</span></button>
+        <button>Account <span>Email, phone, privacy</span></button>
       </div>
       <div style="height:20px"></div>
     </div>
@@ -600,8 +656,8 @@ p{margin:0}
   <p>Every screen here is the look and the journey, not the product. The grey plates stand in for real photography. Try the main path:</p>
   <ol>
     <li>Create account, take the three quiz screens</li>
-    <li>Home feed, then the camera circle</li>
-    <li>Tap the pin on the jeans, then Find the jeans</li>
+    <li>Home feed: For you, Trending, Sale, then the camera circle</li>
+    <li>Take a photo, tap the pin on the jeans, then Find the jeans</li>
     <li>Style it: swap pieces, add all</li>
     <li>Bag, checkout, confirmation</li>
   </ol>
@@ -708,9 +764,13 @@ function renderNav(el){
 }
 
 /* ---------- quiz ---------- */
-const MOODS=[["Minimal","t4"],["Clean","t1"],["Vintage","t6"],["Edgy","s6"],["Streetwear","s2"],["Romantic","t3"],["Classic","b3"],["Model off duty","hero"]];
+const MOODS=[["Minimal","t4"],["Clean","t1"],["Vintage","t6"],["Sporty","x7"],["Edgy","s6"],["Streetwear","s2"],["Romantic","t3"],["Classic","b3"],["Model off duty","hero"],["Y2K","x3"]];
+const COLORS=[["Black","#1C1917"],["Cream","#F3EBDF"],["Espresso","#2B1D16"],["Denim","#5B6B7F"],["Olive","#7A7A5C"],["Blush","#E5C9BE"],["Red","#8C3B2E"],["Neon","#C6FF3D"],["Orange","#E07A2F"],["Purple","#6F4FA3"]];
+const colorChip=(n,c,on)=>`<button class="chip small ${on?'on':''}" onclick="this.classList.toggle('on')"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${c};box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);vertical-align:-1px;margin-right:7px"></span>${n}</button>`;
+document.getElementById("colorsLove").innerHTML = COLORS.map(([n,c],i)=>colorChip(n,c,i<4)).join("");
+document.getElementById("colorsAvoid").innerHTML = COLORS.map(([n,c],i)=>colorChip(n,c,i>=7)).join("");
 $("#moods").innerHTML = MOODS.map(([n,id],i)=>`<button class="mood ${i<3?'on':''}" onclick="this.classList.toggle('on')">${plate(id)}<span class="name">${n}</span><span class="check"></span></button>`).join("");
-const BRANDS=["Aritzia","Zara","Revolve","The RealReal","Depop","Reformation","Toteme","Ganni","Mejuri","Polène","Levi's","Skims","Vintage","Designer"];
+const BRANDS=["Aritzia","Zara","Revolve","Alo","Vuori","The RealReal","Depop","Reformation","Toteme","Ganni","Mejuri","Polène","Levi's","Skims","Vintage","Designer"];
 $("#brands").innerHTML = BRANDS.map((b,i)=>`<button class="chip ${i<5?'on':''}" onclick="this.classList.toggle('on')">${b}</button>`).join("");
 function buildFeed(){
   go("loader");
@@ -729,13 +789,26 @@ function tile(f){
   const tag = f.tag?`<span class="tag ${f.sale?'sale':''}">${f.tag}</span>`:"";
   return `<button class="tile" onclick="openSheet('${f.id}')">${plate(f.id,f.h,tag+`<span class="save" onclick="event.stopPropagation();this.classList.toggle('saved');toast(this.classList.contains('saved')?'Pinned to Fall NYC':'Removed')"><span class="pinmark"></span></span>`)}<div class="cap"><b>${p.n}</b><span>${p.b} · </span><span class="price">${money(p.p)}</span></div></button>`;
 }
+const TRENDING = [
+  {id:"s2",h:"h-3",tag:"#1 this week",buy:"1,240 bought this week"},{id:"hero",h:"h-4",tag:"Trending",buy:"Most styled jean"},{id:"t6",h:"h-2",buy:"Vintage leather, up 3x"},{id:"b1",h:"h-3",buy:"Suede is back"},
+  {id:"j1",h:"h-3",buy:"In 400 looks today"},{id:"x2",h:"h-3",buy:"Oval frames, everywhere"},{id:"x8",h:"h-2",tag:"Sporty",buy:"Alo and Vuori rising"},{id:"s5",h:"h-3",buy:"Ballet flats, still"},
+];
+const SALEFEED=[{id:"t3",h:"h-1",tag:"30% off",sale:true},{id:"b2",h:"h-3",tag:"Saved · now $78",sale:true},{id:"s4",h:"h-3",tag:"Zara",sale:true},{id:"x8",h:"h-2",tag:"Aritzia",sale:true},{id:"d3",h:"h-3",tag:"Levi's",sale:true},{id:"j3",h:"h-3",tag:"20% off",sale:true}];
+const CATS=[["New brands","x7"],["Going out","x1"],["Work","t4"],["Weekends","s2"],["Travel","b3"],["Sporty","x8"]];
+$("#cats").innerHTML = CATS.map(([n,id])=>`<button onclick="fakeSearch('${n}');go('search')">${plate(id)}${n}</button>`).join("");
+function homeTab(t,el){
+  document.querySelectorAll("#hometabs button").forEach(b=>b.classList.toggle("on",b===el));
+  if(t==="foryou"){ $("#feedeyebrow").textContent="Monday, for you"; $("#feedtitle").textContent="Fall, quietly."; $("#feed").innerHTML=FEED.map(tile).join(""); }
+  if(t==="trending"){ $("#feedeyebrow").textContent="This week on PINND"; $("#feedtitle").textContent="What everyone is buying."; $("#feed").innerHTML=TRENDING.map(f=>tile(f).replace('</div></button>',`<div class="trend"><i></i>${f.buy}</div></div></button>`)).join(""); }
+  if(t==="sale"){ $("#feedeyebrow").textContent="Your brands, your size"; $("#feedtitle").textContent="On sale for you."; $("#feed").innerHTML=SALEFEED.map(tile).join(""); }
+}
 $("#feed").innerHTML = FEED.map(tile).join("");
 $("#salesfeed").innerHTML = [{id:"t3",h:"h-1",tag:"30% off",sale:true},{id:"b2",h:"h-3",tag:"Saved · now $78",sale:true},{id:"s4",h:"h-3",tag:"Zara",sale:true},{id:"x8",h:"h-2",tag:"Aritzia",sale:true}].map(tile).join("");
 
 /* ---------- search ---------- */
 function fakeSearch(q){
   $("#q").value=q;
-  const map={"brown suede shoulder bag":["b1","b5","b3","b2"],"red wedding guest dress":["x5","x4","x6","x1"],"oversized vintage leather jacket":["t6","x8","t4","t2"],"Aritzia on sale":["b2","x8","t1","d4"]};
+  const map={"brown suede shoulder bag":["b1","b5","b3","b2"],"red wedding guest dress":["x5","x4","x6","x1"],"oversized vintage leather jacket":["t6","x8","t4","t2"],"Aritzia on sale":["b2","x8","t1","d4"],"New brands":["x7","b3","j3","s5"],"Going out":["x1","s6","j4","b4"],"Work":["t4","x3","s1","b2"],"Weekends":["s2","x8","d3","t1"],"Travel":["b3","x2","t5","s3"],"Sporty":["x7","x8","s2","t1"]};
   const ids = map[q]||["b1","t1","s1","j1"];
   $("#qtitle").textContent = `“${q}”`; $("#qcount").textContent = `${ids.length} of 212`;
   $("#results").innerHTML = ids.map((id,i)=>tile({id,h:i%2?"h-3":"h-1"})).join("");
@@ -756,6 +829,11 @@ const SCENE = `<svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
 const PINS=[["Sunglasses",76,14,"#3D2B22"],["Top",38,20,"#F5F0E6"],["Jeans",62,50,"#5B6B7F"],["Bag",21,64,"#B58C6B"],["Shoes",27,88,"#2B1D16"]];
 function openCamera(){
   go("camera");
+  $("#camstart").hidden=false; $("#vf").hidden=true; $("#camhint").hidden=true; $("#found").innerHTML="";
+  $("#findbtn").disabled=true; $("#findbtn").style.opacity=.4; $("#findbtn").textContent="Find it";
+}
+function startScan(){
+  $("#camstart").hidden=true; $("#vf").hidden=false; $("#camhint").hidden=false;
   const vf=$("#vf"); vf.classList.remove("done"); $("#scene").innerHTML=SCENE;
   $("#pins").innerHTML = PINS.map(([l,x,y])=>`<button class="pin-dot" style="left:${x}%;top:${y}%" onclick="pickPin('${l}')"><span class="pinmark"></span><span class="lbl">${l}</span></button>`).join("");
   $("#found").innerHTML=""; $("#camhint").innerHTML="Looking for pieces…"; $("#findbtn").disabled=true; $("#findbtn").style.opacity=.4; $("#findbtn").textContent="Find it";
@@ -808,7 +886,7 @@ function openSheet(id){
   const p=P[id];
   const sizes = p.sold ? `<div class="sizes-row"><button class="x">25</button><button class="x">26</button><button class="x on">27</button><button class="x">28</button></div>` : `<div class="sizes-row"><button>XS</button><button class="on">S</button><button>M</button><button>L</button></div>`;
   const cta = p.sold
-    ? `<div class="stack"><button class="btn" onclick="closeSheet();toast('We will tell you when 27 is back')">Notify me when available</button><button class="btn ghost" onclick="closeSheet();go('match')">Find secondhand</button></div>`
+    ? `<div class="restock"><label>Tell me when it is back</label><div class="two"><input id="restockEmail" value="ava@pinnd.app"><select id="restockSize"><option>25</option><option>26</option><option selected>27</option><option>28</option></select></div><p>We email you the moment size 27 is back and add it to your bag automatically.</p></div><div class="stack"><button class="btn" onclick="closeSheet();toast('Set. We will email you and add it to your bag')">Notify me</button><button class="btn ghost" onclick="closeSheet();go('match')">Find secondhand</button></div>`
     : `<div class="stack"><button class="btn" onclick="toggleBag('${id}');closeSheet();if(cur==='builder')renderRail()">Add to bag · ${money(p.p)}</button><button class="btn ghost" onclick="closeSheet();openBuilder()">Style it</button></div>`;
   $("#sheet").innerHTML = `<div class="grab"></div>${plate(id)}<p class="brand">${p.b}${p.exact?' · exact item, resale':''}</p><h2>${p.n}</h2><p class="price">${money(p.p)}${p.sold?' · <span style="color:var(--sale)">Sold out in your size</span>':''}</p>${sizes}<p class="note">${p.sold?"We never hide a sold out match. Get a note the moment your size returns, or find the same piece secondhand.":"Ships from "+p.r+". Free returns in 30 days, started from your PINND order."}</p>${cta}<p class="retail">Sold by ${p.r} · checkout stays in PINND</p>`;
   $("#sheetwrap").classList.add("on");
