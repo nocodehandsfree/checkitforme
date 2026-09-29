@@ -84,3 +84,7 @@ Profile v3 in our prototype now follows Emmy's organization in Kayla's order: pr
 Ours still has that Emmy's does not: Trending tab, browse category row on home, Sporty aesthetic with Alo and Vuori, restock by email and size with auto add to bag, four screen quiz.
 
 Decision for the owner: which prototype is the base going forward.
+
+## Kayla's feedback round 3 (2026-09-30), applied in v4
+
+Sign up screen with first name, email, phone, then a 6 digit code screen, before the quiz. Plain color names (black, white, brown, blue, green, pink, red, yellow, orange, purple). Home greeting 'Good morning, Ava.' with 'Tuned to Downtown Minimalist' replaces 'Fall, quietly.' Camera page rebuilt like Emmy's: espresso hero card with stacked Take a photo and Upload a photo, a Test photo card, More to try samples, bottom nav stays. Restock: Notify me arms a simulated restock that 6 seconds later clears sold out, adds the item to the bag, and shows an 'It's back' banner with Open bag.
