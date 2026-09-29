@@ -345,6 +345,30 @@ p{margin:0}
 .styleid .t h2{font-size:20px;line-height:1.1;margin-top:4px;color:var(--cream)}
 .styleid .t p{font-size:11px;color:#CDBDA6;margin-top:4px}
 .styleid em{font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:8px 10px;box-shadow:inset 0 0 0 1px rgba(243,235,223,.5);border-radius:2px;flex:0 0 auto}
+.private{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);padding:0 20px 12px}
+.private svg{width:14px;height:14px;stroke:var(--ink2);fill:none;stroke-width:1.5}
+.idcard{position:relative;margin:0 20px;background:var(--esp);color:var(--cream);border-radius:6px;padding:18px 18px 16px;overflow:hidden}
+.idcard .thumb{position:absolute;right:-6px;top:14px;width:104px;transform:rotate(6deg);box-shadow:0 10px 24px rgba(0,0,0,.35);border-radius:4px;overflow:hidden}
+.idcard .thumb .plate{aspect-ratio:3/4;border-radius:0}
+.idcard .eyebrow{color:#CDBDA6}
+.idcard .nm{font-size:30px;line-height:1.05;font-style:italic;margin-top:6px;max-width:62%;color:var(--cream)}
+.idcard .idnotes{margin-top:14px;display:flex;flex-direction:column;gap:10px;max-width:64%;font-size:13px;line-height:1.4}
+.idcard .idnotes b{display:block;font-weight:400;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#CDBDA6;margin-bottom:2px}
+.idcard .pal{display:flex;gap:6px;margin-top:14px}
+.idcard .pal i{width:22px;height:22px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(243,235,223,.6)}
+.idcard .row{display:flex;gap:8px;margin-top:16px}
+.idcard .row .btn{background:var(--cream);color:var(--esp)}
+.idcard .row .btn.ghost{background:transparent;color:var(--cream);box-shadow:inset 0 0 0 1px rgba(243,235,223,.5)}
+.learnbox{margin:14px 20px 4px}
+.learnbox p:not(.eyebrow){font-size:13px;color:var(--ink2);line-height:1.5;margin-top:10px}
+.menu.rows{margin-top:8px}
+.menu.rows button{align-items:center}
+.menu.rows b{display:block;font-weight:400;font-size:15px}
+.menu.rows small{display:block;font-size:12px;color:var(--ink2);margin-top:2px}
+.menu.rows .chev{color:var(--ink2);font-size:20px}
+.soon{margin:18px 20px 0;padding:16px;background:var(--cream2);border-radius:4px}
+.soon h3{font-size:22px;margin-top:4px}
+.soon p:not(.eyebrow){font-size:13px;color:var(--ink2);line-height:1.5;margin-top:6px}
 /* toast */
 .toast{position:absolute;left:50%;bottom:110px;transform:translateX(-50%) translateY(10px);background:var(--esp);color:var(--cream);padding:10px 16px;border-radius:999px;font-size:13px;display:flex;align-items:center;gap:10px;opacity:0;transition:all .25s;z-index:30;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -613,23 +637,34 @@ p{margin:0}
   <section class="screen" data-s="profile">
     <div class="topbar"><h2 style="font-size:28px">Profile</h2><button class="icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button></div>
     <div class="scroll">
-      <button class="styleid" onclick="toast('Retake the quiz or edit any answer')"><div class="av">A</div><div class="t"><b>Style ID</b><h2>Clean Minimal, with a vintage edge</h2><p>Minimal · Clean · Vintage · Sporty · Gold</p></div><em>Change</em></button>
-      <div class="menu" style="margin-top:6px">
-        <button onclick="go('quiz1')">Style profile <span>Sizes, colors, brands, occasions</span></button>
-        <button onclick="toast('Orders')">Orders <span>1 on the way</span></button>
-        <button onclick="toast('Membership')">Membership <span>PINND+ · $9.99 a month</span></button>
-        <button onclick="toast('Booking preview')">Book a real stylist <span>30 min · $100</span></button>
+      <p class="private"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Private profile. Only you can see your saves and boards.</p>
+      <section class="idcard">
+        <div class="thumb"><div class="plate" style="background:var(--denim)"><svg style="fill:#DCE1E8;stroke:#DCE1E8"><use href="#s-jeans"/></svg></div></div>
+        <div class="eyebrow">Style ID</div>
+        <h2 class="nm">Downtown Minimalist</h2>
+        <div class="idnotes"><div><b>Signature</b>Clean lines, few colors, great fabric.</div><div><b>Uniform</b>contour tee, straight jean, bit loafer</div></div>
+        <div class="pal"><i style="background:#1C1917"></i><i style="background:#F3EBDF"></i><i style="background:#B58C6B"></i><i style="background:#5B6B7F"></i></div>
+        <div class="row"><button class="btn sm" style="width:auto;padding-inline:18px" onclick="toast('Style ID card ready to share')">Share</button><button class="btn sm ghost" style="width:auto;padding-inline:18px" onclick="go('quiz1')">Change</button></div>
+      </section>
+      <section class="learnbox"><p class="eyebrow">Your style profile</p>
+        <div class="chips" style="margin-top:10px"><span class="chip small">Minimal</span><span class="chip small">Clean</span><span class="chip small">Vintage</span><span class="chip small">Sporty</span><span class="chip small">Relaxed fit</span><span class="chip small">No orange or purple</span><span class="chip small on">+ leather</span><span class="chip small on">+ espresso</span></div>
+        <p>Your saves and views are pulling your feed toward leather and espresso. It keeps learning, and still mixes in something different.</p>
+      </section>
+      <div class="menu rows">
+        <button onclick="toast('Orders')"><span><b>Orders</b><small>PN-20388 · Delivered</small></span><span class="chev">›</span></button>
+        <button onclick="toast('Membership')"><span><b>Membership · PINND+</b><small>5 of 7 sessions left this month</small></span><span class="chev">›</span></button>
+        <button onclick="toast('Booking preview')"><span><b>Book a real stylist</b><small>30 minute video session · $100</small></span><span class="chev">›</span></button>
       </div>
-      <div class="section"><h3>Boards <span>Private</span></h3></div>
+      <div class="section"><h3>Boards</h3></div>
       <div class="boards" id="boards"></div>
-      <div class="section"><h3>Orders</h3></div>
-      <div class="lines orders" id="orders"></div>
+      <section class="soon"><p class="eyebrow">Coming later</p><h3>My closet</h3><p>Photograph what you already own and ask things like "style these jeans for dinner tonight." PINND mixes your pieces with new ones.</p></section>
       <div class="section"><h3>Settings</h3></div>
       <div class="menu">
-        <button>Size and fit <span>US · S · 27 · 8</span></button>
-        <button>Notifications <span>Back in stock, price drops</span></button>
-        <button>Connected accounts <span>Instagram · TikTok</span></button>
-        <button>Account <span>Email, phone, privacy</span></button>
+        <button>Sizes and fit <span>S · 27 · 8 · US</span></button>
+        <button>Region and currency <span>United States · USD</span></button>
+        <button>Notifications <span>4 on</span></button>
+        <button>Connected accounts <span>Instagram, TikTok</span></button>
+        <button>Account <span>ava@pinnd.app</span></button>
       </div>
       <div style="height:20px"></div>
     </div>
@@ -910,14 +945,14 @@ function renderCheckout(){
 }
 function placeOrder(){
   const items=[...bag]; bag=[]; updateBadge();
-  $("#orders").innerHTML = `<div class="line">${plate(items[0]||"hero")}<div class="t"><b>Order PN-20419 · ${items.length} piece${items.length===1?"":"s"}</b><span class="st">Preparing shipment · arrives Tue</span><span>${[...new Set(items.map(id=>P[id].r))].join(", ")}</span></div></div>` + $("#orders").innerHTML;
+  const ord=$("#orders"); if(ord) ord.innerHTML = `<div class="line">${plate(items[0]||"hero")}<div class="t"><b>Order PN-20419 · ${items.length} piece${items.length===1?"":"s"}</b><span class="st">Preparing shipment · arrives Tue</span><span>${[...new Set(items.map(id=>P[id].r))].join(", ")}</span></div></div>` + ord.innerHTML;
   go("confirm");
 }
-$("#orders").innerHTML = `<div class="line">${plate("s1")}<div class="t"><b>Order PN-20388 · 2 pieces</b><span class="st">Delivered Sep 19</span><span>Nordstrom, Zara · Return an item</span></div></div>`;
+
 
 /* ---------- boards ---------- */
 const BOARDS=[["Fall NYC",14,["hero","t6","s1"]],["Wedding guest",6,["x4","s3","j1"]],["Europe summer",22,["x3","b3","x2"]],["Dream closet",31,["b4","s6","t4"]]];
-$("#boards").innerHTML = BOARDS.map(([n,c,ids])=>`<button class="board" onclick="toast('Board: ${n}')"><div class="grid">${ids.map(id=>plate(id)).join("")}</div><b>${n}</b><span>${c} pins</span></button>`).join("");
+$("#boards").innerHTML = BOARDS.map(([n,c,ids])=>`<button class="board" onclick="toast('Board: ${n}')"><div class="grid">${ids.map(id=>plate(id)).join("")}</div><b>${n}</b><span>${c} saves</span></button>`).join("") + `<button class="board" onclick="toast('Name your board')"><div class="grid" style="display:grid;place-items:center;background:var(--cream2);font-size:34px;color:var(--ink2)">+</div><b>New board</b><span>&nbsp;</span></button>`;
 
 /* ---------- stylist ---------- */
 const LOOKS={

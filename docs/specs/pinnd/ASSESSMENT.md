@@ -74,3 +74,13 @@ QUESTIONS FOR US TO ANSWER
 Applied in v2: welcome without the icon; home tabs For you / Trending (what people are buying) / Sale; browse categories New brands, Going out, Work, Weekends, Travel, Sporty replacing the camera card; quiz now 4 steps with Sporty, colors loved and avoided, occasions, sustainable and vegan, location for weather, and 'change anytime in Profile'; camera opens on Take a photo / Upload a photo with her copy; profile reordered: Style ID with Change, then Style profile, Orders, Membership, Book a real stylist, then Boards, then Settings (size and fit, notifications, connected accounts Instagram and TikTok); sold out sheet takes email and size, promises the email and the automatic add to bag.
 
 Open: the rest of the profile follows Emmy's app, which we have not seen yet. Gap analysis once the owner shares the link.
+
+## Gap analysis vs Emmy's prototype (2026-09-29)
+
+Emmy's app (claude.ai/code/artifact/2bd37846-7531-44d7-bff0-8355b072f549) is the fuller prototype: drawn flat lay product art, 22 looks, a 6 step quiz with swipe reactions, a Style ID name generator with signature, uniform and palette, feed reasons ('Like the X you saved') and exploration cards, notifications bell, sales for you, orders with returns, region and currency, plans and paywall, human stylist booking, tester tools with integration status and analytics events, and a Claude hookup for photo matching and the stylist.
+
+Profile v3 in our prototype now follows Emmy's organization in Kayla's order: private note, Style ID card (name, signature, uniform, palette, Share, Change), Your style profile chips with learning sentence, rows Orders / Membership / Book a real stylist (Sales for you dropped per Kayla), Boards with New board, Coming later: My closet, Settings (sizes and fit, region and currency, notifications, connected accounts, account).
+
+Ours still has that Emmy's does not: Trending tab, browse category row on home, Sporty aesthetic with Alo and Vuori, restock by email and size with auto add to bag, four screen quiz.
+
+Decision for the owner: which prototype is the base going forward.
