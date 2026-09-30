@@ -55,8 +55,8 @@ p{margin:0}
 .plate.light svg{fill:var(--esp);stroke:var(--esp)}
 .plate .tag{position:absolute;left:8px;top:8px;z-index:2;font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:rgba(251,247,241,.9);color:var(--esp);padding:4px 7px;border-radius:2px;font-weight:400}
 .plate .tag.sale{background:var(--sale);color:var(--cream)}
-.plate .save{position:absolute;right:8px;top:8px;z-index:2;width:30px;height:30px;border-radius:50%;background:rgba(251,247,241,.85);display:grid;place-items:center}
-.plate .save .pinmark{transform:scale(.7)}
+.plate .save{position:absolute;right:8px;top:8px;z-index:2;width:22px;height:22px;border-radius:50%;background:rgba(251,247,241,.9);display:grid;place-items:center}
+.plate .save .pinmark{transform:scale(.45);margin-top:-2px}
 .plate .save.saved{background:var(--esp)}
 .plate .save.saved .pinmark::before{background:var(--cream)}
 
@@ -381,8 +381,8 @@ p{margin:0}
 .soon{margin:18px 20px 0;padding:16px;background:var(--cream2);border-radius:4px}
 .soon h3{font-size:22px;margin-top:4px}
 .soon p:not(.eyebrow){font-size:13px;color:var(--ink2);line-height:1.5;margin-top:6px}
-.banner{position:absolute;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));background:var(--esp);color:var(--cream);padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.45;box-shadow:0 12px 30px rgba(43,29,22,.35);z-index:40;transform:translateY(-140%);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
-.banner.on{transform:translateY(0)}
+.banner{position:absolute;left:12px;right:12px;top:10px;background:var(--esp);color:var(--cream);padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.45;box-shadow:0 12px 30px rgba(43,29,22,.35);z-index:40;transform:translateY(-200%);visibility:hidden;opacity:0;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .2s,visibility 0s .35s}
+.banner.on{transform:translateY(0);visibility:visible;opacity:1;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .2s,visibility 0s}
 .banner b{font-weight:500;font-family:var(--serif);font-size:16px;display:block;margin-bottom:2px}
 .banner button{margin-top:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream);box-shadow:inset 0 0 0 1px rgba(243,235,223,.5);padding:7px 10px;border-radius:2px}
 .kai .nav{display:none}
