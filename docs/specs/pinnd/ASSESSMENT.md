@@ -92,3 +92,14 @@ Sign up screen with first name, email, phone, then a 6 digit code screen, before
 ## Kai mode (2026-09-30), prototype v5
 
 Second interface in the same prototype: no tabs, one pin shaped button bottom right under the thumb. Tap: it drops with a bounce and a sheet slides up over the bottom half with Kai (head stylist of PINND): transcript, live wave while listening, mic button, and a type field. Kai navigates: find this (camera), style the jeans for dinner (builder + direction), add the whole look (bag), show my boards (profile), what's on sale, trending, wedding/Hamptons/chill (stylist looks), search phrases, and remembers 'no heels'. The app above stays touchable. Switch: welcome screen link, or Profile > Settings > Interface. Real Kai stack when the interface is blessed: Deepgram streaming for listening, Claude with tools for navigation, ElevenLabs for Kai's voice, all already wired in this repo's src/voice.
+
+
+## The working app (2026-10-10)
+
+Built in `pinnd/` on branch claude/daughters-app-mvp-qjwsk9 (PR 124). One page app `pinnd/public/index.html`, a real catalog (240 pieces, 25 brands, public Shopify product feeds, photos, prices, sizes, sold out states), and a Hono server `pinnd/src/server.ts` (SQLite on the volume, email code sign in via Brevo, optional Twilio text, Claude proxy for photo detection, matching, Style ID, stylist and Kai, Deepgram in and ElevenLabs out for Kai's voice, restock emails). Checkout, payment, returns, membership and resale are simulated and labeled. Tested headless end to end: 30 steps in artifact mode, 14 in server mode, all green.
+
+Two ways to run it:
+1. claude.ai artifact (no server): uses the artifact runtime (db, user, sample with images, downloads). Kayla needs the link shared at Contributor or above. No microphone and no email there; Kai talks with the phone's own voice.
+2. Railway service `pinnd` from this repo, root directory `pinnd`: full voice and email. The service could not be created from the session (the auto mode gate refused the Railway mutations and the variable reads). Owner steps: New service from GitHub repo nocodehandsfree/checkitforme, branch claude/daughters-app-mvp-qjwsk9, Settings > Root directory `pinnd`; Variables: ANTHROPIC_API_KEY, DEEPGRAM_API_KEY, ELEVENLABS_API_KEY, BREVO_API_KEY, MAIL_FROM (a verified Brevo sender), SESSION_SECRET (any long random string), ADMIN_TOKEN, optional TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_SMS_FROM or TWILIO_MESSAGING_SERVICE_SID, KAI_VOICE_ID; Volume mounted at /data; Networking > Generate domain. Health: `/api/health` reports which services are live.
+
+Tags: `pinnd/public/tags.json` is a rule based baseline; the Claude tagged file replaces it when it lands (same shape).
