@@ -749,7 +749,8 @@ function updateBadges() {
 let C = [], byId = {};
 async function loadCatalog() {
   const [cat, tags] = await Promise.all([fetch('catalog.json').then(r => r.json()), fetch('tags.json').then(r => r.json()).catch(() => ({}))]);
-  C = cat.map(x => { const t = tags[x.id] || {}; return Object.assign(x, { cat: t.cat || x.cat, aes: t.aes || x.storeAes || [], occ: t.occ || ['everyday'], col: t.col || [], dir: t.dir || ['casual'], fit: t.fit || 'relaxed', mat: t.mat || '' }); });
+  const titleCase = n => n === n.toUpperCase() ? n.toLowerCase().replace(/(^|\s|-)([a-z])/g, (m, a, b) => a + b.toUpperCase()).replace(/\b(Alo|Set|Iii|Ii)\b/g, w => w.toUpperCase() === 'ALO' ? 'ALO' : w) : n;
+  C = cat.map(x => { const t = tags[x.id] || {}; x.n = titleCase(x.n); return Object.assign(x, { cat: t.cat || x.cat, aes: t.aes || x.storeAes || [], occ: t.occ || ['everyday'], col: t.col || [], dir: t.dir || ['casual'], fit: t.fit || 'relaxed', mat: t.mat || '' }); });
   byId = Object.fromEntries(C.map(x => [x.id, x]));
 }
 const imgUrl = it => 'img/' + it.file;
