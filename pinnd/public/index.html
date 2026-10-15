@@ -72,6 +72,43 @@ img{max-width:100%;display:block}
 .nav .cam .ring svg{stroke:var(--cream);width:24px;height:24px}
 /* welcome + account */
 .welcome{background:var(--esp);color:var(--cream);justify-content:space-between;padding:0 28px calc(34px + env(safe-area-inset-bottom,0px))}
+.welcome .logo{margin-top:38vh;text-align:center}
+.pick{display:flex;gap:6px}
+.pick select{flex:1;min-width:0;height:42px;border:0;box-shadow:inset 0 0 0 1px var(--line);border-radius:2px;background:var(--paper);color:var(--ink);font-size:15px;padding-inline:8px}
+.pick input{width:72px;height:42px;border:0;box-shadow:inset 0 0 0 1px var(--line);border-radius:2px;background:var(--paper);color:var(--ink);font-size:14px;padding-inline:8px}
+.mood .slot{position:absolute;inset:0;display:grid;place-items:center;background:var(--cream2);color:var(--ink2);font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-align:center;padding:12px}
+.attach{position:absolute;left:0;right:0;bottom:148px;padding:8px 20px;background:var(--paper);display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2);z-index:4}
+.attach img{width:44px;height:44px;object-fit:cover;border-radius:4px}
+.attachbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line);flex:none}
+.attachbtn svg{width:20px;height:20px;stroke:var(--esp);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.msg.me .photo{width:120px;border-radius:10px;overflow:hidden;margin-bottom:6px}
+.closet{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-inline:20px}
+.closet .ph{aspect-ratio:3/4;width:100%}
+.closet .ph img{object-position:center}
+.closet b{display:block;font-weight:400;font-size:12px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.closet .addc{aspect-ratio:3/4;display:grid;place-items:center;background:var(--cream2);border-radius:4px;color:var(--ink2);font-size:28px}
+.post{margin:0 20px 14px;border-radius:6px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.post .ph{aspect-ratio:4/5;width:100%;border-radius:0}
+.post .ph img{object-position:center}
+.post .pc{padding:12px 14px 14px}
+.post .pc b{display:block;font-weight:400;font-size:14px}
+.post .pc span{display:block;font-size:12px;color:var(--ink2);margin-top:2px;line-height:1.45}
+.post .tagged{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.post .tagged button{flex:0 0 64px}
+.post .tagged .ph{aspect-ratio:3/4;border-radius:4px}
+.creator-head{margin:0 20px 14px;display:flex;gap:14px;align-items:center}
+.creator-head .av{width:58px;height:58px;border-radius:50%;background:var(--esp);color:var(--cream);display:grid;place-items:center;font-family:var(--serif);font-size:26px;flex:none}
+.creator-head h2{font-size:24px;line-height:1}
+.creator-head p{font-size:12px;color:var(--ink2);margin-top:4px}
+.app-row{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);align-items:center}
+.app-row b{display:block;font-weight:400;font-size:14px}
+.app-row span{font-size:12px;color:var(--ink2);display:block;margin-top:2px;line-height:1.45}
+.app-row .acts{display:flex;gap:6px;flex:none}
+.app-row .acts button{height:32px;padding-inline:10px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;box-shadow:inset 0 0 0 1px var(--line);border-radius:2px}
+.app-row .acts button.ok{background:var(--esp);color:var(--cream);box-shadow:none}
+.status{display:inline-block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:4px 8px;border-radius:2px;background:var(--cream2);color:var(--esp)}
+.status.ok{background:var(--ok);color:var(--cream)}
+.status.no{background:var(--sale);color:var(--cream)}
 .welcome .collage{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:calc(26px + env(safe-area-inset-top,0px)) -8px 0;transform:rotate(-4deg)}
 .welcome .collage .ph{aspect-ratio:3/4;border-radius:6px;box-shadow:0 14px 30px rgba(0,0,0,.35)}
 .welcome .collage .ph:nth-child(2){transform:translateY(22px)}
@@ -414,16 +451,13 @@ img{max-width:100%;display:block}
 
   <!-- WELCOME -->
   <section class="screen welcome on" data-s="welcome">
-    <div>
-      <div class="collage" id="welcome-collage" aria-hidden="true"></div>
+    <div class="logo">
       <h1>PINND</h1>
       <p class="tag">SEE IT. FIND IT.<br>STYLE IT. SHOP IT.</p>
     </div>
     <div>
       <button class="btn" onclick="go('signup')">Create account</button>
       <button class="btn ghost" onclick="signIn()">I already have one</button>
-      <button class="btn ghost" style="box-shadow:none;color:#CDBDA6" onclick="setKai(true);signIn()">Try it with Kai, no tabs</button>
-      <p class="fine" id="welcome-fine">Real pieces from 25 brands. Checkout is simulated.</p>
     </div>
   </section>
 
@@ -474,14 +508,15 @@ img{max-width:100%;display:block}
       <h2 style="margin-top:22px">Your sizes, once.</h2>
       <p class="sub" style="margin-bottom:18px">So every match and every look opens in your size.</p>
       <div class="field" style="margin-bottom:18px"><label>Show me</label><div class="seg" data-q="shop"><button data-v="f">Womenswear</button><button data-v="m">Menswear</button><button data-v="all">Everything</button></div></div>
+      <div class="field" style="margin-bottom:18px"><label>Sizing system</label><div class="seg" data-q="sys"><button data-v="US">US</button><button data-v="UK">UK</button><button data-v="EU">EU</button></div></div>
       <div class="sizes">
-        <div class="field"><label>Sizing</label><div class="seg" data-q="sys"><button data-v="US">US</button><button data-v="UK">UK</button><button data-v="EU">EU</button></div></div>
-        <div class="field"><label>Height</label><div class="seg" data-q="height"><button data-v="5'2">5'2</button><button data-v="5'6">5'6</button><button data-v="5'10">5'10</button></div></div>
-        <div class="field"><label>Tops</label><div class="seg" data-q="top"><button data-v="XS">XS</button><button data-v="S">S</button><button data-v="M">M</button><button data-v="L">L</button></div></div>
-        <div class="field"><label>Bottoms</label><div class="seg" data-q="bottom"><button data-v="25">25</button><button data-v="26">26</button><button data-v="27">27</button><button data-v="28">28</button></div></div>
-        <div class="field"><label>Dresses</label><div class="seg" data-q="dress"><button data-v="0">0</button><button data-v="2">2</button><button data-v="4">4</button><button data-v="6">6</button></div></div>
-        <div class="field"><label>Shoes</label><div class="seg" data-q="shoe"><button data-v="6">6</button><button data-v="7">7</button><button data-v="8">8</button><button data-v="9">9</button></div></div>
+        <div class="field"><label>Height</label><div class="pick"><select id="qHeight"></select><input id="qHeightCustom" placeholder="or type it" inputmode="text"></div></div>
+        <div class="field"><label>Tops</label><div class="pick"><select id="qTop"></select><input id="qTopCustom" placeholder="other"></div></div>
+        <div class="field"><label>Bottoms</label><div class="pick"><select id="qBottom"></select><input id="qBottomCustom" placeholder="other"></div></div>
+        <div class="field"><label>Dresses</label><div class="pick"><select id="qDress"></select><input id="qDressCustom" placeholder="other"></div></div>
+        <div class="field"><label>Shoes</label><div class="pick"><select id="qShoe"></select><input id="qShoeCustom" placeholder="other"></div></div>
       </div>
+      <p class="fine" style="margin-top:10px">Every size system, every body. If yours is not in a list, type it.</p>
       <div class="field" style="margin-top:18px"><label>Fit</label><div class="chips" data-m="fit"><button class="chip" data-v="fitted">Fitted</button><button class="chip" data-v="relaxed">Relaxed</button><button class="chip" data-v="oversized">Oversized</button></div></div>
       <div class="field" style="margin-top:18px"><label>Jewelry</label><div class="chips" data-m="jewelry"><button class="chip" data-v="gold">Gold</button><button class="chip" data-v="silver">Silver</button><button class="chip" data-v="mixed">Mixed</button><button class="chip" data-v="rarely">Rarely</button></div></div>
     </div>
@@ -635,13 +670,14 @@ img{max-width:100%;display:block}
 
   <!-- STYLIST -->
   <section class="screen" data-s="stylist">
-    <div class="topbar"><h2>Stylist</h2><div class="hbtns"><button class="icon-btn" onclick="newSession()" aria-label="New session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div></div>
+    <div class="topbar"><h2>kAI</h2><div class="hbtns"><button class="icon-btn" onclick="openSessions()" aria-label="Previous sessions"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button><button class="icon-btn" onclick="newSession()" aria-label="New session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button class="icon-btn" onclick="go('bag')" aria-label="Bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="badge bagbadge" hidden>0</span></button></div></div>
     <div class="scroll" id="chatscroll" style="padding-bottom:170px">
       <button class="sessions" id="sessions" onclick="openPlans()"></button>
       <div class="chat" id="chat"></div>
       <div class="prompts" id="prompts"></div>
     </div>
-    <form class="composer" onsubmit="event.preventDefault();askStylist(document.getElementById('stin').value);document.getElementById('stin').value=''"><input id="stin" placeholder="Text your stylist…" autocomplete="off"><button type="submit" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
+    <div class="attach" id="stattach" hidden></div>
+    <form class="composer" onsubmit="event.preventDefault();askStylist(document.getElementById('stin').value);document.getElementById('stin').value=''"><label class="attachbtn" for="stphoto" aria-label="Add a photo"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></label><input id="stphoto" type="file" accept="image/*" hidden><input id="stin" placeholder="Text kAI…" autocomplete="off"><button type="submit" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
     <div class="nav" data-nav></div>
   </section>
 
@@ -662,11 +698,11 @@ img{max-width:100%;display:block}
   <div class="sheet-wrap" id="sheetwrap"><div class="dim" onclick="closeSheet()"></div><div class="sheet" id="sheet"></div></div>
   <button class="kaibtn" id="kaibtn" hidden onclick="openKai()" aria-label="Talk to Kai"><span class="head"></span><span class="needle"></span></button>
   <div class="kaisheet" id="kaisheet" hidden>
-    <div class="ks-head"><div class="ks-av"><span class="pinmark"></span></div><div class="ks-t"><b>Kai</b><span id="ksstate">Head stylist</span></div><button class="ks-close" onclick="closeKai()" aria-label="Close">×</button></div>
+    <div class="ks-head"><div class="ks-av"><span class="pinmark"></span></div><div class="ks-t"><b>kAI</b><span id="ksstate">Your personal stylist</span></div><button class="ks-close" onclick="closeKai()" aria-label="Close">×</button></div>
     <div class="ks-log" id="kslog"></div>
     <div class="ks-chips" id="kschips"></div>
     <div class="ks-wave" id="kswave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <form class="ks-composer" onsubmit="event.preventDefault();sayToKai(document.getElementById('ksin').value);document.getElementById('ksin').value=''"><button type="button" class="ks-mic" id="ksmic" onclick="kaiMic()" aria-label="Talk"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></button><input id="ksin" placeholder="Type to Kai…" autocomplete="off"><button class="ks-send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
+    <form class="ks-composer" onsubmit="event.preventDefault();sayToKai(document.getElementById('ksin').value);document.getElementById('ksin').value=''"><button type="button" class="ks-mic" id="ksmic" onclick="kaiMic()" aria-label="Talk"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></button><input id="ksin" placeholder="Type to kAI…" autocomplete="off"><button class="ks-send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
   </div>
   <div class="banner" id="banner"></div>
   <div class="toast" id="toast"><span class="pinmark"></span><span id="toastmsg"></span></div>
@@ -695,7 +731,7 @@ const COLORS = [['black', '#1C1917'], ['white', '#F8F5F0'], ['brown', '#5C3D2E']
 const SW = Object.fromEntries(COLORS);
 const NEUTRALS = ['black', 'white', 'beige', 'grey', 'brown', 'gold', 'silver'];
 const CAT_LABEL = { tops: 'Tops', bottoms: 'Bottoms', dresses: 'Dresses', outerwear: 'Outerwear', shoes: 'Shoes', bags: 'Bags', jewelry: 'Jewelry', accessories: 'Accessories' };
-const DIRS = { clean: 'Clean', edgy: 'Edgy', casual: 'Casual', dinner: 'Dinner' };
+const DIRS = { clean: 'Clean', edgy: 'Edgy', casual: 'Casual', dinner: 'Dinner', sale: 'Sale' };
 const STYLE_NAMES = { minimal: 'Downtown Minimalist', clean: 'Clean Classic', classic: 'Modern Classic', sporty: 'Off Duty Athlete', streetwear: 'Street Uniform', edgy: 'Soft Edge', vintage: 'Vintage Soul', y2k: 'Y2K Revival', romantic: 'Modern Romantic', luxury: 'Quiet Luxury', casual: 'Easy Everyday', coastal: 'Coastal Minimal', preppy: 'New Prep', western: 'City Western', bohemian: 'Modern Bohemian', business: 'Boardroom Minimal', resort: 'Resort Minimal' };
 
 /* ---------- runtime adapters ---------- */
@@ -711,7 +747,7 @@ async function initRuntime() {
 }
 
 /* ---------- store: profile + state ---------- */
-const DEF_STATE = () => ({ bag: [], boards: [{ id: 'saved', name: 'Saved', pins: [] }], saved: {}, disliked: {}, views: {}, notifs: [], subs: [], restocked: {}, orders: [], events: [], chat: [], kaiLog: [], sessions: { month: monthKey(), used: 0 }, plan: 'free', shipping: {}, searches: [], kai: false });
+const DEF_STATE = () => ({ closet: [], pastChats: [], socials: {}, creator: null, bag: [], boards: [{ id: 'saved', name: 'Saved', pins: [] }], saved: {}, disliked: {}, views: {}, notifs: [], subs: [], restocked: {}, orders: [], events: [], chat: [], kaiLog: [], sessions: { month: monthKey(), used: 0 }, plan: 'free', shipping: {}, searches: [], kai: false });
 let P = null;      // profile (null until signed in)
 let S = DEF_STATE();
 const LS = { get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } }, del(k) { try { localStorage.removeItem(k); } catch { } } };
@@ -752,6 +788,7 @@ async function loadCatalog() {
   const titleCase = n => n === n.toUpperCase() ? n.toLowerCase().replace(/(^|\s|-)([a-z])/g, (m, a, b) => a + b.toUpperCase()).replace(/\b(Alo|Set|Iii|Ii)\b/g, w => w.toUpperCase() === 'ALO' ? 'ALO' : w) : n;
   C = cat.map(x => { const t = tags[x.id] || {}; x.n = titleCase(x.n); return Object.assign(x, { cat: t.cat || x.cat, aes: t.aes || x.storeAes || [], occ: t.occ || ['everyday'], col: t.col || [], dir: t.dir || ['casual'], fit: t.fit || 'relaxed', mat: t.mat || '' }); });
   byId = Object.fromEntries(C.map(x => [x.id, x]));
+  try { BOARDS_IMG = await fetch('moodboards.json').then(r => r.ok ? r.json() : {}); } catch { BOARDS_IMG = {}; }
 }
 const imgUrl = it => 'img/' + it.file;
 const isSoldOut = it => !!(it.soldout && !S.restocked[it.id]);
@@ -795,14 +832,15 @@ function candidates(cat, hero, dir, exclude) {
   return C.filter(it => it.cat === cat && it.id !== hero.id && !ex.has(it.id) && !S.disliked[it.id] && (forMe(it) || it.g === hero.g))
     .map(it => {
       let s = score(it) * .6;
-      if (dir && (it.dir || []).includes(dir)) s += 3;
+      if (dir === 'sale') { if (!onSale(it)) return null; s += 2; }
+      else if (dir && (it.dir || []).includes(dir)) s += 3;
       (hero.aes || []).forEach(a => { if (hasAes(it, a)) s += 1.5; });
       s += colorOK(hero, it) * 2;
       if (isSoldOut(it)) s -= 2;
       const ratio = it.p / Math.max(hero.p, 20); if (ratio > 4 || ratio < .15) s -= 1;
       if (it.b === hero.b) s -= .5;
       return { it, s };
-    }).sort((a, b) => b.s - a.s).map(x => x.it);
+    }).filter(Boolean).sort((a, b) => b.s - a.s).map(x => x.it);
 }
 function buildLook(hero, dir, seed) {
   const r = seeded(hashStr(hero.id + (dir || '') + (seed || 0))); const ids = [hero.id];
@@ -833,7 +871,7 @@ const LOOKS = {}; function regLook(l) { LOOKS[l.id] = l; return l; }
 
 /* ---------- navigation ---------- */
 let cur = 'welcome', history = [];
-const NAV = [['home', 'Home', '<path d="M4 11l8-7 8 7v9H4z"/>'], ['search', 'Search', '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'], ['camera', '', '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'], ['stylist', 'Stylist', '<path d="M12 3l2.2 5.4L20 9l-4.4 3.8L17 19l-5-3-5 3 1.4-6.2L4 9l5.8-.6z"/>'], ['profile', 'Profile', '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>']];
+const NAV = [['home', 'Home', '<path d="M4 11l8-7 8 7v9H4z"/>'], ['search', 'Search', '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'], ['camera', '', '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'], ['stylist', 'kAI', '<path d="M12 3l2.2 5.4L20 9l-4.4 3.8L17 19l-5-3-5 3 1.4-6.2L4 9l5.8-.6z"/>'], ['profile', 'Profile', '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>']];
 function renderNav() { $$('.nav').forEach(el => { el.innerHTML = NAV.map(([k, l, svg]) => k === 'camera' ? `<button class="cam" onclick="openCamera()" aria-label="Camera"><span class="ring"><svg viewBox="0 0 24 24">${svg}</svg></span></button>` : `<button class="${cur === k ? 'on' : ''}" onclick="goTab('${k}')"><svg viewBox="0 0 24 24">${svg}</svg>${l}</button>`).join(''); }); }
 function goTab(k) { if (k === 'home') renderHome(); if (k === 'search') renderSearchHome(); if (k === 'stylist') renderStylist(); if (k === 'profile') renderProfile(); go(k); }
 function go(s) {
@@ -847,14 +885,31 @@ function back() { const prev = history.pop() || 'home'; if (prev === 'match' || 
 function signIn() { if (!P) { go('signup'); return; } renderHome(); go('home'); }
 
 /* ---------- sign up + quiz ---------- */
-const Q = { aes: [], shop: 'f', sys: 'US', height: "5'6", top: 'S', bottom: '27', dress: '4', shoe: '8', fit: ['relaxed'], jewelry: ['gold'], colorsLove: ['black', 'white', 'brown'], colorsAvoid: [], occ: ['going-out', 'weekend'], values: [], brands: [], city: '' };
+const Q = { aes: [], shop: 'f', sys: 'US', height: "5'6\"", top: 'S', bottom: '27', dress: '4', shoe: '8', fit: ['relaxed'], jewelry: ['gold'], colorsLove: ['black', 'white', 'brown'], colorsAvoid: [], occ: ['going-out', 'weekend'], values: [], brands: [], city: '' };
+const SIZE_LISTS = {
+  height: () => { const o = []; for (let i = 56; i <= 80; i++) o.push(`${Math.floor(i / 12)}'${i % 12}"`); for (let c = 140; c <= 205; c += 1) o.push(`${c} cm`); return o; },
+  top: () => ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2X', '3X', '4X', '5X', '00', '0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24'],
+  bottom: () => ['22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '36', '38', '40', '42', '44', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2X', '3X', '4X', '5X', '00', '0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22W', '24W', '26W', '28W'],
+  dress: () => ['00P', '0P', '2P', '4P', '6P', '8P', '10P', '12P', '14P', '16P', '00', '0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '14W', '16W', '18W', '20W', '22W', '24W', '26W', '28W', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2X', '3X', '4X', '5X', "I don't wear dresses"],
+  shoe: (sys, shop) => { const out = []; const w = sys === 'UK' ? [2, 10] : sys === 'EU' ? [34, 45] : [4, 13]; const m = sys === 'UK' ? [5, 15] : sys === 'EU' ? [38, 50] : [6, 16]; const step = sys === 'EU' ? 1 : .5; if (shop !== 'm') for (let x = w[0]; x <= w[1]; x += step) out.push(`${x}${shop === 'all' ? ' W' : ''}`); if (shop !== 'f') for (let x = m[0]; x <= m[1]; x += step) out.push(`${x}${shop === 'all' ? ' M' : ''}`); return out; },
+};
+function fillPick(key, list, current) {
+  const sel = $('#q' + key.charAt(0).toUpperCase() + key.slice(1)); const custom = $('#q' + key.charAt(0).toUpperCase() + key.slice(1) + 'Custom'); if (!sel) return;
+  sel.innerHTML = list.map(v => `<option value="${esc(v)}" ${v === current ? 'selected' : ''}>${esc(v)}</option>`).join('');
+  if (current && !list.includes(current)) { sel.insertAdjacentHTML('afterbegin', `<option value="${esc(current)}" selected>${esc(current)}</option>`); }
+  sel.onchange = () => { Q[key] = sel.value; custom.value = ''; };
+  custom.value = ''; custom.oninput = () => { if (custom.value.trim()) Q[key] = custom.value.trim(); };
+}
+function fillPicks() { const q = Q; fillPick('height', SIZE_LISTS.height(), q.height); fillPick('top', SIZE_LISTS.top(), q.top); fillPick('bottom', SIZE_LISTS.bottom(), q.bottom); fillPick('dress', SIZE_LISTS.dress(), q.dress); fillPick('shoe', SIZE_LISTS.shoe(q.sys, q.shop), q.shoe); }
 const MOODS = [['minimal', 'Minimal'], ['clean', 'Clean'], ['vintage', 'Vintage'], ['sporty', 'Sporty'], ['edgy', 'Edgy'], ['streetwear', 'Streetwear'], ['romantic', 'Romantic'], ['classic', 'Classic'], ['y2k', 'Y2K'], ['luxury', 'Quiet luxury']];
+let BOARDS_IMG = {};
 const MOOD_PICS = { minimal: 'jennikayne', clean: 'oakfort', vintage: 'lisasaysgah', sporty: 'alo', edgy: 'edikted', streetwear: 'stssy', romantic: 'withjan', classic: 'everlane', y2k: 'princesspolly', luxury: 'staud' };
 function moodPic(k) { const pre = MOOD_PICS[k]; const its = C.filter(x => x.id.startsWith(pre + '-') && ['tops', 'dresses', 'outerwear', 'bottoms'].includes(x.cat)); return its[hashStr(k) % Math.max(its.length, 1)] || C[0]; }
 function renderQuiz() {
-  $('#moods').innerHTML = MOODS.map(([k, n]) => { const it = moodPic(k); return `<button class="mood ${Q.aes.includes(k) ? 'on' : ''}" data-v="${k}" onclick="toggleAes('${k}',this)"><div class="ph"><img src="${imgUrl(it)}" alt="" loading="lazy"></div><span class="name">${n}</span><span class="check"></span></button>`; }).join('');
+  $('#moods').innerHTML = MOODS.map(([k, n]) => { const board = BOARDS_IMG[k]; return `<button class="mood ${Q.aes.includes(k) ? 'on' : ''}" data-v="${k}" onclick="toggleAes('${k}',this)">${board ? `<div class="ph"><img src="${esc(board)}" alt="" loading="lazy"></div>` : `<div class="slot">${n}<br><small style="font-size:9px;letter-spacing:.1em;opacity:.7">mood board coming</small></div>`}<span class="name">${board ? n : ''}</span><span class="check"></span></button>`; }).join('');
+  fillPicks();
   $('#moreaes').innerHTML = AES.filter(a => !MOODS.some(m => m[0] === a)).map(a => `<button class="chip small ${Q.aes.includes(a) ? 'on' : ''}" onclick="toggleAes('${a}',this)">${cap1(a)}</button>`).join('');
-  $$('.seg[data-q]').forEach(seg => seg.querySelectorAll('button').forEach(b => { b.classList.toggle('on', Q[seg.dataset.q] === b.dataset.v); b.onclick = () => { Q[seg.dataset.q] = b.dataset.v; seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }; }));
+  $$('.seg[data-q]').forEach(seg => seg.querySelectorAll('button').forEach(b => { b.classList.toggle('on', Q[seg.dataset.q] === b.dataset.v); b.onclick = () => { Q[seg.dataset.q] = b.dataset.v; seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); if (seg.dataset.q === 'sys' || seg.dataset.q === 'shop') fillPick('shoe', SIZE_LISTS.shoe(Q.sys, Q.shop), Q.shoe); }; }));
   $$('.chips[data-m]').forEach(box => { if (box.id === 'brands' || box.id === 'colorsLove' || box.id === 'colorsAvoid') return; box.querySelectorAll('button').forEach(b => { b.classList.toggle('on', (Q[box.dataset.m] || []).includes(b.dataset.v)); b.onclick = () => { toggleMulti(box.dataset.m, b.dataset.v); b.classList.toggle('on'); }; }); });
   const colorChip = (m, [n, c]) => `<button class="chip small ${(Q[m] || []).includes(n) ? 'on' : ''}" onclick="toggleMulti('${m}','${n}');this.classList.toggle('on')"><span class="sw" style="background:${c}"></span>${cap1(n)}</button>`;
   $('#colorsLove').innerHTML = COLORS.filter(c => !['gold', 'silver'].includes(c[0])).map(c => colorChip('colorsLove', c)).join('');
@@ -984,36 +1039,37 @@ function renderItemSheet(it) {
   const cta = (so || !szAvail)
     ? `<div class="restock"><label>Email me when it is back</label><div class="two"><input id="restockEmail" value="${esc((P && P.email) || '')}" inputmode="email" placeholder="you@example.com"><select id="restockSize">${it.sizes.map(z => `<option ${z.s === sz ? 'selected' : ''}>${esc(z.s)}</option>`).join('')}</select></div><p>The moment ${esc(sz)} is back we add it to your bag so it is there when you check out. Email sending is not connected in this build, so you will see it as a PINND notification.</p></div><div class="stack"><button class="btn" onclick="subscribeRestock('${it.id}')">Notify me</button><button class="btn ghost" onclick="closeSheet();openBuilder('${it.id}')">Style it anyway</button></div>`
     : `<div class="stack"><button class="btn" onclick="addToBag('${it.id}');renderItemSheet(byId['${it.id}'])">${inBag ? '✓ In your bag · add another' : 'Add to bag · ' + money(it.p)}</button><button class="btn ghost" onclick="closeSheet();openBuilder('${it.id}')">Style it</button></div>`;
-  openSheetHTML(`${photo(it, 'big', saveBtn(it.id))}<p class="brand">${esc(it.b)}${it.mat ? ' · ' + esc(it.mat) : ''}</p><h2>${esc(it.n)}</h2><p class="price">${money(it.p)}${onSale(it) ? `<span class="was">${money(it.cp)}</span>` : ''}${so ? ' · <span style="color:var(--sale)">Sold out</span>' : !szAvail ? ` · <span style="color:var(--sale)">${esc(sz)} sold out</span>` : ''}</p>${sizes}<p class="note">${so ? 'We never hide a sold out piece. Get a note the moment your size returns.' : `Ships from ${esc(it.b)}. Simulated checkout in this build, or buy it on ${esc(it.b)}'s site.`}</p>${cta}
-    <div class="stack" style="margin-top:8px"><a class="btn ghost sm" href="${esc(it.url)}" target="_blank" rel="noopener">Buy on ${esc(it.b)} ↗</a><div style="display:flex;gap:8px"><button class="btn ghost sm" style="flex:1" onclick="sheetBoards('${it.id}')">Pin to board</button><button class="btn ghost sm" style="flex:1" onclick="dislikeSheet('${it.id}')">Not for me</button><button class="btn ghost sm" style="flex:1" onclick="closeSheet();askAbout('${it.id}')">Ask the stylist</button></div></div>
+  openSheetHTML(`${photo(it, 'big', saveBtn(it.id))}<p class="brand">${esc(it.b)}${it.mat ? ' · ' + esc(it.mat) : ''}</p><h2>${esc(it.n)}</h2><p class="price">${money(it.p)}${onSale(it) ? `<span class="was">${money(it.cp)}</span>` : ''}${so ? ' · <span style="color:var(--sale)">Sold out</span>' : !szAvail ? ` · <span style="color:var(--sale)">${esc(sz)} sold out</span>` : ''}</p>${sizes}<p class="note">${so ? 'We never hide a sold out piece. Get a note the moment your size returns.' : `Sold by ${esc(it.b)}, shipped to you, paid for inside PINND. Checkout is simulated in this build.`}</p>${cta}
+    <div class="stack" style="margin-top:8px"><div style="display:flex;gap:8px"><button class="btn ghost sm" style="flex:1" onclick="sheetBoards('${it.id}')">Pin to board</button><button class="btn ghost sm" style="flex:1" onclick="dislikeSheet('${it.id}')">Not for me</button><button class="btn ghost sm" style="flex:1" onclick="closeSheet();askAbout('${it.id}')">Ask the stylist</button></div></div>
     <p class="retail">${esc(CAT_LABEL[it.cat])} · ${(it.aes || []).slice(0, 3).map(cap1).join(' · ')}</p>`);
 }
 function subscribeRestock(id) { const email = ($('#restockEmail').value || '').trim(); const size = $('#restockSize').value; if (!/.+@.+\..+/.test(email)) { toast('Add a real email'); return; } S.subs.push({ id, size, email, at: Date.now() }); track('restock_requested', { id, size }); saveState(); closeSheet(); toast('Set. We will tell you the moment it is back'); }
-function addToBag(id, size) { const it = byId[id]; if (!it) return; const s = size || sheetSize[id] || mySize(it); S.bag.push({ id, size: s, at: Date.now() }); track('product_added_to_cart', { id, size: s }); bumpTrend(id); saveState(); updateBadges(); toast(`${it.n} · ${s} in your bag`); }
+let VIA = null; // creator post the shopper is shopping from
+function addToBag(id, size) { const it = byId[id]; if (!it) return; const s = size || sheetSize[id] || mySize(it); S.bag.push({ id, size: s, at: Date.now(), via: VIA || null }); track('product_added_to_cart', { id, size: s }); bumpTrend(id); saveState(); updateBadges(); toast(`${it.n} · ${s} in your bag`); }
 function removeFromBag(i) { S.bag.splice(i, 1); saveState(); renderBag(); updateBadges(); }
 
 /* ---------- builder ---------- */
 let B = { hero: null, dir: 'clean', idx: {}, picked: {} };
 function openBuilder(id, dir) {
-  const it = byId[id]; if (!it) return; B = { hero: it, dir: dir || (it.dir || [])[0] || 'clean', idx: {}, picked: {} };
+  const it = typeof id === 'object' ? id : byId[id]; if (!it) return; B = { hero: it, dir: dir || (it.dir || [])[0] || 'clean', idx: {}, picked: {} };
   track('exact_match_opened', { id }); renderBuilder(); go('builder');
 }
 function renderBuilder() {
   const h = B.hero; const inBag = S.bag.some(b => b.id === h.id);
   $('#dirs').innerHTML = Object.entries(DIRS).map(([k, l]) => `<button class="${B.dir === k ? 'on' : ''}" onclick="setDir('${k}')">${l}</button>`).join('');
-  $('#hero').innerHTML = `<span class="pinmark heropin"></span>${photo(h, '', saveBtn(h.id))}<div class="cap"><b>${esc(h.b)}</b><span>${esc(h.n)}</span><em>${money(h.p)}${isSoldOut(h) ? ' · sold out' : ''}</em></div><div style="margin-top:12px"><button class="btn sm ghost" onclick="addToBag('${h.id}');renderBuilder()">${inBag ? '✓ In your bag' : '+ Add this piece'}</button></div>`;
+  $('#hero').innerHTML = h.closet ? `<span class="pinmark heropin"></span><div class="ph"><img src="${h.img}" alt=""></div><div class="cap"><b>Your closet</b><span>${esc(h.n)}</span><em>Already yours</em></div>` : `<span class="pinmark heropin"></span>${photo(h, '', saveBtn(h.id))}<div class="cap"><b>${esc(h.b)}</b><span>${esc(h.n)}</span><em>${money(h.p)}${isSoldOut(h) ? ' · sold out' : ''}</em></div><div style="margin-top:12px"><button class="btn sm ghost" onclick="addToBag('${h.id}');renderBuilder()">${inBag ? '✓ In your bag' : '+ Add this piece'}</button></div>`;
   const rail = $('#rail'); rail.innerHTML = '';
   for (const cat of RAIL_FOR[h.cat] || ['tops', 'bottoms', 'shoes', 'bags']) {
     const cs = candidates(cat, h, B.dir, Object.values(B.picked)); if (!cs.length) continue;
     B.idx[cat] = B.idx[cat] || 0; const it = cs[B.idx[cat] % cs.length]; B.picked[cat] = it.id; const inB = S.bag.some(b => b.id === it.id);
     rail.insertAdjacentHTML('beforeend', `<div class="railset"><h4>${CAT_LABEL[cat]}<button onclick="swap('${cat}')">Swap</button></h4><div class="opt" id="opt-${cat}">${photo(it, '')}<div class="meta"><b>${esc(it.n)}</b><span>${esc(it.b)} · ${money(it.p)}${isSoldOut(it) ? ' · sold out' : ''}</span></div><div class="acts"><button onclick="openItem('${it.id}')">View</button><button class="add ${inB ? 'in' : ''}" onclick="addToBag('${it.id}');renderBuilder()" aria-label="Add">${inB ? '✓' : '+'}</button></div></div></div>`);
   }
-  $('#looktotal').textContent = money(h.p + Object.values(B.picked).reduce((a, id) => a + byId[id].p, 0));
+  $('#looktotal').textContent = money((h.closet ? 0 : h.p) + Object.values(B.picked).reduce((a, id) => a + byId[id].p, 0));
 }
 function setDir(d) { B.dir = d; B.idx = {}; B.picked = {}; renderBuilder(); toast(DIRS[d] + ' direction'); }
 function swap(cat) { const el = $('#opt-' + cat); if (el) el.classList.add('swapping'); const rejected = B.picked[cat]; track('outfit_swapped', { cat, rejected }); S.views[rejected] = Math.max(0, (S.views[rejected] || 0) - 1); delete B.picked[cat]; B.idx[cat] = (B.idx[cat] || 0) + 1; setTimeout(() => renderBuilder(), 200); toast('Noted. Less of that.'); }
-function addAll() { const ids = [B.hero.id, ...Object.values(B.picked)]; ids.forEach(id => { if (!S.bag.some(b => b.id === id)) addToBag(id); }); track('add_all_clicked', { n: ids.length }); toast('Whole look added'); setTimeout(() => go('bag'), 500); }
-function currentLookIds() { return B.hero ? [B.hero.id, ...Object.values(B.picked)] : []; }
+function addAll() { const ids = [...(B.hero.closet ? [] : [B.hero.id]), ...Object.values(B.picked)]; ids.forEach(id => { if (!S.bag.some(b => b.id === id)) addToBag(id); }); track('add_all_clicked', { n: ids.length }); toast('Whole look added'); setTimeout(() => go('bag'), 500); }
+function currentLookIds() { return B.hero ? [...(B.hero.closet ? [] : [B.hero.id]), ...Object.values(B.picked)] : []; }
 function openLook(id) { const L = LOOKS[id]; if (!L) return; const hero = byId[L.hero]; openBuilder(hero.id, L.dir || undefined); // seat the look's pieces
   const cats = RAIL_FOR[hero.cat] || []; cats.forEach(cat => { const want = L.ids.find(x => byId[x] && byId[x].cat === cat); if (!want) return; const cs = candidates(cat, hero, B.dir, []); const k = cs.findIndex(x => x.id === want); if (k >= 0) B.idx[cat] = k; }); B.picked = {}; renderBuilder(); }
 
@@ -1039,7 +1095,8 @@ function placeOrder() {
   const name = $('#shName').value.trim(), addr = $('#shAddr').value.trim(), city = $('#shCity').value.trim(), zip = $('#shZip').value.trim(), email = $('#shEmail').value.trim(), phone = $('#shPhone').value.trim();
   if (!name || !addr || !city) { toast('Add a name, address and city'); return; }
   S.shipping = { name, addr, city, zip, email, phone };
-  const t = bagTotals(); const o = { id: 'PN-' + String(1000 + S.orders.length + hashStr(RT.uid || 'x') % 900), items: S.bag.map(b => ({ id: b.id, size: b.size, price: byId[b.id] ? byId[b.id].p : 0, status: 'Preparing shipment' })), total: t.total, at: Date.now(), status: 'Preparing shipment', ship: S.shipping };
+  const t = bagTotals(); const o = { id: 'PN-' + String(1000 + S.orders.length + hashStr(RT.uid || 'x') % 900), items: S.bag.map(b => ({ id: b.id, size: b.size, price: byId[b.id] ? byId[b.id].p : 0, status: 'Preparing shipment', via: b.via || null })), total: t.total, at: Date.now(), status: 'Preparing shipment', ship: S.shipping };
+  creditCreators(o);
   S.orders.unshift(o); S.bag = []; track('purchase_completed', { id: o.id, total: t.total }); notify('Order placed', `${o.id} · ${o.items.length} piece${o.items.length === 1 ? '' : 's'} · ${money(o.total)}`, 'order'); saveState(); updateBadges();
   $('#confirm-id').textContent = 'Order ' + o.id; go('confirm');
 }
@@ -1222,24 +1279,29 @@ function renderMatch() {
 </script>
 <script>
 /* ===================== stylist ===================== */
-const QUICK = ['I have a wedding this weekend and need a really pretty blue dress', "I'm going to the Hamptons for Memorial Day. Cute red, white and blue outfits", 'I want chill clothes I can wear around the house every day', 'What should I wear tonight?', 'Keep everything under $300'];
+const QUICK = ['What should I wear tonight?', 'Vacation outfits for a week somewhere warm', 'Semi formal, a friend\'s engagement party', 'Black tie wedding next month', 'Date night, something a little unexpected', 'Find me an outfit under $300', 'I have a wedding this weekend and need a really pretty blue dress', 'Chill clothes I can wear around the house'];
 function stylistRules() { return `You are the PINND stylist: a fashionable friend who is also a real personal stylist. Warm, confident, current, never robotic, no emoji, no dashes inside sentences, short sentences. ${profileSummary()}\nCATALOG (one per line: id|name|brand|category|gender f/m/u|price|colors|aesthetics|occasions|directions|stock):\n${catalogSummary()}\nRules: only recommend ids from the catalog, never invent products, respect budgets the shopper states, respect sizes and the gender they shop, prefer in stock pieces, mix price points unless told a budget, 3 to 5 pieces per look from different categories (a dress counts as top and bottom). Ask at most ONE useful follow up (dress code, budget) and only when it truly changes the answer; otherwise give looks now. Reply with only JSON: {"reply": "<1 to 3 short sentences>", "looks": [{"title": "<3 word name>", "ids": ["<id>", ...], "why": "<one short sentence>"}] (0 to 3 looks, 0 when you ask a question), "chips": ["<short reply the shopper might tap>", "<another>"] (2 or 3)}`; }
 function renderStylist() {
   $('#sessions').innerHTML = `<span>${esc(plan().name)} · <b>${esc(meter())}</b></span><span>${plan().id === 'unlimited' ? 'Manage' : 'Upgrade'}</span>`;
   const chat = $('#chat');
-  if (!S.chat.length) { const nm = P && P.name ? ' ' + P.name : ''; chat.innerHTML = `<div class="msg ai"><div class="who">Your stylist</div>Hey${esc(nm)}. Tell me where you are going and I will build the whole look, in your sizes.${aiAvailable() ? '' : '\n\nClaude is not connected in this view, so I will build looks from your quiz on my own.'}</div>`; }
+  if (!S.chat.length) { const nm = P && P.name ? ' ' + P.name : ''; chat.innerHTML = `<div class="msg ai"><div class="who">kAI</div>Hi${esc(nm)}! How can I help you today? What are you shopping for?${aiAvailable() ? '' : '\n\nClaude is not connected in this view, so I will build looks from your quiz on my own.'}</div>`; }
   else chat.innerHTML = S.chat.map(msgHTML).join('');
   $('#prompts').innerHTML = QUICK.map(q => `<button onclick="askStylist('${q.replace(/'/g, "\\'")}')">${esc(q.length > 46 ? q.slice(0, 44) + '…' : q)}</button>`).join('') + `<button onclick="openHuman()">Book a real stylist</button>`;
   setTimeout(() => { $('#chatscroll').scrollTop = 1e6; }, 30);
 }
 function msgHTML(m) {
-  if (m.role === 'user') return `<div class="msg me">${esc(m.text)}</div>`;
+  if (m.role === 'user') return `<div class="msg me">${m.img ? `<div class="photo"><img src="${m.img}" alt="Your photo"></div>` : ''}${esc(m.text)}</div>`;
   const looks = (m.looks || []).map(l => { const L = regLook({ id: 'look-' + hashStr(l.ids.join(',')), ids: l.ids, hero: l.ids[0], dir: null, title: l.title }); return lookCardHTML(L, l.why); }).join('');
-  return `<div class="msg ai"><div class="who">Your stylist</div>${esc(m.text)}${looks ? `<div class="looks" style="margin-top:12px">${looks}</div>` : ''}${(m.chips || []).length ? `<div class="chips" style="margin-top:10px">${m.chips.map(c => `<button class="chip small" onclick="askStylist('${String(c).replace(/'/g, "\\'")}')">${esc(c)}</button>`).join('')}</div>` : ''}</div>`;
+  return `<div class="msg ai"><div class="who">kAI</div>${esc(m.text)}${looks ? `<div class="looks" style="margin-top:12px">${looks}</div>` : ''}${(m.chips || []).length ? `<div class="chips" style="margin-top:10px">${m.chips.map(c => `<button class="chip small" onclick="askStylist('${String(c).replace(/'/g, "\\'")}')">${esc(c)}</button>`).join('')}</div>` : ''}</div>`;
 }
 function lookCardHTML(L, why) { const its = L.ids.map(id => byId[id]).filter(Boolean); return `<div class="look">${collage(L.ids, true)}<div class="c"><b>${esc(L.title)}</b><span>${its.length} pieces · ${money(lookTotal(L))}${why ? ' · ' + esc(why) : ''}</span><div class="acts"><button onclick="openLook('${L.id}')">Style it</button><button class="p" onclick="addLook('${L.id}')">Add all</button></div></div></div>`; }
 function addLook(id) { const L = LOOKS[id]; if (!L) return; L.ids.forEach(x => { if (byId[x] && !S.bag.some(b => b.id === x)) addToBag(x); }); track('add_all_clicked', { look: id }); toast('Look added to bag'); }
-function newSession() { S.chat = []; saveState(); renderStylist(); }
+function newSession() { if (S.chat.length) { S.pastChats.unshift({ id: uid8(), title: (S.chat.find(m => m.role === 'user') || {}).text || 'Styling session', at: Date.now(), chat: S.chat }); if (S.pastChats.length > 20) S.pastChats.length = 20; } S.chat = []; saveState(); renderStylist(); }
+function openSessions() { openSheetHTML(`<h2>Your sessions</h2><p class="note">Every styling conversation stays here. Tap one to pick it back up.</p><div class="menu" style="padding:0">${S.pastChats.length ? S.pastChats.map(c => `<button onclick="resumeSession('${c.id}')"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.title.slice(0, 48))}</span><span>${timeAgo(c.at)}</span></button>`).join('') : '<p class="note">No past sessions yet.</p>'}</div>`); }
+function resumeSession(id) { const i = S.pastChats.findIndex(c => c.id === id); if (i < 0) return; const past = S.pastChats.splice(i, 1)[0]; if (S.chat.length) S.pastChats.unshift({ id: uid8(), title: (S.chat.find(m => m.role === 'user') || {}).text || 'Styling session', at: Date.now(), chat: S.chat }); S.chat = past.chat; saveState(); closeSheet(); renderStylist(); }
+let stPending = null; // a photo attached to the next message
+function attachPhoto(file) { if (!file) return; fileToBlob(file, 900).then(({ blob }) => { const url = URL.createObjectURL(blob); stPending = { blob, url }; const a = $('#stattach'); a.hidden = false; a.innerHTML = `<img src="${url}" alt="">Photo attached. Say what you want done with it. <button class="rm" onclick="clearAttach()">Remove</button>`; }); }
+function clearAttach() { stPending = null; $('#stattach').hidden = true; $('#stattach').innerHTML = ''; }
 function fallbackLooks(text) {
   const t = text.toLowerCase(); const occ = /wedding/.test(t) ? 'wedding' : /hampton|trip|travel|vacation|beach/.test(t) ? 'travel' : /house|chill|lounge|home/.test(t) ? 'everyday' : /tonight|dinner|date|night/.test(t) ? 'going-out' : /work|office/.test(t) ? 'work' : null;
   const budget = (t.match(/under\s*\$?(\d+)/) || [])[1]; const col = COLORS.map(c => c[0]).filter(c => t.includes(c));
@@ -1251,13 +1313,15 @@ function fallbackLooks(text) {
 async function askStylist(text) {
   text = (text || '').trim(); if (!text) return;
   if (!S.chat.length && !startSession()) return;
-  S.chat.push({ role: 'user', text }); saveState(); renderStylist();
+  const att = stPending; clearAttach(); let imgData = null; if (att) { imgData = await new Promise(r => { const c = document.createElement('canvas'); loadImage(att.url).then(im => { const s = Math.min(1, 240 / Math.max(im.width, im.height)); c.width = im.width * s; c.height = im.height * s; c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); r(c.toDataURL('image/jpeg', .7)); }); }); }
+  S.chat.push({ role: 'user', text: text + (att ? ' (photo attached)' : ''), img: imgData }); saveState(); renderStylist();
   const chat = $('#chat'); chat.insertAdjacentHTML('beforeend', `<div class="msg ai" id="thinking"><div class="who">Your stylist</div><span class="thinking">Pulling looks…</span></div>`); $('#chatscroll').scrollTop = 1e6;
   let out;
   if (aiAvailable()) {
     try {
       const turns = [{ role: 'user', content: stylistRules() }, ...S.chat.slice(-8).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.role === 'user' ? m.text : JSON.stringify({ reply: m.text, looks: m.looks || [], chips: m.chips || [] }) }))];
-      out = await askJSON(turns, { tier: 'default', cache: false });
+      if (att) turns[turns.length - 1].content += ' [The attached image is inspiration from the shopper: read the pieces, colors and vibe in it and find the closest real pieces in the catalog.]';
+      out = await askJSON(turns, Object.assign({ tier: 'default', cache: false }, att && aiImagesOK() ? { images: [att.blob] } : {}));
     } catch (e) { console.warn('stylist', e); toast(aiCopy(e)); }
   }
   if (!out || typeof out !== 'object') out = fallbackLooks(text);
@@ -1276,14 +1340,14 @@ function openKai() {
   const sh = $('#kaisheet'); sh.hidden = false; requestAnimationFrame(() => sh.classList.add('on'));
   $('#kschips').innerHTML = KAI_CHIPS.map(c => `<button onclick="sayToKai('${c.replace(/'/g, "\\'")}')">${c}</button>`).join('');
   unlockAudio();
-  if (!kaiOpenedOnce) { kaiOpenedOnce = true; $('#kslog').innerHTML = S.kaiLog.slice(-12).map(m => `<div class="m ${m.r}">${esc(m.t)}</div>`).join(''); if (!S.kaiLog.length) { const hi = `hey${P && P.name ? ' ' + P.name : ''}, I'm Kai. tell me where you're going, or show me something you saw. ${voiceInOK() ? 'talk or type.' : 'type to me, and I will talk back.'}`; kaiSay(hi); speak(hi); } }
-  $('#ksstate').textContent = voiceInOK() ? 'Head stylist · tap the mic or type' : 'Head stylist · type to me';
+  if (!kaiOpenedOnce) { kaiOpenedOnce = true; $('#kslog').innerHTML = S.kaiLog.slice(-12).map(m => `<div class="m ${m.r}">${esc(m.t)}</div>`).join(''); if (!S.kaiLog.length) { const hi = `Hi${P && P.name ? ' ' + P.name : ''}! I'm kAI, your personal stylist. What are you shopping for? ${voiceInOK() ? 'Talk or type.' : 'Type to me and I will talk back.'}`; kaiSay(hi); speak(hi); } }
+  $('#ksstate').textContent = voiceInOK() ? 'Your personal stylist · tap the mic or type' : 'Your personal stylist · type to me';
   $('#ksmic').classList.toggle('off', !voiceInOK());
 }
 function closeKai() { const sh = $('#kaisheet'); sh.classList.remove('on'); setTimeout(() => { sh.hidden = true; }, 380); listening(false); }
 function listening(on) { $('#kswave').classList.toggle('live', on); $('#ksmic').classList.toggle('live', on); }
 function kaiSay(t, cls = 'k') { const l = $('#kslog'); l.insertAdjacentHTML('beforeend', `<div class="m ${cls}">${esc(t)}</div>`); l.scrollTop = 1e6; if (cls !== 'k doing') { S.kaiLog.push({ r: cls, t }); if (S.kaiLog.length > 40) S.kaiLog.shift(); saveState(); } }
-function kaiRules(screen) { return `You are Kai, PINND's head stylist and the voice of the app. The shopper talks to you instead of tapping tabs. Be warm, quick and natural, like a fashionable friend texting; one or two short sentences, no emoji, no dashes inside sentences. ${profileSummary()} Current screen: ${screen}. Bag has ${S.bag.length} pieces. Boards: ${S.boards.map(b => b.name).join(', ')}.\nCATALOG (id|name|brand|category|gender|price|colors|aesthetics|occasions|directions|stock):\n${catalogSummary()}\nYou can act on the app with actions: {"a":"open","screen":"home|search|camera|stylist|profile|bag|checkout|sale|trending|boards|orders|notifications"} · {"a":"search","q":"<query>"} · {"a":"style","id":"<catalog id>","dir":"clean|edgy|casual|dinner"} (opens the outfit builder around a piece) · {"a":"add","id":"<id>"} · {"a":"add_all"} (adds the look on screen) · {"a":"looks","looks":[{"title":"..","ids":[..],"why":".."}]} (1 to 3 full looks, only catalog ids) · {"a":"save","id":"<id>"} · {"a":"dislike","what":"<text>"} · {"a":"restock","id":"<id>"}. Use at most 3 actions. If they say they saw something or want to find a thing from a photo, open camera. If they ask for an outfit for an occasion, send looks. If they name a piece to style, use style with the best matching id. Reply with only JSON {"say": "<what Kai says out loud>", "actions": [...]}`; }
+function kaiRules(screen) { return `You are kAI (said "kai"), PINND's personal stylist and the voice of the app. The shopper talks to you instead of tapping tabs. Be warm, quick and natural, like a fashionable friend texting; one or two short sentences, no emoji, no dashes inside sentences. ${profileSummary()} Current screen: ${screen}. Bag has ${S.bag.length} pieces. Boards: ${S.boards.map(b => b.name).join(', ')}.\nCATALOG (id|name|brand|category|gender|price|colors|aesthetics|occasions|directions|stock):\n${catalogSummary()}\nYou can act on the app with actions: {"a":"open","screen":"home|search|camera|stylist|profile|bag|checkout|sale|trending|boards|orders|notifications"} · {"a":"search","q":"<query>"} · {"a":"style","id":"<catalog id>","dir":"clean|edgy|casual|dinner"} (opens the outfit builder around a piece) · {"a":"add","id":"<id>"} · {"a":"add_all"} (adds the look on screen) · {"a":"looks","looks":[{"title":"..","ids":[..],"why":".."}]} (1 to 3 full looks, only catalog ids) · {"a":"save","id":"<id>"} · {"a":"dislike","what":"<text>"} · {"a":"restock","id":"<id>"}. Use at most 3 actions. If they say they saw something or want to find a thing from a photo, open camera. If they ask for an outfit for an occasion, send looks. If they name a piece to style, use style with the best matching id. Reply with only JSON {"say": "<what Kai says out loud>", "actions": [...]}`; }
 function kaiFallback(q) {
   q = q.toLowerCase(); const A = [];
   const say = (() => {
@@ -1311,7 +1375,7 @@ async function sayToKai(t) {
   if (!out || typeof out !== 'object') out = kaiFallback(t);
   const say = String(out.say || '').slice(0, 300); const actions = Array.isArray(out.actions) ? out.actions.slice(0, 3) : [];
   for (const a of actions) { const d = describeAction(a); if (d) kaiSay(d + '…', 'k doing'); try { await runAction(a); } catch (e) { console.warn('action', e); } }
-  kaiSay(say); speak(say); $('#ksstate').textContent = voiceInOK() ? 'Head stylist · tap the mic or type' : 'Head stylist · type to me';
+  kaiSay(say); speak(say); $('#ksstate').textContent = voiceInOK() ? 'Your personal stylist · tap the mic or type' : 'Your personal stylist · type to me';
 }
 function describeAction(a) { return ({ open: 'Opening ' + (a.screen || ''), search: 'Searching', style: 'Styling', add: 'Adding', add_all: 'Adding the look', looks: 'Pulling looks', save: 'Saving', dislike: 'Noting', restock: 'Setting a restock alert' })[a.a] || ''; }
 async function runAction(a) {
@@ -1358,20 +1422,27 @@ function renderProfile() {
     </div>
     <div class="section" id="boards-anchor"><h3>Boards</h3></div>
     <div class="boards">${S.boards.map(b => `<button class="board" onclick="openBoard('${b.id}')">${b.pins.length ? collage(b.pins.map(p => p.id), true) : '<div class="collage empty-b">+</div>'}<b>${esc(b.name)}</b><span>${b.pins.length} save${b.pins.length === 1 ? '' : 's'}</span></button>`).join('')}<button class="board" onclick="newBoard(null)"><div class="collage empty-b">+</div><b>New board</b><span>&nbsp;</span></button></div>
-    <section class="soon"><p class="eyebrow">Coming later</p><h3>My closet</h3><p>Photograph what you already own and ask things like “style these jeans for dinner tonight.” PINND mixes your pieces with new ones.</p></section>
+    <div class="section"><h3>My closet <span>${S.closet.length} piece${S.closet.length === 1 ? '' : 's'}</span></h3></div>
+    <p class="fine" style="padding:0 20px 10px">Photograph what you already own. Tap a piece and kAI builds the rest of the look around it.</p>
+    <div class="closet">${S.closet.map(c => `<button onclick="openClosetItem('${c.id}')"><div class="ph"><img src="${c.img}" alt=""></div><b>${esc(c.n)}</b></button>`).join('')}<label class="addc" for="closetfile">+</label><input id="closetfile" type="file" accept="image/*" hidden></div>
+    ${creatorRows()}
     <div class="section"><h3>Settings</h3></div>
     <div class="menu">
       <button onclick="retakeQuiz()">Sizes and fit <span>${esc(q.top || '?')} · ${esc(q.bottom || '?')} · ${esc(q.shoe || '?')} · ${esc(q.sys || 'US')}</span></button>
       <button onclick="toast('United States · USD in this build')">Region and currency <span>United States · USD</span></button>
       <button onclick="openNotifPrefs()">Notifications <span>${Object.values(S.notifPrefs || { restock: 1, drops: 1, orders: 1, sales: 1 }).filter(Boolean).length} on</span></button>
-      <button onclick="toast('Instagram and TikTok connect later. Not needed to use PINND.')">Connected accounts <span>Instagram, TikTok · later</span></button>
+      <button onclick="openSocials()">Connected accounts <span>${S.socials.instagram || S.socials.tiktok ? [S.socials.instagram && '@' + S.socials.instagram, S.socials.tiktok && '@' + S.socials.tiktok].filter(Boolean).join(' · ') : 'Instagram, TikTok'}</span></button>
       <button onclick="toast('${esc(P.email || '')}')">Account <span>${esc(P.email || '')}</span></button>
       <button onclick="setKai(!kaiOn);renderProfile()">Interface <span>${kaiOn ? 'Kai · switch to tabs' : 'Tabs · switch to Kai'}</span></button>
       <button onclick="openTester()">Tester tools <span>events, integrations</span></button>
       <button onclick="resetAll()">Sign out and reset <span>clears this account's demo data</span></button>
     </div>
     <p class="fine" style="padding:16px 20px">${RT.mode === 'cloud' ? 'Saved to your PINND account on claude.ai.' : RT.mode === 'server' ? 'Saved to your PINND account.' : 'Saved on this device only.'}</p>`;
+  const cf = $('#closetfile'); if (cf) cf.onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) addClosetPiece(f); };
+  showAdminRow();
 }
+function openSocials() { openSheetHTML(`<h2>Connected accounts</h2><p class="note">Your handles, so kAI and your creator profile can point to them. Connecting the real accounts comes with the app store build.</p><div class="form"><div class="in"><label>Instagram</label><input id="soIg" value="${esc(S.socials.instagram || '')}" placeholder="username"></div><div class="in"><label>TikTok</label><input id="soTt" value="${esc(S.socials.tiktok || '')}" placeholder="username"></div></div><div class="stack" style="margin-top:16px"><button class="btn" onclick="saveSocials()">Save</button></div>`); }
+function saveSocials() { S.socials = { instagram: ($('#soIg').value || '').replace(/^@/, '').trim(), tiktok: ($('#soTt').value || '').replace(/^@/, '').trim() }; saveState(); closeSheet(); renderProfile(); toast('Saved'); }
 function openNotifPrefs() { S.notifPrefs = S.notifPrefs || { restock: true, drops: true, orders: true, sales: true }; const P2 = S.notifPrefs; openSheetHTML(`<h2>Only what's useful</h2><p class="note">No spam. Each one is a real moment.</p><div class="menu" style="padding:0">${[['restock', 'Back in stock, in your size'], ['drops', 'Price drop on something you saved'], ['orders', 'Order shipped and delivered'], ['sales', 'Favorite brand sale']].map(([k, l]) => `<button onclick="S.notifPrefs['${k}']=!S.notifPrefs['${k}'];saveState();openNotifPrefs()">${l} <span>${P2[k] ? 'On' : 'Off'}</span></button>`).join('')}</div>`); }
 function openTester() {
   const soldInBag = S.bag.map(b => byId[b.id]).filter(it => it && isSoldOut(it)); const subs = S.subs.map(s => byId[s.id]).filter(Boolean); const targets = [...new Map([...subs, ...soldInBag, ...C.filter(isSoldOut).slice(0, 3)].map(it => [it.id, it])).values()].slice(0, 5);
@@ -1379,6 +1450,7 @@ function openTester() {
   openSheetHTML(`<h2>Tester tools</h2><p class="note">For you and Kayla. Nothing here is visible to a normal customer.</p>
     <div class="section" style="padding:6px 0 0"><h3>Bring a piece back in stock</h3></div><div class="stack">${targets.length ? targets.map(it => `<button class="btn ghost sm" onclick="fireRestock('${it.id}')">${esc(it.n)} · ${esc(it.b)}</button>`).join('') : '<p class="note">Tap Notify me on a sold out piece first.</p>'}</div>
     <div class="section" style="padding:18px 0 0"><h3>Other moments</h3></div><div class="stack"><button class="btn ghost sm" onclick="firePriceDrop()">Fire a price drop on a saved piece</button><button class="btn ghost sm" onclick="notify('Favorite brand sale','${esc((P.quiz && P.quiz.brands && P.quiz.brands[0]) || 'Staud')} just marked down 11 pieces in your size.','sale');closeSheet();toast('Sent')">Fire a brand sale note</button></div>
+    ${RT.mode === 'server' ? `<div class="section" style="padding:18px 0 0"><h3>Owner access</h3></div><div class="form"><div class="in"><label>Admin token</label><input id="admtok" value="${esc(LS.get('pinnd.admin') || '')}" placeholder="From the Railway variables"></div></div><div class="stack" style="margin-top:10px"><button class="btn ghost sm" onclick="LS.set('pinnd.admin',document.getElementById('admtok').value.trim());closeSheet();renderProfile();toast('Saved on this phone')">Save admin token</button></div>` : ''}
     <div class="section" style="padding:18px 0 0"><h3>Integration status</h3></div><table class="itable" style="margin:0;width:100%">${INT.map(([a, b]) => `<tr><th>${a}</th><td class="${/^live/.test(b) ? 'live' : ''}">${b}</td></tr>`).join('')}</table>
     <div class="section" style="padding:18px 0 0"><h3>Analytics events</h3></div><ul class="evlog" style="padding:0">${S.events.slice(0, 40).map(e => `<li><code>${esc(e.n)}</code><span>${timeAgo(e.at)}</span></li>`).join('') || '<li>Nothing yet</li>'}</ul>`);
 }
@@ -1423,12 +1495,12 @@ async function boot() {
   if (RT.mode === 'server') { try { const r = await fetch('/api/me', { credentials: 'same-origin' }); const j = await r.json(); if (j.user) { P = j.profile || { name: j.user.name, email: j.user.email, phone: j.user.phone, createdAt: Date.now() }; S = Object.assign(DEF_STATE(), j.state || {}); RT.uid = j.user.id; } } catch (e) { console.warn('me', e); } }
   else await loadStore();
   await loadTrend();
-  $('#welcome-collage').innerHTML = [['withjan', 'dresses'], ['staud', 'tops'], ['lisasaysgah', 'dresses']].map(([pre, cat]) => { const it = C.find(x => x.id.startsWith(pre + '-') && x.cat === cat) || C[0]; return `<div class="ph"><img src="${imgUrl(it)}" alt=""></div>`; }).join('');
   if (RT.me && RT.me.name && !($('#suName').value)) { $('#suName').value = RT.me.name; if (RT.me.email) $('#suEmail').value = RT.me.email; }
   if (RT.mode === 'server') { $('#su-note').textContent = 'We send a 6 digit code to your email to sign you in. Instagram and TikTok can be connected later.'; }
-  $('#welcome-fine').textContent = RT.mode === 'cloud' ? 'Real pieces from 25 brands. Saves live on your claude.ai account. Checkout is simulated.' : RT.mode === 'server' ? 'Real pieces from 25 brands. Checkout is simulated.' : 'Real pieces from 25 brands. This view saves on this device only.';
   renderQuiz();
   $('#camfile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) startScan(f); });
+  $('#stphoto').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) attachPhoto(f); });
+  if (RT.mode !== 'local') syncCreatorStatus().catch(() => { });
   $('#libfile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) startScan(f); });
   if (P && P.quiz) { Object.assign(Q, JSON.parse(JSON.stringify(P.quiz))); renderQuiz(); }
   if (S.kai) setKai(true);
@@ -1436,4 +1508,103 @@ async function boot() {
   if ('speechSynthesis' in window) speechSynthesis.getVoices();
 }
 boot().catch(e => { console.error('boot', e); toast('Something did not load. Pull to refresh.'); });
+</script>
+<script>
+/* ===================== My closet ===================== */
+async function addClosetPiece(file) {
+  toast('Adding to your closet…');
+  const { blob, img } = await fileToBlob(file, 900);
+  const thumb = await new Promise(r => { const c = document.createElement('canvas'); const s = Math.min(1, 320 / Math.max(img.width, img.height)); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); r(c.toDataURL('image/jpeg', .72)); });
+  let meta = { n: 'A piece of mine', cat: 'tops', col: [], aes: [] };
+  if (aiImagesOK()) { try { const v = await askJSON('This is a photo of one clothing item, shoe, bag or accessory the shopper already owns. Reply with only JSON {"n": "<short name, under 5 words, like Black leather jacket>", "cat": one of [tops,bottoms,dresses,outerwear,shoes,bags,jewelry,accessories], "col": [1 or 2 from black,white,brown,beige,grey,blue,green,pink,red,yellow,orange,purple,gold,silver], "aes": [1 or 2 from minimal,clean,classic,sporty,streetwear,edgy,vintage,y2k,romantic,luxury,casual,coastal,preppy,western,bohemian,business,resort], "dir": [1 from clean,edgy,casual,dinner]}', { images: [blob], tier: 'quick', cache: true }); if (v && v.n) meta = { n: String(v.n).slice(0, 40), cat: CAT_LABEL[v.cat] ? v.cat : 'tops', col: Array.isArray(v.col) ? v.col.slice(0, 2) : [], aes: Array.isArray(v.aes) ? v.aes.slice(0, 2) : [], dir: Array.isArray(v.dir) ? v.dir : [] }; } catch (e) { console.warn('closet', e); } }
+  const piece = Object.assign({ id: 'c' + uid8(), img: thumb, closet: true, p: 0, b: 'Your closet', g: (P && P.quiz && P.quiz.shop) || 'f', occ: ['everyday'], dir: ['casual'], at: Date.now() }, meta);
+  S.closet.unshift(piece); if (S.closet.length > 12) S.closet.length = 12; track('closet_added', { cat: piece.cat }); saveState(); renderProfile(); toast(`${piece.n} is in your closet`);
+  if (meta.n === 'A piece of mine') openClosetItem(piece.id);
+}
+function openClosetItem(id) {
+  const c = S.closet.find(x => x.id === id); if (!c) return;
+  openSheetHTML(`<div class="ph big"><img src="${c.img}" alt=""></div><p class="brand">Your closet</p><h2>${esc(c.n)}</h2><div class="form" style="margin:10px 0 14px"><div class="in"><label>Name it</label><input id="clName" value="${esc(c.n)}"></div></div><div class="chips" style="margin-bottom:14px">${Object.entries(CAT_LABEL).map(([k, l]) => `<button class="chip small ${c.cat === k ? 'on' : ''}" onclick="S.closet.find(x=>x.id==='${id}').cat='${k}';saveState();openClosetItem('${id}')">${l}</button>`).join('')}</div>
+    <div class="stack"><button class="btn" onclick="S.closet.find(x=>x.id==='${id}').n=document.getElementById('clName').value.trim()||'A piece of mine';saveState();closeSheet();openBuilder(S.closet.find(x=>x.id==='${id}'))">Style it with new pieces</button><button class="btn ghost" onclick="closeSheet();goTab('stylist');askStylist('Style this piece from my closet: ${esc(c.n).replace(/'/g, '')}. Build a full look around it for tonight.')">Ask kAI about it</button><button class="btn ghost sm" onclick="S.closet=S.closet.filter(x=>x.id!=='${id}');saveState();closeSheet();renderProfile()">Remove from closet</button></div>`);
+}
+
+/* ===================== Creators: apply, approve, post, shop, earn ===================== */
+const COMMISSION = 0.10; // placeholder, decided later
+const creatorStore = {
+  async get(col, id) { if (RT.mode === 'cloud') { try { const s = await RT.db.doc(`${col}/${id}`).get(); return s.exists ? s.data() : null; } catch { return null; } } if (RT.mode === 'server') { try { const r = await fetch(`/api/shared/${col}/${id}`, { credentials: 'same-origin', headers: adminHeaders() }); const j = await r.json(); return j.doc || null; } catch { return null; } } return (LS.get('pinnd.shared.' + col) || {})[id] || null; },
+  async list(col) { if (RT.mode === 'cloud') { try { const q = await RT.db.collection(col).limit(200).get(); return q.docs.map(d => Object.assign({ id: d.id }, d.data())); } catch { return []; } } if (RT.mode === 'server') { try { const r = await fetch(`/api/shared/${col}`, { credentials: 'same-origin', headers: adminHeaders() }); const j = await r.json(); return j.docs || []; } catch { return []; } } return Object.values(LS.get('pinnd.shared.' + col) || {}); },
+  async set(col, id, data) { data = JSON.parse(JSON.stringify(data)); if (RT.mode === 'cloud') { await RT.db.doc(`${col}/${id}`).set(data); return; } if (RT.mode === 'server') { const r = await fetch(`/api/shared/${col}/${id}`, { method: 'PUT', headers: Object.assign({ 'content-type': 'application/json' }, adminHeaders()), body: JSON.stringify(data), credentials: 'same-origin' }); if (!r.ok) throw new Error('save ' + r.status); return; } const all = LS.get('pinnd.shared.' + col) || {}; all[id] = Object.assign({ id }, data); LS.set('pinnd.shared.' + col, all); },
+};
+const myId = () => RT.uid || 'local';
+async function isAdmin() { if (RT.mode === 'cloud' && RT.user) { try { return !!(await RT.user.isOwner()); } catch { return false; } } if (RT.mode === 'server') { const t = LS.get('pinnd.admin'); if (!t) return false; try { const r = await fetch('/api/admin/check', { headers: { 'x-admin-token': t }, credentials: 'same-origin' }); return r.ok; } catch { return false; } } return true; }
+const adminHeaders = () => { const t = RT.mode === 'server' && LS.get('pinnd.admin'); return t ? { 'x-admin-token': t } : {}; };
+function creatorRows() {
+  const c = S.creator || {};
+  return `<div class="section"><h3>Creators</h3></div><div class="menu rows">
+    ${c.status === 'approved' ? `<button onclick="openStudio()"><span><b>Creator studio</b><small>Post an outfit, tag the pieces, earn when people shop it</small></span><span class="chev">›</span></button><button onclick="openCreator('${myId()}')"><span><b>My public profile</b><small>What other shoppers see</small></span><span class="chev">›</span></button>` : c.status === 'pending' ? `<button onclick="toast('Your application is in. We review it by hand.')"><span><b>Creator application</b><small>Pending review</small></span><span class="status">Pending</span></button>` : c.status === 'denied' ? `<button onclick="openApply()"><span><b>Creator application</b><small>Not this time. You can apply again later.</small></span><span class="status no">Denied</span></button>` : `<button onclick="openApply()"><span><b>Apply as a PINND creator</b><small>Share your outfits, let people shop them, earn commission</small></span><span class="chev">›</span></button>`}
+    <button onclick="openCreatorsFeed()"><span><b>Creator looks</b><small>Real people, real outfits, shop every piece</small></span><span class="chev">›</span></button>
+    <button id="adminrow" hidden onclick="openAdmin()"><span><b>Review creator applications</b><small>Owner only</small></span><span class="chev">›</span></button>
+  </div>`;
+}
+async function showAdminRow() { const el = $('#adminrow'); if (!el) return; el.hidden = !(await isAdmin()); }
+function openApply() {
+  openSheetHTML(`<h2>Apply as a creator</h2><p class="note">We look at every application by hand. Approved creators get a public profile, post outfits, tag the pieces, and earn a share of every purchase made through their posts.</p>
+    <div class="form"><div class="in"><label>Name</label><input id="apName" value="${esc((P && P.name) || '')}"></div><div class="two"><div class="in"><label>Instagram</label><input id="apIg" value="${esc(S.socials.instagram || '')}" placeholder="username"></div><div class="in"><label>TikTok</label><input id="apTt" value="${esc(S.socials.tiktok || '')}" placeholder="username"></div></div><div class="two"><div class="in"><label>Followers</label><input id="apFol" inputmode="numeric" placeholder="12,400"></div><div class="in"><label>Engagement</label><input id="apEng" placeholder="4.2%"></div></div><div class="in"><label>Anything else</label><input id="apNote" placeholder="Your style, your audience, links"></div></div>
+    <div class="field" style="margin-top:14px"><label>Screenshot of your analytics (optional)</label><input id="apShot" type="file" accept="image/*"></div>
+    <div class="stack" style="margin-top:16px"><button class="btn" onclick="submitApply()">Send application</button></div>`);
+}
+async function submitApply() {
+  const name = $('#apName').value.trim(), ig = $('#apIg').value.replace(/^@/, '').trim(), tt = $('#apTt').value.replace(/^@/, '').trim(); if (!name || (!ig && !tt)) { toast('Add your name and at least one handle'); return; }
+  let shot = null; const f = $('#apShot').files[0]; if (f) { const { img } = await fileToBlob(f, 600); const c = document.createElement('canvas'); const s = Math.min(1, 480 / Math.max(img.width, img.height)); c.width = img.width * s; c.height = img.height * s; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); shot = c.toDataURL('image/jpeg', .6); }
+  const app = { id: myId(), name, instagram: ig, tiktok: tt, followers: $('#apFol').value.trim(), engagement: $('#apEng').value.trim(), note: $('#apNote').value.trim().slice(0, 300), shot, status: 'pending', at: Date.now(), email: (P && P.email) || '' };
+  try { await creatorStore.set('applications', app.id, app); } catch (e) { toast('Could not send from this view. Try again signed in.'); return; }
+  S.creator = { status: 'pending', at: Date.now() }; S.socials = { instagram: ig, tiktok: tt }; track('creator_applied'); saveState(); closeSheet(); renderProfile(); toast('Application sent');
+}
+async function openAdmin() {
+  if (!(await isAdmin())) { toast('Owner only'); return; }
+  const apps = (await creatorStore.list('applications')).sort((a, b) => (b.at || 0) - (a.at || 0));
+  openSheetHTML(`<h2>Creator applications</h2><p class="note">Approve and the creator gets a studio and a public profile right away. Purchases through their posts are tracked under Earnings.</p>${apps.length ? apps.map(a => `<div class="app-row"><div style="min-width:0"><b>${esc(a.name)} <span class="status ${a.status === 'approved' ? 'ok' : a.status === 'denied' ? 'no' : ''}">${esc(a.status)}</span></b><span>${a.instagram ? 'IG @' + esc(a.instagram) : ''}${a.tiktok ? ' · TikTok @' + esc(a.tiktok) : ''}${a.followers ? ' · ' + esc(a.followers) + ' followers' : ''}${a.engagement ? ' · ' + esc(a.engagement) : ''}${a.note ? '<br>' + esc(a.note) : ''}${a.shot ? `<br><img src="${a.shot}" style="width:120px;border-radius:4px;margin-top:6px" alt="">` : ''}</span></div><div class="acts"><button class="ok" onclick="decide('${a.id}','approved')">Approve</button><button onclick="decide('${a.id}','denied')">Deny</button></div></div>`).join('') : '<p class="note">No applications yet.</p>'}
+    <div class="section" style="padding:18px 0 0"><h3>Earnings by creator</h3></div><div id="earnings"><p class="note">Loading…</p></div>`);
+  const led = await creatorStore.list('earnings'); $('#earnings').innerHTML = led.length ? led.map(l => `<div class="app-row"><div><b>${esc(l.name || l.id)}</b><span>${l.orders || 0} order${l.orders === 1 ? '' : 's'} · ${money(l.sales || 0)} in sales · ${money(l.commission || 0)} owed at ${Math.round(COMMISSION * 100)}%</span></div></div>`).join('') : '<p class="note">Nothing attributed yet.</p>';
+}
+async function decide(id, status) {
+  const a = await creatorStore.get('applications', id); if (!a) return; a.status = status; a.decidedAt = Date.now(); await creatorStore.set('applications', id, a);
+  if (status === 'approved') await creatorStore.set('creators', id, { id, name: a.name, instagram: a.instagram, tiktok: a.tiktok, approvedAt: Date.now() });
+  if (id === myId()) { S.creator = { status, at: Date.now() }; saveState(); }
+  toast(status === 'approved' ? `${a.name} is a PINND creator` : 'Denied'); openAdmin();
+}
+async function syncCreatorStatus() { if (!S.creator || S.creator.status === 'approved') return; const a = await creatorStore.get('applications', myId()); if (a && a.status !== S.creator.status) { S.creator = { status: a.status, at: Date.now() }; saveState(); if (cur === 'profile') renderProfile(); } }
+/* studio: post an outfit */
+let POST = { img: null, items: [], caption: '' };
+function openStudio() { POST = { img: null, items: [], caption: '' }; renderStudio(); }
+function renderStudio() {
+  openSheetHTML(`<h2>Post an outfit</h2><p class="note">A real photo of you in it, then tag up to five pieces from the catalog. Shoppers tap your photo and buy them; you earn ${Math.round(COMMISSION * 100)}% of what they spend.</p>
+    ${POST.img ? `<div class="ph big"><img src="${POST.img}" alt=""></div>` : `<label class="btn ghost" for="postfile">Choose the photo</label><input id="postfile" type="file" accept="image/*" hidden>`}
+    <div class="form" style="margin:12px 0"><div class="in"><label>Caption</label><input id="postcap" value="${esc(POST.caption)}" placeholder="Saturday in the city"></div></div>
+    <div class="field"><label>Tagged pieces (${POST.items.length}/5)</label><div class="row" style="padding:0">${POST.items.map(id => card(byId[id])).join('')}</div></div>
+    <div class="searchbox" style="margin:10px 0"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="postq" placeholder="Search the catalog to tag a piece" oninput="renderPostHits(this.value)"></div><div class="chips" id="posthits"></div>
+    <div class="stack" style="margin-top:16px"><button class="btn" onclick="publishPost()" ${POST.img && POST.items.length ? '' : 'disabled'}>Publish</button></div>`);
+  const pf = $('#postfile'); if (pf) pf.onchange = async e => { const f = e.target.files[0]; if (!f) return; const { img } = await fileToBlob(f, 1000); const c = document.createElement('canvas'); const s = Math.min(1, 640 / Math.max(img.width, img.height)); c.width = img.width * s; c.height = img.height * s; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); POST.img = c.toDataURL('image/jpeg', .72); POST.caption = ($('#postcap') || {}).value || ''; renderStudio(); };
+}
+function renderPostHits(q) { q = (q || '').trim().toLowerCase(); const hits = q ? C.filter(it => (it.n + ' ' + it.b).toLowerCase().includes(q)).slice(0, 8) : []; $('#posthits').innerHTML = hits.map(it => `<button class="chip small" onclick="tagPost('${it.id}')">${esc(it.n)} · ${esc(it.b)}</button>`).join(''); }
+function tagPost(id) { if (POST.items.length >= 5 || POST.items.includes(id)) return; POST.caption = ($('#postcap') || {}).value || ''; POST.items.push(id); renderStudio(); }
+async function publishPost() {
+  const caption = ($('#postcap').value || '').trim().slice(0, 120); const id = 'p' + uid8();
+  const post = { id, creator: myId(), name: (P && P.name) || 'Creator', img: POST.img, items: POST.items, caption, at: Date.now() };
+  try { await creatorStore.set('posts', id, post); } catch (e) { toast('Could not publish from this view.'); return; }
+  track('creator_posted', { n: POST.items.length }); closeSheet(); toast('Posted'); openCreator(myId());
+}
+async function openCreatorsFeed() {
+  const posts = (await creatorStore.list('posts')).sort((a, b) => (b.at || 0) - (a.at || 0));
+  showList('Creator looks', posts.length ? posts.map(postHTML).join('') : `<div class="empty"><h2>No creator looks yet.</h2><p>Approved creators post real outfits here. Every piece is shoppable.</p></div>`);
+}
+async function openCreator(id) {
+  const [c, posts] = await Promise.all([creatorStore.get('creators', id), creatorStore.list('posts')]); const mine = posts.filter(p => p.creator === id).sort((a, b) => (b.at || 0) - (a.at || 0)); const name = (c && c.name) || (mine[0] && mine[0].name) || 'Creator';
+  showList(name, `<div class="creator-head"><div class="av">${esc(name.charAt(0))}</div><div><h2>${esc(name)}</h2><p>${c && c.instagram ? 'IG @' + esc(c.instagram) : ''}${c && c.tiktok ? ' · TikTok @' + esc(c.tiktok) : ''} · PINND creator</p></div></div>${mine.length ? mine.map(postHTML).join('') : '<p class="fine" style="padding-inline:20px">No outfits posted yet.</p>'}`);
+}
+function postHTML(p) { const its = (p.items || []).map(id => byId[id]).filter(Boolean); return `<div class="post"><div class="ph"><img src="${p.img}" alt=""></div><div class="pc"><b>${esc(p.name)}</b><span>${esc(p.caption || '')} · ${its.length} piece${its.length === 1 ? '' : 's'} · ${money(its.reduce((a, x) => a + x.p, 0))}</span><div class="tagged">${its.map(it => `<button onclick="VIA='${p.id}';openItem('${it.id}')">${photo(it)}</button>`).join('')}</div><div class="acts" style="display:flex;gap:6px;margin-top:8px"><button class="btn sm ghost" onclick="openCreator('${p.creator}')">Profile</button><button class="btn sm" onclick="VIA='${p.id}';${its.map(it => `addToBag('${it.id}');`).join('')}VIA=null;go('bag')">Shop the look</button></div></div></div>`; }
+async function creditCreators(order) {
+  const byPost = {}; order.items.forEach(x => { if (x.via) (byPost[x.via] = byPost[x.via] || []).push(x); }); const posts = Object.keys(byPost); if (!posts.length) return;
+  for (const pid of posts) { const post = await creatorStore.get('posts', pid); if (!post) continue; const sales = byPost[pid].reduce((a, x) => a + x.price, 0); const led = (await creatorStore.get('earnings', post.creator)) || { id: post.creator, name: post.name, orders: 0, sales: 0, commission: 0 }; led.orders += 1; led.sales = Math.round((led.sales + sales) * 100) / 100; led.commission = Math.round(led.sales * COMMISSION * 100) / 100; led.name = post.name; try { await creatorStore.set('earnings', post.creator, led); } catch { } }
+  track('creator_commission', { posts: posts.length });
+}
 </script>
