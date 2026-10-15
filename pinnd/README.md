@@ -13,3 +13,5 @@ One page app in `public/index.html`, a real catalog of 240 pieces from 25 brands
 Run locally: `pnpm install && DEV_SHOW_CODE=1 pnpm start` (with `DEV_SHOW_CODE=1` the sign in code comes back in the response; never set it on Railway).
 
 The same `public/index.html` also runs as a claude.ai artifact with no server: there it uses the artifact runtime (`db`, `user`, `sample`).
+
+Membership levels (names, prices, what each includes, the one time session price) live in `PLANS` and `HUMAN` at the top of the third script block in `public/index.html`; change them there and every screen follows.

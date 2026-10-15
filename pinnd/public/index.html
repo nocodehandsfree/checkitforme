@@ -309,13 +309,20 @@ img{max-width:100%;display:block}
 .restock .two{display:grid;grid-template-columns:1fr 94px;gap:8px}
 .restock input,.restock select{height:44px;border:0;box-shadow:inset 0 0 0 1px var(--line);border-radius:2px;padding-inline:12px;color:var(--ink);background:var(--paper);font-size:15px}
 .restock p{font-size:12px;color:var(--ink2);line-height:1.5;margin-top:8px}
-.plans{display:flex;flex-direction:column;gap:10px;margin:12px 0}
-.plan{display:flex;justify-content:space-between;align-items:center;padding:14px;box-shadow:inset 0 0 0 1px var(--line);border-radius:4px;text-align:left}
-.plan b{display:block;font-family:var(--serif);font-size:22px;font-weight:500}
-.plan span{font-size:12px;color:var(--ink2)}
-.plan em{font-style:normal;font-size:15px;font-variant-numeric:tabular-nums}
+.plans{display:flex;flex-direction:column;gap:12px;margin:14px 0 4px}
+.plan{padding:16px;box-shadow:inset 0 0 0 1px var(--line);border-radius:6px;text-align:left}
+.plan b{display:block;font-family:var(--serif);font-size:24px;font-weight:500;line-height:1.1}
+.plan em{display:block;font-style:normal;font-size:14px;font-variant-numeric:tabular-nums;margin-top:4px}
+.plan .pitch{font-size:13px;color:var(--ink2);margin:8px 0 10px}
+.plan ul{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:6px}
+.plan li{font-size:13px;line-height:1.35;display:flex;gap:9px}
+.plan li::before{content:'';flex:none;width:5px;height:5px;border-radius:50%;background:var(--esp);margin-top:7px}
+.plan .btn{width:100%}
+.plan .btn[disabled]{opacity:.55}
 .plan.on{background:var(--esp);color:var(--cream);box-shadow:none}
-.plan.on span{color:#CDBDA6}
+.plan.on .pitch,.plan.on li{color:#CDBDA6}
+.plan.on li::before{background:#CDBDA6}
+.plan.on .btn{background:var(--cream);color:var(--esp)}
 /* bag, checkout, orders */
 .lines{padding-inline:20px}
 .line{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:flex-start}
@@ -720,12 +727,24 @@ const monthKey = () => new Date().toISOString().slice(0, 7);
 let toastT; function toast(m) { $('#toastmsg').textContent = m; $('#toast').classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => $('#toast').classList.remove('on'), 1800); }
 function banner(html, ms = 9000) { const b = $('#banner'); b.innerHTML = html; b.classList.add('on'); clearTimeout(banner.t); banner.t = setTimeout(() => b.classList.remove('on'), ms); }
 
+/* Membership levels. kAI is free for everyone; the paid levels add a real stylist. Names, prices, counts and the
+   kAI session cap (Infinity = unlimited) are the business's to change, here and nowhere else. */
 const PLANS = [
-  { id: 'free', name: 'Free', price: 0, sessions: 2, blurb: 'Everything in PINND, plus 2 stylist sessions a month' },
-  { id: 'plus', name: 'PINND+', price: 9.99, sessions: 7, blurb: '7 stylist sessions a month' },
-  { id: 'unlimited', name: 'PINND Unlimited', price: 19.99, sessions: Infinity, blurb: 'Unlimited stylist sessions, fair use applies' },
+  { id: 'free', name: 'PINND Free', price: 0, from: false, sessions: Infinity, human: false, cta: 'Back to free',
+    pitch: 'Everything you need to see it, find it and shop it.',
+    features: ['kAI, your stylist in your pocket, as often as you want', 'Snap a photo, find the real piece', 'Your Style ID and a feed built on it', 'Mood boards, saves, and a text when a sold out piece is back', 'Every store in one bag, checkout inside PINND'] },
+  { id: 'plus', name: 'PINND Plus', price: 9.99, from: false, sessions: Infinity, human: false, cta: 'Get Plus',
+    pitch: 'kAI, with a real person checking its work.',
+    features: ['Everything in PINND Free', 'One outfit a month looked over by a real PINND stylist, with notes', 'Sale alerts on your saved pieces before anyone else', 'First look at new brands and drops'] },
+  { id: 'styled', name: 'PINND Styled', price: 79, from: true, sessions: Infinity, human: true, cta: 'Meet your stylist',
+    pitch: 'A real stylist who knows your closet.',
+    features: ['Your own PINND stylist, the same person every month', '30 minute video session to start', '2 mood boards made for you, every piece shoppable', '4 full outfits a month from your closet and the catalog', '2 rounds of changes on every outfit', 'Text your stylist any time, a reply within a day', 'kAI, unlimited, always'] },
+  { id: 'frontrow', name: 'PINND Front Row', price: 399, from: true, sessions: Infinity, human: true, cta: 'Meet your stylist',
+    pitch: 'Your stylist, in person when it matters.',
+    features: ['A dedicated stylist, in person once a month for an hour', '12 full outfits a month, plus event looks when you need them', 'Your closet photographed and loaded into My Closet, up to 150 pieces', '3 mood boards a season, every piece shoppable', 'Unlimited messaging, unlimited kAI', 'First call on drops, sourcing for sold out pieces, PINND event invites'] },
 ];
-const HUMAN = { price: 100, minutes: 30 };
+const HUMAN = { price: 49, minutes: 30 }; // one time video session for anyone not on a stylist level
+const firstHuman = () => PLANS.find(p => p.human);
 const AES = ['minimal', 'clean', 'classic', 'sporty', 'streetwear', 'edgy', 'vintage', 'y2k', 'romantic', 'luxury', 'casual', 'coastal', 'preppy', 'western', 'bohemian', 'business', 'resort'];
 const COLORS = [['black', '#1C1917'], ['white', '#F8F5F0'], ['brown', '#5C3D2E'], ['beige', '#D9C8B1'], ['grey', '#8A8580'], ['blue', '#3E5A8A'], ['green', '#5F7A4E'], ['pink', '#E3A5B4'], ['red', '#B23A2E'], ['yellow', '#E8C547'], ['orange', '#E07A2F'], ['purple', '#6F4FA3'], ['gold', '#C9A24D'], ['silver', '#B8BCC2']];
 const SW = Object.fromEntries(COLORS);
@@ -1113,11 +1132,12 @@ function openNotifs() { const list = S.notifs; openSheetHTML(`<h2>Notifications<
 function timeAgo(t) { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'now' : m < 60 ? m + 'm ago' : m < 1440 ? Math.round(m / 60) + 'h ago' : Math.round(m / 1440) + 'd ago'; }
 function plan() { return PLANS.find(p => p.id === S.plan) || PLANS[0]; }
 function sessionsUsed() { if (S.sessions.month !== monthKey()) { S.sessions = { month: monthKey(), used: 0 }; } return S.sessions.used; }
-function meter() { const p = plan(); return p.sessions === Infinity ? 'Unlimited sessions' : `${Math.min(sessionsUsed(), p.sessions)} of ${p.sessions} sessions used this month`; }
+function meter() { const p = plan(); const k = p.sessions === Infinity ? 'Unlimited kAI' : `${Math.min(sessionsUsed(), p.sessions)} of ${p.sessions} kAI sessions used this month`; return p.human ? k + ' · real stylist included' : k; }
 function startSession() { const p = plan(); if (sessionsUsed() >= p.sessions) { openPlans(true); return false; } S.sessions.used++; track('ai_session_started'); saveState(); return true; }
-function openPlans(wall) { track('subscription_viewed'); openSheetHTML(`<h2>${wall ? 'You have used your free sessions this month' : 'Your stylist, as often as you want'}</h2><p class="note">Membership is simulated in this build. Prices and limits live in one config so the business can change them.</p><div class="plans">${PLANS.map(p => `<button class="plan ${S.plan === p.id ? 'on' : ''}" onclick="choosePlan('${p.id}')"><div><b>${p.name}</b><span>${p.blurb}</span></div><em>${p.price ? money(p.price) + '/mo' : 'Free'}</em></button>`).join('')}</div>`); }
-function choosePlan(id) { S.plan = id; track('subscription_started', { plan: id }); saveState(); closeSheet(); toast(`${plan().name} · ${meter()}`); if (cur === 'stylist') renderStylist(); if (cur === 'profile') renderProfile(); }
-function openHuman() { track('stylist_booking_started'); openSheetHTML(`<h2>A real stylist, on video</h2><p class="note">${HUMAN.minutes} minutes, ${money(HUMAN.price)}. They learn the event, your style, budget, sizes and what you already own, and leave you with one or two focused outfit directions. Booking is a preview in this build.</p><div class="field"><label>Occasion</label><div class="chips" id="hocc">${['Wedding', 'Trip', 'Work wardrobe', 'Date night', 'Just me'].map((o, i) => `<button class="chip ${i === 0 ? 'on' : ''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===this))">${o}</button>`).join('')}</div></div><div class="field" style="margin-top:16px"><label>This week</label><div class="chips" id="hslot">${['Tue 6pm', 'Wed 12pm', 'Thu 7pm', 'Sat 10am'].map((o, i) => `<button class="chip ${i === 1 ? 'on' : ''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===this))">${o}</button>`).join('')}</div></div><div class="stack" style="margin-top:18px"><button class="btn" onclick="bookHuman()">Request this session</button></div>`); }
+function priceLine(p) { return p.price ? `${p.from ? 'Starting at ' : ''}${money(p.price)} a month` : 'Free, always'; }
+function openPlans(wall) { track('subscription_viewed'); openSheetHTML(`<h2>${wall ? 'You have used this month\'s kAI sessions' : 'Your stylist, your level'}</h2><p class="note">kAI is free for everyone. Add a real stylist when you want a person in your corner. Membership is simulated in this build. Names, prices and counts live in one config.</p><div class="plans">${PLANS.map(p => { const on = S.plan === p.id; return `<div class="plan ${on ? 'on' : ''}"><b>${esc(p.name)}</b><em>${priceLine(p)}</em><p class="pitch">${esc(p.pitch)}</p><ul>${p.features.map(f => `<li>${esc(f)}</li>`).join('')}</ul><button class="btn sm" onclick="choosePlan('${p.id}')" ${on ? 'disabled' : ''}>${on ? 'Your level' : esc(p.cta)}</button></div>`; }).join('')}</div><p class="note" style="margin-top:14px">Not ready for a monthly stylist? Book one ${HUMAN.minutes} minute video session, ${money(HUMAN.price)}.</p><button class="btn ghost sm" style="margin-top:10px" onclick="openHuman()">Book one session</button>`); }
+function choosePlan(id) { S.plan = id; const p = plan(); track('subscription_started', { plan: id }); saveState(); closeSheet(); toast(`${p.name} · ${meter()}`); if (cur === 'stylist') renderStylist(); if (cur === 'profile') renderProfile(); if (p.human) openHuman(); }
+function openHuman() { track('stylist_booking_started'); const p = plan(); const h = firstHuman(); openSheetHTML(`<h2>${p.human ? 'Your stylist, on video' : 'A real stylist, on video'}</h2><p class="note">${p.human ? `Included in ${esc(p.name)}. Pick a time and your stylist confirms within a day.` : `${HUMAN.minutes} minutes, ${money(HUMAN.price)} one time, or every month on ${esc(h.name)} from ${money(h.price)} a month.`} They learn the event, your style, budget, sizes and what you already own, and leave you with one or two focused outfit directions. Booking is a preview in this build.</p><div class="field"><label>Occasion</label><div class="chips" id="hocc">${['Wedding', 'Trip', 'Work wardrobe', 'Date night', 'Just me'].map((o, i) => `<button class="chip ${i === 0 ? 'on' : ''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===this))">${o}</button>`).join('')}</div></div><div class="field" style="margin-top:16px"><label>This week</label><div class="chips" id="hslot">${['Tue 6pm', 'Wed 12pm', 'Thu 7pm', 'Sat 10am'].map((o, i) => `<button class="chip ${i === 1 ? 'on' : ''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===this))">${o}</button>`).join('')}</div></div><div class="stack" style="margin-top:18px"><button class="btn" onclick="bookHuman()">${p.human ? 'Book this session' : 'Request this session'}</button>${p.human ? '' : '<button class="btn ghost" onclick="openPlans()">See the stylist levels</button>'}</div>`); }
 function bookHuman() { const occ = ($('#hocc .chip.on') || {}).textContent || ''; const slot = ($('#hslot .chip.on') || {}).textContent || ''; notify('Request received', `${occ} · ${slot}. A stylist confirms within a day (simulated).`, 'stylist'); closeSheet(); toast('Request received'); }
 </script>
 <script>
@@ -1282,7 +1302,7 @@ function renderMatch() {
 const QUICK = ['What should I wear tonight?', 'Vacation outfits for a week somewhere warm', 'Semi formal, a friend\'s engagement party', 'Black tie wedding next month', 'Date night, something a little unexpected', 'Find me an outfit under $300', 'I have a wedding this weekend and need a really pretty blue dress', 'Chill clothes I can wear around the house'];
 function stylistRules() { return `You are the PINND stylist: a fashionable friend who is also a real personal stylist. Warm, confident, current, never robotic, no emoji, no dashes inside sentences, short sentences. ${profileSummary()}\nCATALOG (one per line: id|name|brand|category|gender f/m/u|price|colors|aesthetics|occasions|directions|stock):\n${catalogSummary()}\nRules: only recommend ids from the catalog, never invent products, respect budgets the shopper states, respect sizes and the gender they shop, prefer in stock pieces, mix price points unless told a budget, 3 to 5 pieces per look from different categories (a dress counts as top and bottom). Ask at most ONE useful follow up (dress code, budget) and only when it truly changes the answer; otherwise give looks now. Reply with only JSON: {"reply": "<1 to 3 short sentences>", "looks": [{"title": "<3 word name>", "ids": ["<id>", ...], "why": "<one short sentence>"}] (0 to 3 looks, 0 when you ask a question), "chips": ["<short reply the shopper might tap>", "<another>"] (2 or 3)}`; }
 function renderStylist() {
-  $('#sessions').innerHTML = `<span>${esc(plan().name)} · <b>${esc(meter())}</b></span><span>${plan().id === 'unlimited' ? 'Manage' : 'Upgrade'}</span>`;
+  $('#sessions').innerHTML = `<span>${esc(plan().name)} · <b>${esc(meter())}</b></span><span>${plan().human ? 'Manage' : 'Upgrade'}</span>`;
   const chat = $('#chat');
   if (!S.chat.length) { const nm = P && P.name ? ' ' + P.name : ''; chat.innerHTML = `<div class="msg ai"><div class="who">kAI</div>Hi${esc(nm)}! How can I help you today? What are you shopping for?${aiAvailable() ? '' : '\n\nClaude is not connected in this view, so I will build looks from your quiz on my own.'}</div>`; }
   else chat.innerHTML = S.chat.map(msgHTML).join('');
@@ -1418,7 +1438,7 @@ function renderProfile() {
     <div class="menu rows" style="margin-top:8px">
       <button onclick="openOrders()"><span><b>Orders</b><small>${o ? esc(o.id) + ' · ' + esc(o.status) : 'Nothing yet'}</small></span><span class="chev">›</span></button>
       <button onclick="openPlans()"><span><b>Membership · ${esc(plan().name)}</b><small>${esc(meter())}</small></span><span class="chev">›</span></button>
-      <button onclick="openHuman()"><span><b>Book a real stylist</b><small>${HUMAN.minutes} minute video session · ${money(HUMAN.price)}</small></span><span class="chev">›</span></button>
+      <button onclick="openHuman()"><span><b>Book a real stylist</b><small>${plan().human ? 'Included in ' + esc(plan().name) : HUMAN.minutes + ' minute video session · ' + money(HUMAN.price) + ', or monthly from ' + money(firstHuman().price)}</small></span><span class="chev">›</span></button>
     </div>
     <div class="section" id="boards-anchor"><h3>Boards</h3></div>
     <div class="boards">${S.boards.map(b => `<button class="board" onclick="openBoard('${b.id}')">${b.pins.length ? collage(b.pins.map(p => p.id), true) : '<div class="collage empty-b">+</div>'}<b>${esc(b.name)}</b><span>${b.pins.length} save${b.pins.length === 1 ? '' : 's'}</span></button>`).join('')}<button class="board" onclick="newBoard(null)"><div class="collage empty-b">+</div><b>New board</b><span>&nbsp;</span></button></div>
@@ -1564,7 +1584,7 @@ async function openAdmin() {
   const apps = (await creatorStore.list('applications')).sort((a, b) => (b.at || 0) - (a.at || 0));
   openSheetHTML(`<h2>Creator applications</h2><p class="note">Approve and the creator gets a studio and a public profile right away. Purchases through their posts are tracked under Earnings.</p>${apps.length ? apps.map(a => `<div class="app-row"><div style="min-width:0"><b>${esc(a.name)} <span class="status ${a.status === 'approved' ? 'ok' : a.status === 'denied' ? 'no' : ''}">${esc(a.status)}</span></b><span>${a.instagram ? 'IG @' + esc(a.instagram) : ''}${a.tiktok ? ' · TikTok @' + esc(a.tiktok) : ''}${a.followers ? ' · ' + esc(a.followers) + ' followers' : ''}${a.engagement ? ' · ' + esc(a.engagement) : ''}${a.note ? '<br>' + esc(a.note) : ''}${a.shot ? `<br><img src="${a.shot}" style="width:120px;border-radius:4px;margin-top:6px" alt="">` : ''}</span></div><div class="acts"><button class="ok" onclick="decide('${a.id}','approved')">Approve</button><button onclick="decide('${a.id}','denied')">Deny</button></div></div>`).join('') : '<p class="note">No applications yet.</p>'}
     <div class="section" style="padding:18px 0 0"><h3>Earnings by creator</h3></div><div id="earnings"><p class="note">Loading…</p></div>`);
-  const led = await creatorStore.list('earnings'); $('#earnings').innerHTML = led.length ? led.map(l => `<div class="app-row"><div><b>${esc(l.name || l.id)}</b><span>${l.orders || 0} order${l.orders === 1 ? '' : 's'} · ${money(l.sales || 0)} in sales · ${money(l.commission || 0)} owed at ${Math.round(COMMISSION * 100)}%</span></div></div>`).join('') : '<p class="note">Nothing attributed yet.</p>';
+  const led = await creatorStore.list('earnings'); const earnEl = $('#earnings'); if (earnEl) earnEl.innerHTML = led.length ? led.map(l => `<div class="app-row"><div><b>${esc(l.name || l.id)}</b><span>${l.orders || 0} order${l.orders === 1 ? '' : 's'} · ${money(l.sales || 0)} in sales · ${money(l.commission || 0)} owed at ${Math.round(COMMISSION * 100)}%</span></div></div>`).join('') : '<p class="note">Nothing attributed yet.</p>';
 }
 async function decide(id, status) {
   const a = await creatorStore.get('applications', id); if (!a) return; a.status = status; a.decidedAt = Date.now(); await creatorStore.set('applications', id, a);
@@ -1585,7 +1605,7 @@ function renderStudio() {
     <div class="stack" style="margin-top:16px"><button class="btn" onclick="publishPost()" ${POST.img && POST.items.length ? '' : 'disabled'}>Publish</button></div>`);
   const pf = $('#postfile'); if (pf) pf.onchange = async e => { const f = e.target.files[0]; if (!f) return; const { img } = await fileToBlob(f, 1000); const c = document.createElement('canvas'); const s = Math.min(1, 640 / Math.max(img.width, img.height)); c.width = img.width * s; c.height = img.height * s; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); POST.img = c.toDataURL('image/jpeg', .72); POST.caption = ($('#postcap') || {}).value || ''; renderStudio(); };
 }
-function renderPostHits(q) { q = (q || '').trim().toLowerCase(); const hits = q ? C.filter(it => (it.n + ' ' + it.b).toLowerCase().includes(q)).slice(0, 8) : []; $('#posthits').innerHTML = hits.map(it => `<button class="chip small" onclick="tagPost('${it.id}')">${esc(it.n)} · ${esc(it.b)}</button>`).join(''); }
+function renderPostHits(q) { q = (q || '').trim().toLowerCase(); const hits = q ? C.filter(it => (it.n + ' ' + it.b).toLowerCase().includes(q)).slice(0, 8) : []; const hitsEl = $('#posthits'); if (hitsEl) hitsEl.innerHTML = hits.map(it => `<button class="chip small" onclick="tagPost('${it.id}')">${esc(it.n)} · ${esc(it.b)}</button>`).join(''); }
 function tagPost(id) { if (POST.items.length >= 5 || POST.items.includes(id)) return; POST.caption = ($('#postcap') || {}).value || ''; POST.items.push(id); renderStudio(); }
 async function publishPost() {
   const caption = ($('#postcap').value || '').trim().slice(0, 120); const id = 'p' + uid8();
