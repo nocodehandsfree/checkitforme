@@ -110,12 +110,15 @@ app.get("/api/admin/last-code", async c => { if (!ADMIN_TOKEN || c.req.header("x
 app.get("/api/admin/events", async c => { if (!ADMIN_TOKEN || c.req.header("x-admin-token") !== ADMIN_TOKEN) return c.json({ error: "no" }, 403); const r = await db.execute("SELECT user_id,kind,detail,at FROM events ORDER BY id DESC LIMIT 100"); return c.json({ events: r.rows }); });
 
 /* ---------- shared collections: creator applications, creators, posts, earnings ---------- */
-const SHARED = new Set(["applications", "creators", "posts", "earnings"]);
+const INQUIRY_TO = env.INQUIRY_TO || "";
+const fromEmail = () => { const m = MAIL_FROM.match(/<(.+)>$/); return (m ? m[1] : MAIL_FROM).trim(); };
+const escHtml = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] as string));
+const SHARED = new Set(["applications", "creators", "posts", "earnings", "inquiries"]);
 const isAdminReq = (c: any) => !!ADMIN_TOKEN && c.req.header("x-admin-token") === ADMIN_TOKEN;
 async function sharedGet(col: string, id: string) { const r = await db.execute({ sql: "SELECT json FROM docs WHERE user_id=? AND name=?", args: ["shared:" + col, id] }); return r.rows[0] ? JSON.parse(String(r.rows[0].json)) : null; }
 app.get("/api/admin/check", c => isAdminReq(c) ? c.json({ ok: true }) : c.json({ error: "no" }, 403));
-app.get("/api/shared/:col", async c => { const col = c.req.param("col"); if (!SHARED.has(col)) return c.json({ error: "no such collection" }, 404); const u = await sessionUser(c); if (!u && !isAdminReq(c)) return c.json({ error: "sign in" }, 401); if ((col === "applications" || col === "earnings") && !isAdminReq(c)) { const mine = u ? await sharedGet(col, u.id) : null; return c.json({ docs: mine ? [mine] : [] }); } const r = await db.execute({ sql: "SELECT name,json FROM docs WHERE user_id=? ORDER BY updated_at DESC LIMIT 300", args: ["shared:" + col] }); return c.json({ docs: r.rows.map(x => Object.assign({ id: String(x.name) }, JSON.parse(String(x.json)))) }); });
-app.get("/api/shared/:col/:id", async c => { const col = c.req.param("col"), id = c.req.param("id"); if (!SHARED.has(col)) return c.json({ error: "no such collection" }, 404); const u = await sessionUser(c); if (!u && !isAdminReq(c)) return c.json({ error: "sign in" }, 401); if ((col === "applications" || col === "earnings") && !isAdminReq(c) && (!u || u.id !== id)) return c.json({ doc: null }); return c.json({ doc: await sharedGet(col, id) }); });
+app.get("/api/shared/:col", async c => { const col = c.req.param("col"); if (!SHARED.has(col)) return c.json({ error: "no such collection" }, 404); const u = await sessionUser(c); if (!u && !isAdminReq(c)) return c.json({ error: "sign in" }, 401); if (col === "inquiries" && !isAdminReq(c)) return c.json({ docs: [] }); if ((col === "applications" || col === "earnings") && !isAdminReq(c)) { const mine = u ? await sharedGet(col, u.id) : null; return c.json({ docs: mine ? [mine] : [] }); } const r = await db.execute({ sql: "SELECT name,json FROM docs WHERE user_id=? ORDER BY updated_at DESC LIMIT 300", args: ["shared:" + col] }); return c.json({ docs: r.rows.map(x => Object.assign({ id: String(x.name) }, JSON.parse(String(x.json)))) }); });
+app.get("/api/shared/:col/:id", async c => { const col = c.req.param("col"), id = c.req.param("id"); if (!SHARED.has(col)) return c.json({ error: "no such collection" }, 404); const u = await sessionUser(c); if (!u && !isAdminReq(c)) return c.json({ error: "sign in" }, 401); if ((col === "applications" || col === "earnings") && !isAdminReq(c) && (!u || u.id !== id)) return c.json({ doc: null }); if (col === "inquiries" && !isAdminReq(c) && (!u || !id.startsWith(u.id + "-"))) return c.json({ doc: null }); return c.json({ doc: await sharedGet(col, id) }); });
 app.put("/api/shared/:col/:id", async c => {
   const col = c.req.param("col"), id = c.req.param("id"); if (!SHARED.has(col)) return c.json({ error: "no such collection" }, 404);
   const u = await sessionUser(c); const admin = isAdminReq(c); if (!u && !admin) return c.json({ error: "sign in" }, 401);
@@ -123,9 +126,10 @@ app.put("/api/shared/:col/:id", async c => {
   if (col === "applications" && !admin && (!u || u.id !== id)) return c.json({ error: "not yours" }, 403);
   if (col === "applications" && !admin) { body.status = "pending"; body.id = u!.id; }
   if (col === "creators" && !admin) return c.json({ error: "admin only" }, 403);
+  if (col === "inquiries" && !admin) { if (!u || !id.startsWith(u.id + "-")) return c.json({ error: "not yours" }, 403); body.user = u!.id; body.status = "new"; }
   if (col === "posts" && !admin) { const cr = u ? await sharedGet("creators", u.id) : null; if (!cr) return c.json({ error: "not an approved creator" }, 403); body.creator = u!.id; }
   await db.execute({ sql: "INSERT INTO docs (user_id,name,json,updated_at) VALUES (?,?,?,?) ON CONFLICT(user_id,name) DO UPDATE SET json=excluded.json, updated_at=excluded.updated_at", args: ["shared:" + col, id, JSON.stringify(body), Date.now()] });
-  await logEvent(u ? u.id : "admin", "shared_" + col, id); return c.json({ ok: true });
+  await logEvent(u ? u.id : "admin", "shared_" + col, id); if (col === "inquiries" && !admin) { const to = INQUIRY_TO || fromEmail(); if (to) { try { await sendMail(to, `PINND stylist inquiry from ${String(body.name || "").slice(0, 60)}`, `<p>${escHtml(body.name)} (${escHtml(body.email)}${body.phone ? ", " + escHtml(body.phone) : ""}) wrote:</p><p>${escHtml(body.what)}</p><p>Reach them: ${escHtml(body.when || "")}</p>`); } catch { } } } return c.json({ ok: true });
 });
 
 /* ---------- Claude proxy: the page builds the prompt, the server holds the key ---------- */

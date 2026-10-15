@@ -14,4 +14,4 @@ Run locally: `pnpm install && DEV_SHOW_CODE=1 pnpm start` (with `DEV_SHOW_CODE=1
 
 The same `public/index.html` also runs as a claude.ai artifact with no server: there it uses the artifact runtime (`db`, `user`, `sample`).
 
-Membership levels (names, prices, what each includes, the one time session price) live in `PLANS` and `HUMAN` at the top of the third script block in `public/index.html`; change them there and every screen follows.
+Membership levels and real stylist packages (names, prices, what each includes) live in `PLANS` and `STYLIST` at the top of the third script block in `public/index.html`; change them there and every screen follows. Set `INQUIRY_TO` on Railway to the address that should get custom session inquiries (defaults to the `MAIL_FROM` address).
