@@ -4961,7 +4961,10 @@ function initMap(){
   try{
     const c=USER_LOC?[USER_LOC.lat,USER_LOC.lng]:[39.5,-98.35];
     MAP=L.map('mapview',{zoomControl:false,attributionControl:false}).setView(c, USER_LOC?12:4);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:19,minZoom:3,subdomains:'abcd'}).addTo(MAP);
+    // CARTO started stamping "API KEY REQUIRED" across every tile (owner 2026-10-16), so the map
+    // background is Esri's dark grey canvas now. Its tiles stop at zoom 16, and it serves from one
+    // host, so there are no subdomains to rotate.
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,minZoom:3}).addTo(MAP);
     if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,false);
     // Master drop-a-pin: tap anywhere (zoom out & roam first) → that becomes your location, stores reload.
     // Regular users tap store pins to check; the map never moves them.
@@ -8435,7 +8438,7 @@ function zoneMapInit(){
   try{ if(ZMAP){ ZMAP.remove(); ZMAP=null; } }catch(_){ } ZMARKERS={}; ZRING=null;
   const c=USER_LOC?[USER_LOC.lat,USER_LOC.lng]:[34.15,-118.63];
   ZMAP=L.map('zmap',{zoomControl:false,attributionControl:false}).setView(c, USER_LOC?12:10);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:19,minZoom:3,subdomains:'abcd'}).addTo(ZMAP);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,minZoom:3}).addTo(ZMAP); // same swap off CARTO as the store map above
   ZMAP.on('click', async (e)=>{ USER_LOC={lat:e.latlng.lat,lng:e.latlng.lng}; try{ ZMAP.panTo([USER_LOC.lat,USER_LOC.lng]); }catch(_){ } await zoneEnsureStores(); zoneMapDraw(); zoneBarSync(); toast(t('zones.recentered','Zone recentered here'),'neutral'); }); // panTo so the new pin locks to center (owner 07-11)
   setTimeout(()=>{ try{ ZMAP.invalidateSize(); }catch(_){ } zoneMapDraw(); },60);
 }

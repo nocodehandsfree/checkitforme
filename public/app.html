@@ -6815,7 +6815,10 @@ function mapSheet(){
 function ensureMap(){
   if(!MAP){
     MAP=L.map('leafletmap',{zoomControl:false,attributionControl:false}).setView([34.05,-118.24],10);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:''}).addTo(MAP);
+    // CARTO started stamping "API KEY REQUIRED" across every tile (owner 2026-10-16), so the map
+    // background is Esri's dark grey canvas now. Its tiles stop at zoom 16, and it serves from one
+    // host, so there are no subdomains to rotate.
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:''}).addTo(MAP);
     MARKERS=L.layerGroup().addTo(MAP);
   }
   setTimeout(()=>{MAP.invalidateSize(); loadMap();},120);
