@@ -1,0 +1,280 @@
+<title>PINND Style Dial</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap">
+<style>
+/* Layout: one phone screen. Style name up top, the pile of clothes on a cream sheet in the middle, kAI's bar, then a rotary dial under the thumb. */
+:root{--bg:#FBF7F1;--sheet:#F3EBDF;--sheet2:#EAE0D0;--fg:#241913;--muted:#6B5A4E;--line:#DDD2C2;--esp:#2B1D16;--cream:#F3EBDF;--chip:#FFFFFF;--shadow:rgba(43,29,22,.28);--serif:"Cormorant Garamond",Georgia,"Times New Roman",serif;--sans:"Jost","Helvetica Neue",Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1B1310;--sheet:#EFE6D8;--sheet2:#E2D6C4;--fg:#F3EBDF;--muted:#B9A999;--line:#3D2B22;--esp:#F3EBDF;--cream:#2B1D16;--chip:#2B1D16;--shadow:rgba(20,10,5,.35);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1B1310;--sheet:#EFE6D8;--sheet2:#E2D6C4;--fg:#F3EBDF;--muted:#B9A999;--line:#3D2B22;--esp:#F3EBDF;--cream:#2B1D16;--chip:#2B1D16;--shadow:rgba(20,10,5,.35);color-scheme:dark}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent;touch-action:pan-y}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--esp);outline-offset:2px}
+.app{height:100%;max-width:430px;margin:0 auto;display:flex;flex-direction:column;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px 0;position:relative;user-select:none;-webkit-user-select:none}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:4px 6px}
+.top .wm{font-family:var(--serif);font-weight:600;font-size:15px;letter-spacing:.22em;color:var(--muted)}
+.top h1{margin:0;font-family:var(--serif);font-weight:500;font-size:34px;line-height:1;text-wrap:balance;min-height:34px}
+.top .sub{font-size:12px;color:var(--muted);margin-top:4px;min-height:16px}
+.keep{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);font-weight:500;font-size:13px;flex:none;transition:background .2s,color .2s}
+.keep svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+.keep.on{background:var(--esp);color:var(--cream);box-shadow:none}
+.keep.on svg{fill:currentColor}
+.sheet{position:relative;flex:1;min-height:300px;background:var(--sheet);border-radius:10px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--sheet2);background-image:radial-gradient(ellipse at 50% 40%,rgba(255,255,255,.55),rgba(255,255,255,0) 70%)}
+.sheet::after{content:"";position:absolute;inset:auto 0 0 0;height:70px;background:linear-gradient(to bottom,rgba(43,29,22,0),rgba(43,29,22,.08));opacity:0;transition:opacity .2s;pointer-events:none}
+.sheet.dragging::after{opacity:1}
+.piece{position:absolute;transform:rotate(var(--rot)) translate(var(--dx,0px),var(--dy,0px)) scale(var(--sc,1));transform-origin:50% 50%;will-change:transform;touch-action:none;cursor:grab;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.piece.moving{transition:none;cursor:grabbing}
+.piece.lift{--sc:1.08;z-index:40!important}
+.piece.out{opacity:0;--dy:46px}
+.piece.in{opacity:0;--dy:-26px}
+.piece img{display:block;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none;filter:drop-shadow(0 12px 14px var(--shadow)) drop-shadow(0 2px 3px rgba(43,29,22,.18))}
+.piece.lift img{filter:drop-shadow(0 22px 22px var(--shadow)) drop-shadow(0 3px 4px rgba(43,29,22,.2))}
+.piece .tag{position:absolute;left:50%;bottom:-8px;transform:translate(-50%,100%);background:var(--chip);color:var(--fg);box-shadow:0 2px 10px rgba(43,29,22,.18);border-radius:6px;padding:6px 9px;font-size:11px;line-height:1.25;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
+.piece .tag b{display:block;font-family:var(--serif);font-size:15px;font-weight:600}
+.piece.lift .tag{opacity:1}
+.hint{position:absolute;left:0;right:74px;bottom:12px;text-align:center;font-size:11px;color:var(--muted);pointer-events:none;padding:0 16px;text-wrap:balance}
+.dock{position:absolute;right:12px;bottom:12px;width:50px;height:50px;border-radius:50%;background:var(--esp);color:var(--cream);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(43,29,22,.25);z-index:60;transition:transform .2s,box-shadow .2s}
+.dock svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7}
+.dock .n{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--bg);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 5px;font-variant-numeric:tabular-nums}
+.dock.hot{transform:scale(1.18);box-shadow:0 0 0 8px rgba(43,29,22,.12),0 6px 18px rgba(43,29,22,.3)}
+.dock.pop{animation:pop .35s}
+@keyframes pop{40%{transform:scale(1.25)}}
+.kai{display:flex;flex-direction:column;gap:6px;padding-block:10px 4px;position:relative}
+.kai .bubble{position:absolute;left:0;right:0;bottom:100%;margin-bottom:6px;background:var(--esp);color:var(--cream);border-radius:12px;padding:9px 12px;font-size:13px;line-height:1.35;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s;pointer-events:none;z-index:70}
+.kai .bubble.on{opacity:1;transform:none}
+.kai form{display:flex;align-items:center;gap:8px;height:46px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);padding:0 6px 0 14px;background:var(--chip)}
+.kai .k{width:24px;height:24px;border-radius:50%;background:var(--esp);color:var(--cream);font-family:var(--serif);font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
+.kai input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:15px;color:var(--fg);outline:0}
+.kai input::placeholder{color:var(--muted)}
+.kai .go{width:34px;height:34px;border-radius:50%;background:var(--esp);color:var(--cream);display:flex;align-items:center;justify-content:center;flex:none}
+.kai .go svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;height:30px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);font-size:12px;color:var(--fg)}
+.dialwrap{position:relative;height:138px;overflow:hidden;margin-left:calc(-1*max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1*max(16px,env(safe-area-inset-right,0px)));touch-action:none}
+.dialwrap .needle{position:absolute;left:50%;top:6px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid var(--esp);transform:translateX(-50%);z-index:3}
+.wheel{position:absolute;left:50%;top:22px;width:var(--d);height:var(--d);margin-left:calc(var(--d)/-2);border-radius:50%;box-shadow:inset 0 0 0 1px var(--line),0 -8px 30px rgba(43,29,22,.06);background:radial-gradient(circle at 50% 50%,var(--bg) 60%,var(--sheet) 100%);transform:rotate(var(--theta));transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.wheel.moving{transition:none}
+.wheel .lab{position:absolute;left:50%;top:50%;width:120px;margin-left:-60px;text-align:center;font-family:var(--serif);font-size:21px;font-weight:500;color:var(--muted);transform:rotate(var(--a)) translateY(calc(var(--d)/-2 + 30px));transition:color .2s,font-size .2s}
+.wheel .lab.cur{color:var(--fg);font-weight:600;font-size:23px}
+.wheel .lab i{display:block;width:1px;height:8px;background:var(--line);margin:0 auto 6px}
+.wheel .lab.cur i{background:var(--esp);height:12px}
+.dialwrap .arrow{position:absolute;top:52px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--muted);z-index:4}
+.dialwrap .arrow svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+.dialwrap .arrow.l{left:max(16px,env(safe-area-inset-left,0px))}
+.dialwrap .arrow.r{right:max(16px,env(safe-area-inset-right,0px))}
+.dialwrap .idlabel{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-10px);background:var(--esp);color:var(--cream);padding:8px 14px;border-radius:999px;font-size:12px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:80;white-space:nowrap}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.bagsheet{position:absolute;inset:0;background:rgba(36,25,19,.35);display:none;align-items:flex-end;z-index:90}
+.bagsheet.on{display:flex}
+.bagsheet .card{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:70%;overflow:auto}
+.bagsheet h2{margin:0 0 4px;font-family:var(--serif);font-weight:500;font-size:26px}
+.bagsheet .note{font-size:12px;color:var(--muted);margin:0 0 12px}
+.bagsheet .row{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.bagsheet .row img{width:46px;height:46px;object-fit:contain;background:var(--sheet);border-radius:6px;flex:none;padding:3px}
+.bagsheet .row b{display:block;font-family:var(--serif);font-size:16px;font-weight:600}
+.bagsheet .row span{font-size:12px;color:var(--muted)}
+.bagsheet .row em{margin-left:auto;font-style:normal;font-variant-numeric:tabular-nums}
+.bagsheet .close{width:100%;height:46px;border-radius:999px;background:var(--esp);color:var(--cream);font-weight:500;margin-top:14px}
+@media (prefers-reduced-motion:reduce){.piece,.wheel,.dock,.kai .bubble,.toast{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app" id="app">
+  <div class="top">
+    <div>
+      <div class="wm">PINND</div>
+      <h1 id="styleName">Minimal</h1>
+      <div class="sub" id="styleSub">Spin the dial. The pile re-lays itself.</div>
+    </div>
+    <button class="keep" id="keepBtn" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/></svg><span id="keepTxt">Keep</span></button>
+  </div>
+
+  <div class="sheet" id="sheet">
+    <div class="hint" id="hint">Tap a piece to lift it · drag it down to your bag · flick it away if it's not you · hold it and kAI rebuilds the outfit around it</div>
+    <button class="dock" id="dock" aria-label="Your bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 12H5L6 8z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg><span class="n" id="bagN">0</span></button>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="kai">
+    <div class="bubble" id="bubble"></div>
+    <form id="kaiForm">
+      <span class="k">k</span>
+      <input id="kaiIn" placeholder="Tell kAI: rainy day, cheaper, dressier…" autocomplete="off" enterkeyhint="go">
+      <button class="go" type="submit" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </form>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="dialwrap" id="dialwrap">
+    <div class="needle"></div>
+    <div class="wheel" id="wheel"></div>
+    <button class="arrow l" id="prev" aria-label="Previous style"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="arrow r" id="next" aria-label="Next style"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <div class="idlabel" id="idlabel">Your Style ID: pick 2 or 3</div>
+  </div>
+
+  <div class="bagsheet" id="bagsheet"><div class="card"><h2>Your bag</h2><p class="note">Pieces you dragged off the pile. Checkout stays inside PINND. This is a prototype, nothing is charged.</p><div id="bagRows"></div><button class="close" id="bagClose">Back to the pile</button></div></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const STYLES = ['minimal','clean','classic','luxury','romantic','vintage','edgy','streetwear','sporty']; // the nine styles the catalog's tags cover today; the rest join as tagging fills in
+const NICE = { minimal:'Minimal', clean:'Clean', classic:'Classic', luxury:'Luxury', romantic:'Romantic', vintage:'Vintage', y2k:'Y2K', edgy:'Edgy', streetwear:'Streetwear', sporty:'Sporty', casual:'Casual', resort:'Resort' };
+const LINE = { minimal:'Few pieces, nothing loud, every one earns its place.', clean:'Crisp lines and a tidy palette.', classic:'The pieces that never date.', luxury:'Quiet, considered, very good fabric.', romantic:'Soft shapes, bows, a little lace.', vintage:'Found pieces with a past.', y2k:'Low rise, shine, a wink at 2003.', edgy:'Black, leather, sharp edges.', streetwear:'Boxy, graphic, built for the city.', sporty:'Moves with you, looks good standing still.', casual:'Easy pieces for an easy day.', resort:'Packed for somewhere warm.' };
+const NEAR = { minimal:['clean','classic'], clean:['minimal','classic'], classic:['clean','minimal'], luxury:['classic','minimal'], romantic:['vintage','classic'], vintage:['romantic','classic'], y2k:['edgy','streetwear'], edgy:['streetwear','y2k'], streetwear:['sporty','edgy'], sporty:['streetwear','casual'], casual:['sporty','clean'], resort:['romantic','casual'] };
+/* The pile: 7 slots, percent of the sheet. One hero, three core, three accents. */
+const SLOTS = [
+  { id:'hero', cats:['outerwear','dresses','tops'], x:3, y:24, w:58, r:-7, z:5 },
+  { id:'top', cats:['tops','dresses'], x:27, y:1, w:44, r:3, z:3 },
+  { id:'bottom', cats:['bottoms'], x:55, y:18, w:40, r:5, z:2 },
+  { id:'shoes', cats:['shoes'], x:44, y:62, w:36, r:-12, z:6 },
+  { id:'bag', cats:['bags'], x:0, y:56, w:31, r:6, z:4 },
+  { id:'acc1', cats:['accessories','jewelry'], x:74, y:2, w:22, r:-10, z:7 },
+  { id:'acc2', cats:['jewelry','accessories'], x:77, y:46, w:20, r:8, z:7 },
+];
+const WORD = { hero:'the jacket', top:'the top', bottom:'the bottoms', shoes:'the shoes', bag:'the bag', acc1:'the accessory', acc2:'the jewelry' };
+const money = n => '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let ITEMS = [], byId = {};
+let cur = 0, roll = 0, pile = {}, bag = [], kept = [], disliked = new Set(), lock = null, seedN = 1;
+function rnd() { seedN = (seedN * 9301 + 49297) % 233280; return seedN / 233280; }
+function pools(style) { const a = ITEMS.filter(i => i.aes.includes(style) && !disliked.has(i.id)); const b = ITEMS.filter(i => (NEAR[style] || []).some(n => i.aes.includes(n)) && !disliked.has(i.id)); const c = ITEMS.filter(i => !disliked.has(i.id)); return [a, b, c]; }
+function pickFor(slot, style, used, prefer) {
+  const P = pools(style);
+  if (prefer) for (const pool of P) { const cand = pool.filter(i => slot.cats.includes(i.cat) && !used.has(i.id) && prefer(i)); if (cand.length) return cand[Math.floor(rnd() * cand.length)]; }
+  for (const pool of P) for (const cat of slot.cats) { const cand = pool.filter(i => i.cat === cat && !used.has(i.id)); if (cand.length) return cand[Math.floor(rnd() * cand.length)]; }
+  return null;
+}
+function compose(style, keep, prefer) {
+  seedN = 7 + STYLES.indexOf(style) * 131 + roll * 17; const used = new Set(); const out = {};
+  if (keep) for (const [sid, it] of Object.entries(keep)) { out[sid] = it; used.add(it.id); }
+  for (const slot of SLOTS) { if (out[slot.id]) continue; const it = pickFor(slot, style, used, prefer && prefer[slot.id]); if (it) { out[slot.id] = it; used.add(it.id); } }
+  return out;
+}
+
+/* ---------- render ---------- */
+const sheet = $('#sheet');
+function pieceEl(slot, it) {
+  const el = document.createElement('div'); el.className = 'piece in'; el.dataset.slot = slot.id; el.dataset.id = it.id;
+  el.style.left = slot.x + '%'; el.style.top = slot.y + '%'; el.style.width = slot.w + '%'; el.style.zIndex = slot.z; el.style.setProperty('--rot', slot.r + 'deg');
+  el.innerHTML = `<img src="cut/${it.id}.webp" alt="${esc(it.n)} by ${esc(it.b)}" draggable="false"><div class="tag"><b>${esc(it.n)}</b>${esc(it.b)} · ${money(it.p)}</div>`;
+  bindPiece(el); return el;
+}
+function render(next, opts) {
+  opts = opts || {}; const old = [...sheet.querySelectorAll('.piece')];
+  const keepIds = new Set(Object.values(next).map(i => i.id));
+  old.forEach((el, i) => { if (keepIds.has(el.dataset.id) && opts.keepSame !== false) return; el.classList.add('out'); el.style.transitionDelay = reduced ? '0ms' : (i * 30) + 'ms'; setTimeout(() => el.remove(), reduced ? 0 : 420); });
+  let n = 0;
+  for (const slot of SLOTS) { const it = next[slot.id]; if (!it) continue; const exists = old.find(el => el.dataset.id === it.id && !el.classList.contains('out')); if (exists) { exists.dataset.slot = slot.id; continue; }
+    const el = pieceEl(slot, it); sheet.appendChild(el); const d = reduced ? 0 : 160 + n * 55; n++; setTimeout(() => el.classList.remove('in'), d); }
+  pile = next; updateHeader();
+}
+function updateHeader() { const s = STYLES[cur]; $('#styleName').textContent = NICE[s]; $('#styleSub').textContent = LINE[s]; const on = kept.includes(s); $('#keepBtn').classList.toggle('on', on); $('#keepBtn').setAttribute('aria-pressed', on); $('#keepTxt').textContent = on ? 'Kept' : 'Keep'; $('#idlabel').textContent = kept.length ? 'Your Style ID: ' + kept.map(k => NICE[k]).join(' · ') : 'Your Style ID: pick 2 or 3'; }
+function setStyle(i, opts) { cur = ((i % STYLES.length) + STYLES.length) % STYLES.length; lock = null; render(compose(STYLES[cur]), opts); spin(-cur * STEP, true); tick(); }
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 1700); }
+let touched = false; document.addEventListener('pointerdown', () => { touched = true; }, { once: true });
+function tick() { if (!touched) return; try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} }
+
+/* ---------- piece gestures: tap lifts, drag down bags, flick dismisses, hold rebuilds ---------- */
+let drag = null;
+function bindPiece(el) {
+  el.addEventListener('pointerdown', e => {
+    if (e.button) return; el.setPointerCapture(e.pointerId);
+    drag = { el, x0: e.clientX, y0: e.clientY, t0: performance.now(), moved: false, samples: [[e.clientX, performance.now()]], held: false };
+    drag.hold = setTimeout(() => { if (drag && drag.el === el && !drag.moved) { drag.held = true; rebuildAround(el); } }, 520);
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', e => {
+    if (!drag || drag.el !== el || drag.held) return; const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.moved && Math.hypot(dx, dy) > 7) { drag.moved = true; clearTimeout(drag.hold); el.classList.add('moving'); el.classList.remove('lift'); el.style.zIndex = 50; sheet.classList.add('dragging'); }
+    if (!drag.moved) return;
+    el.style.setProperty('--dx', dx + 'px'); el.style.setProperty('--dy', dy + 'px'); drag.samples.push([e.clientX, performance.now()]); if (drag.samples.length > 6) drag.samples.shift();
+    $('#dock').classList.toggle('hot', overDock(e));
+  });
+  const end = e => {
+    if (!drag || drag.el !== el) return; clearTimeout(drag.hold); const d = drag; drag = null; sheet.classList.remove('dragging'); $('#dock').classList.remove('hot');
+    if (d.held) return;
+    el.classList.remove('moving');
+    if (!d.moved) { lift(el); return; }
+    const dx = e.clientX - d.x0; const s0 = d.samples[0], s1 = d.samples[d.samples.length - 1]; const vx = s1[1] > s0[1] ? (s1[0] - s0[0]) / (s1[1] - s0[1]) : 0;
+    if (overDock(e)) { toBag(el); return; }
+    if (Math.abs(dx) > sheet.clientWidth * 0.38 || Math.abs(vx) > 0.9) { dismiss(el, dx < 0 ? -1 : 1); return; }
+    el.style.setProperty('--dx', '0px'); el.style.setProperty('--dy', '0px');
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+function overDock(e) { const r = $('#dock').getBoundingClientRect(); const cx = r.left + r.width / 2, cy = r.top + r.height / 2; const sr = sheet.getBoundingClientRect(); return Math.hypot(e.clientX - cx, e.clientY - cy) < 70 || e.clientY > sr.bottom - 36; }
+function lift(el) { sheet.querySelectorAll('.piece.lift').forEach(p => { if (p !== el) { p.classList.remove('lift'); p.style.zIndex = slotOf(p).z; } }); el.classList.add('lift'); clearTimeout(el._lt); el._lt = setTimeout(() => { el.classList.remove('lift'); el.style.zIndex = slotOf(el).z; }, 2400); }
+function slotOf(el) { return SLOTS.find(s => s.id === el.dataset.slot) || SLOTS[0]; }
+function toBag(el) { const it = byId[el.dataset.id]; if (!it) return; const dock = $('#dock').getBoundingClientRect(), r = el.getBoundingClientRect(); el.classList.remove('moving'); el.style.transition = reduced ? 'none' : 'transform .4s cubic-bezier(.4,0,.2,1), opacity .4s'; el.style.setProperty('--dx', (dock.left + dock.width / 2 - (r.left + r.width / 2) + parseFloat(el.style.getPropertyValue('--dx') || 0)) + 'px'); el.style.setProperty('--dy', (dock.top + dock.height / 2 - (r.top + r.height / 2) + parseFloat(el.style.getPropertyValue('--dy') || 0)) + 'px'); el.style.setProperty('--sc', '0.1'); el.style.opacity = 0;
+  bag.push(it); $('#bagN').textContent = bag.length; const dk = $('#dock'); dk.classList.remove('pop'); void dk.offsetWidth; dk.classList.add('pop'); toast(`${it.n} is in your bag`); tick();
+  setTimeout(() => { el.remove(); refill(el.dataset.slot); }, reduced ? 0 : 420); }
+function dismiss(el, dir) { const it = byId[el.dataset.id]; disliked.add(el.dataset.id); el.classList.remove('moving'); el.style.transition = reduced ? 'none' : 'transform .35s ease-in, opacity .35s'; el.style.setProperty('--dx', (dir * sheet.clientWidth * 1.1) + 'px'); el.style.setProperty('--rot', (dir * 28) + 'deg'); el.style.opacity = 0; toast(`Not you. kAI noted it: no more ${it ? it.cat : 'pieces'} like that`); tick(); setTimeout(() => { el.remove(); refill(el.dataset.slot); }, reduced ? 0 : 360); }
+function refill(slotId) { const slot = SLOTS.find(s => s.id === slotId); const used = new Set(Object.values(pile).map(i => i.id)); seedN = Math.floor(Math.random() * 100000); const it = pickFor(slot, STYLES[cur], used); if (!it) { delete pile[slotId]; return; } pile[slotId] = it; const el = pieceEl(slot, it); sheet.appendChild(el); setTimeout(() => el.classList.remove('in'), reduced ? 0 : 60); }
+function rebuildAround(el) { const it = byId[el.dataset.id]; if (!it) return; lock = el.dataset.slot; roll++; el.classList.add('lift'); tick(); const keep = {}; keep[el.dataset.slot] = it; render(compose(STYLES[cur], keep)); say(`Built around the ${it.n.toLowerCase()}: everything else is new, that one stays.`); setTimeout(() => { el.classList.remove('lift'); el.style.zIndex = slotOf(el).z; }, 1800); }
+
+/* ---------- swipe on the sheet background changes style ---------- */
+let sw = null;
+sheet.addEventListener('pointerdown', e => { if (e.target.closest('.piece') || e.target.closest('.dock')) return; sw = { x0: e.clientX, y0: e.clientY }; });
+sheet.addEventListener('pointerup', e => { if (!sw) return; const dx = e.clientX - sw.x0, dy = e.clientY - sw.y0; sw = null; if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) setStyle(cur + (dx < 0 ? 1 : -1)); });
+
+/* ---------- the dial ---------- */
+const wheel = $('#wheel'), dw = $('#dialwrap'); const STEP = 360 / STYLES.length; let theta = 0, dd = null;
+function buildWheel() { const d = Math.max(560, Math.min(760, window.innerWidth * 1.7)); wheel.style.setProperty('--d', d + 'px'); wheel.innerHTML = STYLES.map((s, i) => `<div class="lab ${i === cur ? 'cur' : ''}" style="--a:${i * STEP}deg" data-i="${i}"><i></i>${NICE[s]}</div>`).join(''); }
+function spin(t, snap) { theta = t; wheel.style.setProperty('--theta', theta + 'deg'); if (snap) { wheel.querySelectorAll('.lab').forEach(l => l.classList.toggle('cur', +l.dataset.i === cur)); } }
+function centerOf() { const r = wheel.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
+function ang(e) { const [cx, cy] = centerOf(); return Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI; }
+dw.addEventListener('pointerdown', e => { if (e.target.closest('.arrow')) return; dw.setPointerCapture(e.pointerId); dd = { a0: ang(e), t0: theta, last: cur }; wheel.classList.add('moving'); });
+dw.addEventListener('pointermove', e => { if (!dd) return; const t = dd.t0 + (ang(e) - dd.a0); spin(t, false); const k = ((Math.round(-t / STEP) % STYLES.length) + STYLES.length) % STYLES.length; if (k !== dd.last) { dd.last = k; tick(); wheel.querySelectorAll('.lab').forEach(l => l.classList.toggle('cur', +l.dataset.i === k)); $('#styleName').textContent = NICE[STYLES[k]]; } });
+const dEnd = e => { if (!dd) return; const k = dd.last; dd = null; wheel.classList.remove('moving'); if (k !== cur) setStyle(k); else spin(-cur * STEP, true); };
+dw.addEventListener('pointerup', dEnd); dw.addEventListener('pointercancel', dEnd);
+wheel.addEventListener('click', e => { const l = e.target.closest('.lab'); if (l && !dd) setStyle(+l.dataset.i); });
+$('#prev').addEventListener('click', () => setStyle(cur - 1)); $('#next').addEventListener('click', () => setStyle(cur + 1));
+document.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') setStyle(cur - 1); if (e.key === 'ArrowRight') setStyle(cur + 1); });
+
+/* ---------- keep (Style ID) ---------- */
+$('#keepBtn').addEventListener('click', () => { const s = STYLES[cur]; if (kept.includes(s)) kept = kept.filter(k => k !== s); else { if (kept.length >= 3) { toast('Three is plenty. Un-keep one first.'); return; } kept.push(s); } try { localStorage.setItem('pinnd.dial.kept', JSON.stringify(kept)); } catch (e) {} updateHeader(); tick(); });
+
+/* ---------- kAI: words move the clothes ---------- */
+const CHIPS = ['Rainy day', 'Cheaper', 'Dressier', 'Warmer', 'Hot out', 'Swap the shoes', 'Shuffle'];
+$('#chips').innerHTML = CHIPS.map(c => `<button type="button" data-q="${esc(c)}">${esc(c)}</button>`).join('');
+$('#chips').addEventListener('click', e => { const b = e.target.closest('button'); if (b) kai(b.dataset.q); });
+$('#kaiForm').addEventListener('submit', e => { e.preventDefault(); const q = $('#kaiIn').value.trim(); if (q) kai(q); $('#kaiIn').value = ''; $('#kaiIn').blur(); });
+function say(m) { const b = $('#bubble'); b.textContent = m; b.classList.add('on'); clearTimeout(say.t); say.t = setTimeout(() => b.classList.remove('on'), 3600); }
+const has = (it, re) => re.test((it.n + ' ' + it.mat + ' ' + it.color).toLowerCase());
+function kai(q) {
+  const t = q.toLowerCase(); const style = STYLES[cur]; roll++; const keep = {}, prefer = {}; let msg = '';
+  const total = p => Object.values(p).reduce((s, i) => s + (i.p || 0), 0);
+  if (/rain|wet|storm|drizzl/.test(t)) { prefer.hero = i => i.cat === 'outerwear'; prefer.shoes = i => has(i, /boot|loafer|sneaker|trainer|oxford|derby|clog/) && !has(i, /suede/); prefer.bag = i => !has(i, /suede/); msg = 'Rainy day: a jacket on top, closed shoes, nothing suede.'; }
+  else if (/cheap|budget|less|afford|under|save/.test(t)) { const next = compose(style, null, Object.fromEntries(SLOTS.map(s => [s.id, i => i.p <= 150]))); render(next); say(`Cheaper: this pile is ${money(total(next))} all in, was ${money(total(pile))}.`); return; }
+  else if (/dress(y|ier)|dinner|date|night|fancy|wedding|going out/.test(t)) { prefer.hero = i => i.cat === 'dresses'; prefer.shoes = i => has(i, /heel|pump|sandal|slingback|mule/); prefer.acc1 = i => i.cat === 'jewelry'; msg = 'Dressier: a dress as the hero, a heel, and jewelry doing the talking.'; }
+  else if (/warm|cold|winter|chill|freez|snow/.test(t)) { prefer.hero = i => i.cat === 'outerwear'; prefer.top = i => has(i, /knit|sweater|cardigan|wool|cashmere|fleece|turtleneck/); prefer.shoes = i => has(i, /boot/); msg = 'Warmer: coat, knit, boots.'; }
+  else if (/hot|heat|summer|beach|sun|cool(er)?\b/.test(t)) { prefer.hero = i => i.cat === 'dresses' || i.cat === 'tops'; prefer.top = i => has(i, /tank|cami|linen|tee|t-shirt|crop/); prefer.shoes = i => has(i, /sandal|slide|flip|espadrille|mule/); msg = 'Hot out: no jacket, light top, sandals.'; }
+  else if (/swap|change|different|another|new|replace/.test(t)) { const slot = /jacket|coat|outer|hero/.test(t) ? 'hero' : /shoe|boot|heel|sneaker|sandal/.test(t) ? 'shoes' : /bag|purse|tote/.test(t) ? 'bag' : /jean|pant|trouser|skirt|short|bottom/.test(t) ? 'bottom' : /top|shirt|tee|sweater|knit|blouse/.test(t) ? 'top' : /jewel|ring|necklace|earring|watch|bracelet/.test(t) ? 'acc2' : /hat|cap|belt|scarf|sunglass|access/.test(t) ? 'acc1' : null;
+    if (slot) { const el = sheet.querySelector(`.piece[data-slot="${slot}"]`); if (el) { el.classList.add('out'); setTimeout(() => { el.remove(); refill(slot); }, reduced ? 0 : 320); } else refill(slot); say(`Swapped ${WORD[slot]}.`); return; }
+    render(compose(style)); say('A fresh pile, same style.'); return; }
+  else if (/shuffle|again|mix|surprise|fresh/.test(t)) { render(compose(style)); say('Shuffled. Same style, new pieces.'); return; }
+  else { say('Try: rainy day, cheaper, dressier, warmer, hot out, swap the shoes, or shuffle.'); roll--; return; }
+  render(compose(style, keep, prefer)); say(msg);
+}
+
+/* ---------- bag sheet ---------- */
+$('#dock').addEventListener('click', () => { $('#bagRows').innerHTML = bag.length ? bag.map(i => `<div class="row"><img src="cut/${i.id}.webp" alt=""><div><b>${esc(i.n)}</b><span>${esc(i.b)}</span></div><em>${money(i.p)}</em></div>`).join('') + `<div class="row"><b>Total</b><em>${money(bag.reduce((s, i) => s + i.p, 0))}</em></div>` : '<p class="note">Nothing yet. Drag a piece down to the bag.</p>'; $('#bagsheet').classList.add('on'); });
+$('#bagClose').addEventListener('click', () => $('#bagsheet').classList.remove('on'));
+$('#bagsheet').addEventListener('click', e => { if (e.target === $('#bagsheet')) $('#bagsheet').classList.remove('on'); });
+
+/* ---------- boot ---------- */
+async function boot() {
+  try { kept = JSON.parse(localStorage.getItem('pinnd.dial.kept') || '[]').filter(k => STYLES.includes(k)); } catch (e) { kept = []; }
+  try { const r = await fetch('pile-data.json'); ITEMS = await r.json(); } catch (e) { ITEMS = []; }
+  byId = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+  buildWheel(); setStyle(0, { keepSame: false }); window.PD = { get pile() { return pile; }, get bag() { return bag; }, get cur() { return cur; }, STYLES, setStyle, kai, get kept() { return kept; }, get disliked() { return disliked; } };
+  setTimeout(() => { const h = $('#hint'); if (h) h.style.opacity = 0; }, 9000);
+}
+window.addEventListener('resize', () => { buildWheel(); spin(-cur * STEP, true); });
+boot();
+</script>

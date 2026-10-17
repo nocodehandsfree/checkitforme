@@ -1,0 +1,24 @@
+{
+  "name": "pinnd",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "description": "PINND: see it, find it, style it, shop it. Fashion discovery with a stylist you can talk to.",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "dev": "DEV_SHOW_CODE=1 tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@libsql/client": "^0.14.0",
+    "hono": "^4.6.16",
+    "jose": "^5.9.6",
+    "tsx": "^4.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.6",
+    "typescript": "^5.7.3"
+  }
+}

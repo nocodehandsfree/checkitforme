@@ -17,3 +17,5 @@ docs/tasks/**
 docs/archive/**
 docs/design/truth/**
 docs/design/comps/inbox/**
+# PINND, the owner's daughter's fashion app (owner sign-off 2026-10-10: "get an actual working prototype built", full permissions). Lives in its own folder until it moves to its own repo.
+pinnd/**
