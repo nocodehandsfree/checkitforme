@@ -3,10 +3,11 @@
 > The consumer web app `public/checkit.html` + consumer routes in `src/server.ts`, design and ALL copy.
 > Charter: `handoff.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines. History is in git.
 
-## 10-16 — THE MAP BACKGROUND LEFT CARTO (@71b4af3c, staging), which now stamps "API KEY REQUIRED" on
-every tile. All three `L.tileLayer` calls draw Esri's dark grey canvas: the store map (checkit.html
-~:4967), the zone map (~:8441), the Admin map (app.html ~:6821). `maxZoom:16` is that service's own
-ceiling; one host, so no subdomains.
+## 10-16 — THE MAP BACKGROUND LEFT CARTO, which now stamps "API KEY REQUIRED" on every tile. All three
+`L.tileLayer` calls draw Esri's dark grey canvas: the store map (checkit.html ~:4967), the zone map
+(~:8441) and the Admin map (app.html ~:6821). `maxZoom:16` is that service's own ceiling; one host, so
+no subdomains. Site on staging @71b4af3c, THE Admin shipped LIVE @cd6ae97b (`ship-admin.sh`). Driven on
+both at 390px: 0 CARTO requests, tiles drawn, no watermark. The site half still needs a promote.
 
 ## 08-19 — AUTO-CHECKS BUILT, ON STAGING (@1a2c0193). Contract + his rulings, and the four faults his
 testing found: `docs/tasks/site-auto-checks.md`. Every piece below was copied, not invented.
